@@ -84,3 +84,4 @@ td.en{font-family:inherit;color:var(--muted);white-space:normal}
 .parses{padding-left:18px;margin:4px 0 8px}.parses li{margin:4px 0;line-height:1.4}.parses li.near{font-weight:600}
 .newtip{margin-top:12px;padding:8px 10px;border-radius:10px;background:var(--soft);border:1px dashed var(--line)}
 .newtags{display:flex;gap:6px;margin-top:6px}
+.weak td{vertical-align:top}.weak td:first-child{white-space:normal}

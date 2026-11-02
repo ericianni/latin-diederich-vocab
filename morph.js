@@ -33,7 +33,9 @@
     const nb = plain(base), ns = plain(s);
     let j = 0; while (j < ns.length && isV(ns[j])) j++;          // leading vowels of the suffix
     let best = -1, bestScore = 0;
-    for (let i = j; i < nb.length; i++) {
+    // match inside the stem, not the 1st-person ending (exorior, -ortus -> exortus, not exoriortus)
+    const lim = stem && plain(stem).length >= j + 1 && nb.startsWith(plain(stem)) ? plain(stem).length : nb.length;
+    for (let i = j; i < lim; i++) {
       if (nb[i] !== ns[j]) continue;
       let k = 0; while (j + k < ns.length && i + k < nb.length && nb[i + k] === ns[j + k]) k++;
       const score = 2 * k + (nb.slice(i - j, i) === ns.slice(0, j) ? 1 : 0);

@@ -176,5 +176,6 @@ let words = 0;
 for (const e of W.filter(x => !x.d)) { const a = M.analyze(e); if (a.skip || !a.tbl) continue; words++;
   for (const k in a.tbl) { const bad = !a.tbl[k].length || a.tbl[k].some(f => !f || /undefined|null|NaN/.test(f)) || /undefined/.test(M.label(a.kind, k)); if (bad) { fail++; console.log('FAIL bad cell', e.la, k, a.tbl[k]); } } }
 pass++;
+t('exorior', 'ptc.dep.perf', 'exortus'); t('exorior', 'sup.um', 'exortum');   // "-ortus sum" matches the stem, not the -or ending
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

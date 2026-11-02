@@ -7,7 +7,7 @@
   const today = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000); };
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const POS_SHORT = { noun: 'noun', verb: 'verb', adjective: 'adj.', adverb: 'adv.', conjunction: 'conj.', preposition: 'prep.', pronoun: 'pron.', indeclinable: 'indecl.', interjection: 'interj.' };
-  const REVIEW_CAP = 60, DRILL_CAP = 30;
+  const REVIEW_CAP = 60;
 
   // ---------- state ----------
   // Cards: { box: 0-7, due: local day number }. Leitner boxes: right moves a card up one box, wrong sends it to box 0.
@@ -19,7 +19,7 @@
   function boxFromIvl(c) { const i = c.ivl || 0; if (i <= 0) return c.reps > 0 ? 1 : 0; return i <= 2 ? 1 : i <= 6 ? 2 : i <= 13 ? 3 : i <= 29 ? 4 : i <= 59 ? 5 : i <= 119 ? 6 : 7; }
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
-    s.set = Object.assign({ newPerDay: 10, drillNew: 5, strictMac: false, dmode: 'type' }, s.set || {});
+    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10 }, s.set || {});
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
         const c = s.cards[k];
@@ -27,15 +27,19 @@
         const m = k.match(/^d:(\d+):[pf]$/);    // verb drills were split into present / perfect units; now one unit per verb
         if (m) { const nk = 'd:' + m[1] + ':v', o = s.cards[nk], n = s.cards[k]; s.cards[nk] = o ? { box: Math.min(o.box, n.box), due: Math.min(o.due, n.due) } : n; delete s.cards[k]; }
       }
-      if (!s.set.drillNew) s.set.drillNew = 5;
       s.v = 2;
     }
     s.set.df = Object.assign({}, DF, s.set.df || {});
     s.lessons = s.lessons || {};
-    if (!s.ds) {                               // drill stats: words and form combinations seen (words already drilled count as seen)
-      s.ds = { w: {}, f: {} };
-      for (const k of Object.keys(s.cards)) { const m = k.match(/^d:(\d+):/); if (m) s.ds.w[m[1]] = 1; }
+    if (!s.ds) s.ds = { w: {} };        // words seen in drills (id -> times); s.ds.f was v9's form list
+    s.dst = s.dst || {};                       // drill stats per form combination: see drillpick.js
+    s.dq = s.dq || 0;                          // drill answers so far (for "not asked recently")
+    if (!s.v || s.v < 3) {                     // v3: drills are free practice; the old per-word drill schedule (d: cards) goes
+      for (const k of Object.keys(s.cards)) { const m = k.match(/^d:(\d+):/); if (m) { s.ds.w[m[1]] = s.ds.w[m[1]] || 1; delete s.cards[k]; } }
+      for (const [k, n] of Object.entries(s.ds.f || {})) { const c = k.split(':')[0]; if (!s.dst[c]) s.dst[c] = { r: 0, n: 0, a: n, ok: 0, t: Date.now() }; }   // seen, accuracy unknown
+      delete s.set.drillNew; s.v = 3;
     }
+    delete s.ds.f;
     return s;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or private mode */ } }
@@ -49,7 +53,7 @@
   const nextTxt = k => { const b = Math.min(7, ((S.cards[k] || {}).box || 0) + 1), n = INT[b]; return n === 1 ? 'tomorrow' : n < 31 ? 'in ' + n + ' days' : 'in ' + Math.round(n / 30) + ' mo'; };
 
   // ---------- data ----------
-  let W = [], BY = {}, UNITS = [];
+  let W = [], BY = {}, UNITS = new Map();
   const AN = {};
   const an = w => AN[w.id] || (AN[w.id] = ['verb', 'noun', 'adjective'].includes(w.pos) ? Morph.analyze(w) : { skip: 'not drilled (' + w.pos + ')' });
   const rankTxt = w => w.r ? '#' + w.r : '—';
@@ -83,11 +87,27 @@
     return df.types.includes('adj') && (a.decl === 3 ? df.decl.includes('3') : df.decl.includes('1') || df.decl.includes('2'));
   }
   const drillKeys = a => Object.keys(a.tbl).filter(k => keyOk(a, k, S.set.df));
-  const unitOf = (w, a) => 'd:' + w.id + ':' + (a.kind === 'verb' ? 'v' : a.kind === 'noun' ? 'n' : 'a');
+  // UNITS: every form combination the settings allow ("paradigm|key", e.g. "n3|dat.pl") -> the words that have it
   function buildUnits() {
-    const u = [];
-    for (const w of W) { const a = an(w); if (wordOk(a, S.set.df) && drillKeys(a).length) u.push(unitOf(w, a)); }
+    const u = new Map();
+    for (const w of W) { const a = an(w); if (!wordOk(a, S.set.df)) continue; const g = pdg(a);
+      for (const k of drillKeys(a)) { const c = g + '|' + k; if (!u.has(c)) u.set(c, []); u.get(c).push(w.id); } }
     return u;
+  }
+  const kindOfC = c => ({ v: 'verb', n: 'noun', a: 'adj' })[c[0]];
+  const groupWords = () => { const g = {}; for (const [c, ids] of UNITS) { const k = c.split('|')[0]; (g[k] = g[k] || new Set()); ids.forEach(i => g[k].add(i)); } return g; };
+  function entries(only) {
+    const gw = groupWords(), out = [];
+    for (const c of UNITS.keys()) if (!only || only.has(c)) { const g = c.split('|')[0]; out.push({ c, kind: kindOfC(c), g, nw: gw[g].size }); }
+    return out;
+  }
+  // next drill question: a combo (weighted toward weak, unseen and not-recent), then a word that has it
+  function drillQ(only, avoidC, avoidW) {
+    const es = entries(only); if (!es.length) return null;
+    const c = DrillPick.pickCombo(es, S.dst, { q: S.dq, exclude: avoidC });
+    const ids = UNITS.get(c);
+    const id = DrillPick.pickWord(ids.map(i => ({ id: i, r: BY[i].r, fc: !!S.cards['r:' + i] })), avoidW);
+    return { c, id, key: c.slice(c.indexOf('|') + 1) };
   }
 
   // ---------- queues ----------
@@ -96,42 +116,39 @@
     return Object.keys(S.cards).filter(k => prefixRe.test(k) && S.cards[k].due <= t && (!allow || allow.has(k))).sort((a, b) => S.cards[a].due - S.cards[b].due).slice(0, cap);
   }
   function newWords(n) { const out = []; for (const w of W) { if (out.length >= n) break; if (!S.cards['r:' + w.id]) out.push('r:' + w.id); } return out; }
-  function newUnits(n) {
-    if (n <= 0) return [];
-    const fresh = UNITS.filter(k => !S.cards[k]);
-    const seen = fresh.filter(k => S.cards['r:' + k.split(':')[1]]);   // words already met as flashcards first
-    return seen.concat(fresh.filter(k => !seen.includes(k))).slice(0, n);
-  }
   const vNewLeft = () => { const d = day(); return Math.max(0, S.set.newPerDay + (d.extra || 0) - d.nv); };
-  const dNewLeft = () => { const d = day(); return Math.max(0, S.set.drillNew + (d.dx || 0) - d.nd); };
-  function counts() {
-    const allow = new Set(UNITS);
-    return { vDue: dueKeys(/^[rp]:/, REVIEW_CAP).length, vNew: newWords(vNewLeft()).length, dDue: dueKeys(/^d:/, DRILL_CAP, allow).length, dNew: newUnits(dNewLeft()).length };
-  }
+  function counts() { return { vDue: dueKeys(/^[rp]:/, REVIEW_CAP).length, vNew: newWords(vNewLeft()).length }; }
 
-  let Q = null; // current session {kind:'vocab'|'drill', items:[{k,isNew}], done, total}
+  let Q = null; // current session: vocab {kind, items:[{k,isNew}], done, total}; drill {kind, len, done, total, asked, ok, redo:[{c, at, avoid}], only}
+  function startDrills(only) {
+    Q = { kind: 'drill', len: S.set.dlen, done: 0, total: S.set.dlen, asked: 0, ok: 0, redo: [], only: only || null, recent: [] };
+    next();
+  }
   function startSession(kind) {
+    if (kind === 'drill') return startDrills();
     const items = [];
     if (kind === 'vocab') {
       const rev = dueKeys(/^[rp]:/, REVIEW_CAP).map(k => ({ k }));
       const nw = newWords(vNewLeft()).map(k => ({ k, isNew: true }));
       // weave one new card after every two reviews
       while (rev.length || nw.length) { if (rev.length) items.push(rev.shift()); if (rev.length) items.push(rev.shift()); if (nw.length) items.push(nw.shift()); }
-    } else {
-      dueKeys(/^d:/, DRILL_CAP, new Set(UNITS)).forEach(k => items.push({ k }));
-      newUnits(dNewLeft()).forEach(k => items.push({ k, isNew: true }));
-      shuffle(items);
     }
     Q = { kind, items, done: 0, total: items.length };
     next();
   }
   function grade(item, right) {
     const d = day();
+    if (item.c) {                              // drill: update the combo's stats; a wrong answer comes back with another word
+      S.dq++; S.dst[item.c] = DrillPick.record(S.dst[item.c], right, Date.now(), S.dq);
+      S.ds.w[item.id] = (S.ds.w[item.id] || 0) + 1; d.dn = (d.dn || 0) + 1;
+      save(); Q.done++; if (right) Q.ok++;
+      if (!right && !item.redo) { Q.redo.push({ c: item.c, at: Q.done + 3, avoid: item.id }); Q.total++; }   // one re-ask per miss, so a set always ends
+      return next();
+    }
     const k = item.k;
     const first = !S.cards[k];
     S.cards[k] = sched(S.cards[k] || newCard(), right);
-    if (first && item.isNew) { if (k[0] === 'd') d.nd++; else d.nv++; }
-    if (k[0] === 'd') { d.dn = (d.dn || 0) + 1; const id = k.split(':')[1]; S.ds.w[id] = (S.ds.w[id] || 0) + 1; if (item.cmb) S.ds.f[item.cmb] = (S.ds.f[item.cmb] || 0) + 1; }
+    if (first && item.isNew) d.nv++;
     if (k[0] === 'r' && right && !S.cards['p' + k.slice(1)]) { const p = newCard(); p.due = today() + 1; S.cards['p' + k.slice(1)] = p; }
     save();
     Q.done++;
@@ -139,9 +156,21 @@
     next();
   }
   function next() {
+    if (Q && Q.kind === 'drill') return nextDrill();
     const it = Q && Q.items.shift();
-    if (!it) { const kind = Q && Q.kind; Q = null; return kind === 'drill' ? renderDrills() : renderToday(); }
-    if (it.k[0] === 'd') renderDrill(it); else renderVocab(it);
+    if (!it) { Q = null; return renderToday(); }
+    renderVocab(it);
+  }
+  function nextDrill() {
+    let i = Q.redo.findIndex(r => r.at <= Q.done), it = null;
+    if (i < 0 && Q.asked >= Q.len && Q.redo.length) i = 0;           // finish re-asks before the set ends
+    if (i >= 0) { const r = Q.redo.splice(i, 1)[0]; const ids = UNITS.get(r.c);
+      if (ids) { const id = DrillPick.pickWord(ids.map(x => ({ id: x, r: BY[x].r, fc: !!S.cards['r:' + x] })), new Set([r.avoid])); it = { c: r.c, id, key: r.c.slice(r.c.indexOf('|') + 1), redo: true }; }
+      else Q.total--; }
+    if (!it && Q.asked < Q.len) { const q = drillQ(Q.only, new Set(Q.recent.map(x => x.c)), new Set(Q.recent.map(x => x.id))); if (q) { it = q; Q.asked++; } }
+    if (!it) { if (Q.redo.length) return nextDrill(); const fin = { n: Q.done, ok: Q.ok, only: Q.only }; Q = null; drillEnd = fin; return renderDrills(); }
+    Q.recent = Q.recent.concat({ c: it.c, id: it.id }).slice(-3);
+    renderDrill(it);
   }
 
   // ---------- views ----------
@@ -171,7 +200,7 @@
     const c = counts();
     const vTot = c.vDue + c.vNew;
     const mins = Math.max(1, Math.round((c.vDue * 8 + c.vNew * 15) / 60));
-    const drillNote = `<div class="row"><span class="grow small muted">${c.dDue + c.dNew ? `<b>${c.dDue + c.dNew}</b> form drills waiting` : 'Form drills: done for today'}</span><button id="godr">Drills ›</button></div>`;
+    const drillNote = `<div class="row"><span class="grow small muted">Form drills: practice anytime, weighted toward your weak spots</span><button id="godr">Drills ›</button></div>`;
     if (vTot === 0) {
       V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>Flashcards done for today</h2>
         <p class="muted">Nice work. Come back tomorrow — new words and reviews will be waiting.</p>
@@ -259,31 +288,32 @@
   let showSet = false, drillMsg = '';
   function renderDrills() {
     $('#sub').textContent = 'Form drills';
-    const c = counts(), d = day(), tot = c.dDue + c.dNew;
-    const head = UNITS.length === 0
+    const d = day(), fin = drillEnd; drillEnd = null;
+    const tried = [...UNITS.keys()].filter(c => S.dst[c]).length, weak = DrillPick.weakest(S.dst, WEAK_N, new Set(UNITS.keys()), WEAK_MAX);
+    const head = UNITS.size === 0
       ? `<div class="card"><div class="prompt-kind">Form drills</div><p class="no">Nothing matches your choices.</p><p class="small muted">Turn on at least one mood, voice, tense, case, or number below.</p></div>`
-      : tot === 0
-        ? `<div class="card done"><div class="check">✓</div><h2>Drills done for today</h2><p class="muted">${d.dn || 0} forms practiced today.</p><button class="big" id="dmore">Drill 5 more words</button></div>`
-        : `<div class="card"><div class="prompt-kind">Today’s drills · one form per word</div>
-          <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${c.dNew}</b><span>new words</span></div><div class="stat"><b>${c.dDue}</b><span>reviews</span></div></div>
-          <button class="primary big" id="dgo">Start drills</button>
-          <p class="small muted center" style="margin:10px 0 0">${modeTxt()} ${d.dn ? d.dn + ' done today.' : ''}</p></div>`;
+      : `<div class="card">${fin ? `<div class="prompt-kind">Set done</div><h2 style="margin:4px 0 0">${fin.ok} of ${fin.n} right</h2>` : '<div class="prompt-kind">Form drills · free practice</div>'}
+          <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${tried}</b><span>of ${UNITS.size} forms tried</span></div><div class="stat"><b>${d.dn || 0}</b><span>answered today</span></div></div>
+          <button class="primary big" id="dgo">${fin ? 'Keep going' : `Start a set of ${S.set.dlen}`}</button>
+          <p class="small muted center" style="margin:10px 0 0">Questions lean toward forms you miss, haven’t tried, or haven’t seen lately. Stop anytime; every answer is saved. ${modeTxt()}</p></div>
+        <div class="card"><div class="row"><h2 class="grow" style="margin:0">Weak spots</h2><button class="link" id="gweak">View ›</button></div>
+          <div class="small muted" style="margin-top:4px">${weak.length ? weak.slice(0, 3).map(c => esc(comboLabel(c)) + ' · ' + pct(S.dst[c])).join('<br>') : (Object.keys(S.dst).length ? 'None right now: every form you’ve tried is at 85% or better.' : 'Your lowest-accuracy forms will show up here once you’ve answered a few.')}</div></div>`;
     const msg = drillMsg ? `<div class="card small" id="dmsg">${esc(drillMsg)}</div>` : ''; drillMsg = '';
     const modeCard = `<div class="card"><div class="small muted chiph" style="margin-top:0">How to answer</div><div class="seg" id="dmode">${MODES.map(([m, l]) => `<button data-m="${m}" class="${S.set.dmode === m ? 'on' : ''}" aria-pressed="${S.set.dmode === m}">${l}</button>`).join('')}</div></div>`;
     V().innerHTML = msg + head + modeCard + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
-      <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.length}</b> words match</div>
-      <div class="small muted" style="margin-top:2px">Seen in drills so far: ${plur(Object.keys(S.ds.w).length, 'word')} · ${plur(Object.keys(S.ds.f).length, 'form')}</div>
+      <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.size}</b> forms, <b>${new Set([].concat(...UNITS.values())).size}</b> words match</div>
+      <div class="small muted" style="margin-top:2px">Seen in drills so far: ${plur(Object.keys(S.ds.w).length, 'word')} · ${plur(Object.keys(S.dst).length, 'form')}</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
-        <div class="small muted chiph">New words per day</div><div class="seg" id="sdr">${[3, 5, 10].map(n => `<button data-n="${n}" class="${S.set.drillNew === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+        <div class="small muted chiph">Questions per set</div><div class="seg" id="sdr">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.dlen === n ? 'on' : ''}">${n}</button>`).join('')}</div>
         <p class="small muted">Imperatives come in present and future (use the Tense chips). Gerund, gerundive and supine ignore the voice and tense chips. Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Locative exists only for domus, rūs, humus, bellum and mīlitia.</p>
         <button class="primary big" id="tdone">Done</button>
         <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}
       </div>
       <div class="card"><button class="big" id="opencs">📖 Cheat sheet — endings tables</button></div>`;
-    if ($('#dgo')) $('#dgo').onclick = () => startSession('drill');
-    if ($('#dmore')) $('#dmore').onclick = () => { day().dx = (day().dx || 0) + 5; save(); startSession('drill'); };
+    if ($('#dgo')) $('#dgo').onclick = () => startDrills(fin && fin.only && [...fin.only].some(c => UNITS.has(c)) ? fin.only : null);
+    if ($('#gweak')) $('#gweak').onclick = renderWeak;
     $('#tset').onclick = () => { showSet = !showSet; renderDrills(); };
     if ($('#tdone')) $('#tdone').onclick = () => { showSet = false; renderDrills(); window.scrollTo(0, 0); };
     $('#opencs').onclick = () => setTab('cheat');
@@ -292,8 +322,28 @@
       S.set.df[g] = arr.includes(v) ? arr.filter(x => x !== v) : arr.concat(v);
       save(); UNITS = buildUnits(); renderDrills();
     });
-    document.querySelectorAll('#sdr button').forEach(b => b.onclick = () => { S.set.drillNew = +b.dataset.n; save(); renderDrills(); });
+    document.querySelectorAll('#sdr button').forEach(b => b.onclick = () => { S.set.dlen = +b.dataset.n; save(); renderDrills(); });
     document.querySelectorAll('#dmode button').forEach(b => b.onclick = () => { S.set.dmode = b.dataset.m; save(); renderDrills(); });
+  }
+  let drillEnd = null;
+  const WEAK_N = 12, WEAK_MAX = 0.85;   // weak spot = recent accuracy under 85%
+  const GROUP = { v1: '1st conj.', v2: '2nd conj.', v3: '3rd conj.', v3io: '3rd conj. -iō', v4: '4th conj.', vsum: 'sum', vpossum: 'possum', veo: 'eō', vfero: 'ferō', vvolo: 'volō/nōlō/mālō', vfio: 'fīō',
+    n1: '1st decl.', n2: '2nd decl.', n3: '3rd decl.', n3i: '3rd decl. i-stem', n4: '4th decl.', n5: '5th decl.', nirr: 'irregular noun', a12: '1st/2nd-decl. adj.', a3: '3rd-decl. adj.' };
+  const comboLabel = c => { const i = c.indexOf('|'), g = c.slice(0, i); return (GROUP[g] || g) + ' · ' + Morph.label(kindOfC(c), c.slice(i + 1)); };
+  const pct = st => st && st.n > 0 ? Math.round(100 * DrillPick.acc(st)) + '%' : '—';
+  function renderWeak() {
+    $('#sub').textContent = 'Weak spots';
+    const allow = new Set(UNITS.keys()), weak = DrillPick.weakest(S.dst, WEAK_N, allow, WEAK_MAX);
+    const outside = DrillPick.weakest(S.dst, 1e9, null, WEAK_MAX).filter(c => !allow.has(c)).length;
+    V().innerHTML = `<div class="row"><button class="link" id="wback">‹ Drills</button></div>
+      <div class="card"><h2 style="margin-top:0">Weak spots</h2><p class="small muted" style="margin-top:0">Your lowest-accuracy forms (under 85%) within your current drill choices. Accuracy counts recent answers more than old ones.</p>
+      ${weak.length ? `<table class="weak"><tr><th>Form</th><th>Recent</th><th>Tries</th></tr>${weak.map(c => { const st = S.dst[c]; return `<tr><td>${esc(comboLabel(c))}</td><td>${pct(st)}</td><td>${st.a}<span class="muted"> (${st.ok} ✓)</span></td></tr>`; }).join('')}</table>
+        <button class="primary big" id="wgo" style="margin-top:12px">Practice weak spots</button>` : `<p>${Object.keys(S.dst).length ? 'No weak spots right now: every form you’ve tried is at 85% or better.' : 'Nothing yet. Answer a few drills first.'}</p>`}
+      ${outside ? `<p class="small muted">${outside} more weak form${outside === 1 ? ' is' : 's are'} outside your current drill choices.</p>` : ''}</div>
+      <div class="card"><button class="big" id="wrst">Reset drill stats</button><p class="small muted" style="margin:8px 0 0">Clears drill accuracy and which words and forms you’ve seen. Flashcard progress is not affected.</p></div>`;
+    $('#wback').onclick = renderDrills;
+    if ($('#wgo')) $('#wgo').onclick = () => startDrills(new Set(weak));
+    $('#wrst').onclick = () => { if (confirm('Reset all drill stats on this device? Flashcards are not affected.')) { S.dst = {}; S.ds = { w: {} }; S.dq = 0; save(); renderWeak(); } };
   }
   const MODES = [['type', 'Type the form'], ['id', 'Identify the form'], ['mix', 'Mix']];
   const modeTxt = () => S.set.dmode === 'id' ? 'Tap what each form is: case, number, gender… or person, tense, voice, mood.'
@@ -319,12 +369,11 @@
   }
   function renderDrill(it) {
     if (S.set.dmode === 'id' || S.set.dmode === 'mix' && Math.random() < 0.5) { if (renderIdentify(it)) return; }
-    const [, id] = it.k.split(':'); const w = BY[id]; const a = an(w);
-    const keys = drillKeys(a); const key = keys[Math.floor(Math.random() * keys.length)];
+    const w = BY[it.id], a = an(w), key = it.key;
     const answers = a.tbl[key];
     const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective';
     const ctx = csTarget(a, key);
-    V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w, a, key)}
+    V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w)}
       <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
       <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
       <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
@@ -348,8 +397,8 @@
   const pdg = a => a.kind === 'verb' ? 'v' + (a.conj === 'irr' ? IRR_ID[a.irr] || 'irr' : conjKey(a)) : a.kind === 'noun' ? 'n' + (a.decl === 3 && a.istem ? '3i' : a.decl) : 'a' + (a.decl === 3 ? '3' : '12');
   const LESSON_ID = { vpossum: 'sum', vsum: 'sum', veo: 'eo', vfero: 'fero', vvolo: 'volo', a12: 'a12', a3: 'a3' };
   const lessonOf = a => { const p = pdg(a), id = LESSON_ID[p] || (/^(n[1-5]|n3i|v[1-4]|v3io)$/.test(p) ? p : null); return LS.find(l => l.id === id) || null; };
-  function newTags(it, w, a, key) {
-    it.cmb = pdg(a) + '|' + key; it.nw = !S.ds.w[w.id]; it.nf = !S.ds.f[it.cmb];
+  function newTags(it, w) {
+    it.nw = !S.ds.w[w.id]; it.nf = !S.dst[it.c];
     return it.nw || it.nf ? `<div class="newtags">${it.nw ? '<span class="pill">New word</span>' : ''}${it.nf ? '<span class="pill">New form</span>' : ''}</div>` : '';
   }
   function newTip(it, a, ctx) {
@@ -362,13 +411,13 @@
   // ---------- identify the form ----------
   // Show a generated form; the user taps one chip per attribute. Any valid parse is accepted (rēgēs: nom. or acc. pl.).
   function renderIdentify(it) {
-    const [, id] = it.k.split(':'); const w = BY[id]; const a = an(w), df = S.set.df;
-    const q = Identify.pick(a, drillKeys(a), df); if (!q) return false;
+    const w = BY[it.id], a = an(w), df = S.set.df;
+    const q = Identify.pick(a, [it.key], df); if (!q) return false;
     const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
     const sel = {}; let done = false;
     const entry = w.la.replace(/\s\([^)]*\)$/, '');   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
-    V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w, a, q.key)}
+    V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w)}
       <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
       <div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button>
       <div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div>${it.nf ? '<div class="newtip small" id="pretip">New form for you: take your best guess. A refresher link comes with the answer.</div>' : ''}</div>`;
@@ -828,12 +877,13 @@
       <div class="small muted">New flashcard words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
       <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p>
-      <p class="small muted">Drill settings (which forms, new words per day) are on the Drills tab.</p>
+      <p class="small muted">Drill settings (which forms, questions per set) are on the Drills tab.</p>
       <div class="row wrap" style="margin-top:14px"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
       <input type="file" id="impf" accept="application/json" hidden></div>
       <div class="card"><h2 style="margin-top:0">How it works</h2>
       <p><b>Today</b> is flashcards: a few new words each day plus whatever is due. Answer <b>Right</b> or <b>Wrong</b> (or type the Latin and it’s checked for you). Cards move through Leitner boxes: each right answer moves a card up a box and spaces it out further (1, 3, 7, 14, 30, 60, 120 days); a wrong answer sends it back to the start and shows it again in a few cards. Latin→English and English→Latin are scheduled separately; the English→Latin card unlocks the day after you first get a word right.</p>
       <p><b>Drills</b> ask for one form at a time (macrons optional unless you turn on <b>Require macrons</b>) and check your answer. Choose the moods, voices, tenses, cases and numbers you want. Forms are generated from the dictionary entry using standard paradigms; ${drillWords} of ${W.length} words are drillable. Words that can’t be generated reliably (defective, impersonal, indeclinable words, some irregulars) are left out and say so in the word list. If you think the app marked you wrong unfairly, tap <b>Count as correct</b>.</p>
+      <p>Drills have no schedule: practice in short sets and stop anytime. The app keeps a recent-weighted right/wrong score for each form in each paradigm (say, dative plural in the 3rd declension) and asks more often about forms you miss, haven’t tried, or haven’t seen lately, then picks a word with that form, slightly favoring common words and words you know from flashcards. A form you miss comes back a few questions later with a different word. <b>Weak spots</b> on the Drills tab lists your lowest-accuracy forms.</p>
       <p>The <b>Cheat sheet</b> has endings tables for every declension and conjugation the drills use, plus the main irregular verbs; open it from any drill question.</p>
       <p>Your progress stays on this device (localStorage). No account, no tracking; works offline once installed.</p></div>
       <div class="card"><h2 style="margin-top:0">Sources &amp; credits</h2>
