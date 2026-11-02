@@ -85,3 +85,5 @@ td.en{font-family:inherit;color:var(--muted);white-space:normal}
 .newtip{margin-top:12px;padding:8px 10px;border-radius:10px;background:var(--soft);border:1px dashed var(--line)}
 .newtags{display:flex;gap:6px;margin-top:6px}
 .weak td{vertical-align:top}.weak td:first-child{white-space:normal}
+.list li.sec{position:sticky;top:var(--lt,0);z-index:1;background:var(--soft);cursor:default;padding:6px 8px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.list .sec1{flex-basis:100%;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.list .sec2{flex:1;font-weight:600}.list .secn{font-size:.8rem;color:var(--muted)}

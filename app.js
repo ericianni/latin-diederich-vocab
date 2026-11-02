@@ -840,12 +840,26 @@
     $('#srt').onchange = e => { listSort = e.target.value; listN = 100; fill(); };
     fill();
   }
+  // Diederich's own section titles, as listed in the Hiberna Caroli Raetici 'Lodge' edition (sections I–VIII and sub-sections)
+  const SECT = ['I. Nouns and Related Words', 'II. Pronouns', 'III. Verbs and Related Words', 'IV. Adjectives and Related Words', 'V. Adverbs', 'VI. Interjections', 'VII. Conjunctions', 'VIII. Prepositions and Prefixes'];
+  const SUBSECT = { 1: ['Gods', 'Time', 'Sky', 'Fire', 'Water', 'Earth', 'Plants', 'Food', 'Animals', 'People', 'Body', 'Mind', 'Feelings', 'Talk', 'Writing', 'Work and Play', 'City and Buildings', 'Military', 'Government', 'Social Approval', 'Evil', 'Death', 'Abstractions and Unclassified'],
+    3: ['Verbs Which Express or Affect the Location of the Subject', 'Verbs Which Affect the Location of the Object', 'Verbs Which Express or Affect the State of the Subject', 'Verbs Which Affect the State of the Object', 'Constructive Activities', 'Destructive Activities', 'Verbs Affecting Other Verbs', 'Vocal Activities', 'Mental and Sensory Operations', 'Favor', 'Disfavor'],
+    4: ['Size', 'Number', 'Texture – Density', 'Appearance', 'Position', 'Time', 'Favorable', 'Unfavorable', 'Unclassified'], 5: ['Time', 'Place', 'Cause – Manner', 'Adversative'] };
+  function secHead(sec, n, first) {
+    const [a, b] = sec.split('.').map(Number), subs = SUBSECT[a];
+    return `<li class="sec">${first && subs ? `<span class="sec1">${esc(SECT[a - 1])}</span>` : ''}<span class="sec2">${subs ? esc(b + '. ' + subs[b - 1]) : esc(SECT[a - 1])}</span><span class="secn">${n} word${n === 1 ? '' : 's'}</span></li>`;
+  }
   function fill() {
     const q = listQ.trim(), nq = Morph.norm(q), lq = q.toLowerCase();
     let rows = q ? W.filter(w => Morph.norm(w.la).includes(nq) || w.en.toLowerCase().includes(lq)) : W.slice();
     if (listSort === 'az') rows.sort((a, b) => Morph.norm(a.la).localeCompare(Morph.norm(b.la)));
     else if (listSort === 'diederich') rows.sort((a, b) => a.id - b.id);
-    $('#ul').innerHTML = rows.slice(0, listN).map(w => `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(w.la)}</div><div class="en">${esc(w.en)}</div><div class="det"></div></li>`).join('') || '<li class="muted">No matches.</li>';
+    const cnt = {}; if (listSort === 'diederich') rows.forEach(w => { cnt[w.sec] = (cnt[w.sec] || 0) + 1; });
+    let prev = null;
+    $('#ul').innerHTML = rows.slice(0, listN).map(w => { let h = '';
+      if (listSort === 'diederich' && w.sec !== prev) { h = secHead(w.sec, cnt[w.sec], !prev || prev.split('.')[0] !== w.sec.split('.')[0]); prev = w.sec; }
+      return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(w.la)}</div><div class="en">${esc(w.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
+    const bar = $('#ul').previousElementSibling; if (bar) $('#ul').style.setProperty('--lt', bar.offsetHeight + 'px');
     $('#moreBox').innerHTML = rows.length > listN ? `<button class="big" id="lm" style="margin-top:10px">Show more (${rows.length - listN})</button>` : '';
     if ($('#lm')) $('#lm').onclick = () => { listN += 200; fill(); };
     document.querySelectorAll('#ul li[data-id]').forEach(li => li.onclick = e => {
@@ -864,7 +878,7 @@
       else forms = ['sg', 'pl'].map(n => T(['m', 'f', 'n'].filter(g => a.tbl[g + '.nom.' + n]), Morph.CASES_X.filter(r => a.tbl['m.' + r + '.' + n] || a.tbl['f.' + r + '.' + n]), (r, g) => a.tbl[g + '.' + r + '.' + n])).join('<div style="height:6px"></div>');
     }
     return `<div class="answer small"><div>Diederich section ${w.s || '–'}.${w.ss || ''} · frequency ${w.f != null ? w.f : '–'} · ${POS_SHORT[w.pos]}</div>
-      <div>Latin→English: ${status('r:' + w.id)} · English→Latin: ${status('p:' + w.id)}${a.skip ? '' : ' · drill: ' + status(unitOf(w, a))}</div>
+      <div>Latin→English: ${status('r:' + w.id)} · English→Latin: ${status('p:' + w.id)}${a.skip ? '' : ' · drills: ' + (S.ds.w[w.id] ? 'seen ' + S.ds.w[w.id] + '×' : 'not yet')}</div>
       ${a.skip ? `<div class="muted">Not in form drills: ${esc(a.skip)}</div>` : `<div class="forms">${forms}</div>`}
       ${a.flag ? `<div class="muted">Note: ${esc(a.flag)}</div>` : ''}</div>`;
   }
@@ -904,6 +918,7 @@
   fetch('data/words.json').then(r => r.json()).then(all => {
     W = all.filter(w => !w.d).sort((a, b) => (a.r || 1e9) - (b.r || 1e9) || a.id - b.id);
     W.forEach(w => { BY[w.id] = w; });
+    let ps = null; all.sort((a, b) => a.id - b.id).forEach(w => { if (w.s) ps = w.s + '.' + w.ss; w.sec = ps; });   // 3 entries without a section sit inside the one before
     UNITS = buildUnits();
     const t = (location.hash || '').slice(1);
     save();   // persist any v1 -> v2 migration
