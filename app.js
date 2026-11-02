@@ -272,7 +272,7 @@
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
         <div class="small muted chiph">New words per day</div><div class="seg" id="sdr">${[3, 5, 10].map(n => `<button data-n="${n}" class="${S.set.drillNew === n ? 'on' : ''}">${n}</button>`).join('')}</div>
-        <p class="small muted">Imperatives come in present and future (use the Tense chips). Gerund, gerundive and supine ignore the voice and tense chips. Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms. Locative exists only for domus, rūs, humus, bellum and mīlitia.</p>
+        <p class="small muted">Imperatives come in present and future (use the Tense chips). Gerund, gerundive and supine ignore the voice and tense chips. Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Locative exists only for domus, rūs, humus, bellum and mīlitia.</p>
         <button class="primary big" id="tdone">Done</button>
         <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}
       </div>
@@ -346,8 +346,9 @@
     const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
     const sel = {}; let done = false;
+    const entry = w.la.replace(/\s\([^)]*\)$/, '');   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
     V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form${it.isNew ? ' · <span class="pill">new</span>' : ''}</div>
-      <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</b> · ${esc(w.en.slice(0, 80))}</div>
+      <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
       <div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button>
       <div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div></div>`;
     const draw = () => {
@@ -368,8 +369,9 @@
       document.querySelectorAll('#idrows .idrow').forEach(r => { const attr = r.dataset.a, want = g.best.at[attr];
         r.querySelectorAll('button').forEach(b => { b.disabled = true; const v = b.dataset.v;
           if (v === sel[attr]) b.classList.add(off.has(attr) ? 'wrong' : 'right'); else if (off.has(attr) && want != null && Identify.hit(want, v)) b.classList.add('want'); }); });
-      const many = ps.length > 1, lex = a.kind === 'noun' ? `<div class="small muted">${esc(w.la.split(',').slice(0, 2).join(','))}: ${Identify.genders(w, a).map(x => ({ m: 'masculine', f: 'feminine', n: 'neuter' })[x]).join(' or ')}, ${a.decl === 'irr' ? 'irregular' : ORD[a.decl] + ' declension'}</div>`
-        : a.kind === 'adj' ? `<div class="small muted">${a.decl === 3 ? '3rd' : '1st/2nd'}-declension adjective</div>` : '';
+      const many = ps.length > 1, lex = a.kind === 'noun' ? `<div class="small muted"><b>${esc(entry)}</b>: ${Identify.genders(w, a).map(x => ({ m: 'masculine', f: 'feminine', n: 'neuter' })[x]).join(' or ')}, ${a.decl === 'irr' ? 'irregular' : ORD[a.decl] + ' declension'}</div>`
+        : a.kind === 'adj' ? `<div class="small muted"><b>${esc(entry)}</b>: ${a.decl === 3 ? '3rd' : '1st/2nd'}-declension adjective</div>`
+        : ps.some(p => p.dep) ? `<div class="small muted"><b>${esc(entry)}</b> is deponent: passive forms, active meaning. Voice is judged by the form${ps.some(p => p.dep && p.at.voice === 'act') ? ' (its present and future participles and future infinitive look active)' : ''}.</div>` : '';
       const offTxt = g.off.map(x => Identify.TITLE[x].toLowerCase().replace('mood / form', 'mood')).join(', ');
       $('#ans').innerHTML = `<div class="answer">${g.ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong${offTxt ? ' — check the ' + esc(offTxt) : ''}</div>`}
         <div class="small muted chiph">${many ? `${ps.length} valid answers (any one counts)` : 'The answer'}</div>

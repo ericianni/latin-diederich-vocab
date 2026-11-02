@@ -8,7 +8,7 @@
   const C5 = ['nom', 'gen', 'dat', 'acc', 'abl'], CX = ['nom', 'gen', 'dat', 'acc', 'abl', 'voc', 'loc'];
   const L = {
     mood: { ind: 'Indicative', sub: 'Subjunctive', imp: 'Imperative', inf: 'Infinitive', ptc: 'Participle', ger: 'Gerund', gdv: 'Gerundive', sup: 'Supine' },
-    voice: { act: 'Active', pas: 'Passive', dep: 'Deponent' },
+    voice: { act: 'Active', pas: 'Passive' },
     tense: { pres: 'Present', impf: 'Imperfect', fut: 'Future', perf: 'Perfect', plup: 'Pluperfect', fperf: 'Fut. perfect' },
     person: { 1: '1st', 2: '2nd', 3: '3rd' },
     num: { sg: 'Singular', pl: 'Plural' },
@@ -52,6 +52,10 @@
     Object.defineProperty(a, '_x', { value: x, enumerable: false });
     return x;
   }
+  // voice is identified by form: deponents count as passive, except their active-looking forms
+  // (present & future participle, future infinitive: hortāns, hortātūrus, hortātūrus esse)
+  const formVoice = (v, mood, tense) => v !== 'dep' ? v : (mood === 'ptc' && tense !== 'perf') || (mood === 'inf' && tense === 'fut') ? 'act' : 'pas';
+  const isDep = key => key.split('.')[1] === 'dep';
   function attrs(a, w, key) {
     if (a.kind === 'noun') { const [c, n] = key.split('.'); return { case: c, num: n, gender: genders(w, a), decl: String(a.decl) }; }
     if (a.kind === 'adj') { const [g, c, n] = key.split('.'); return { case: c, num: n, gender: [g], decl: a.decl === 3 ? '3' : '1/2' }; }
@@ -60,9 +64,10 @@
     if (mood === 'ger') return { mood, case: p[1] };
     if (mood === 'sup') return { mood, case: p[1] === 'um' ? 'acc' : 'abl' };
     if (mood === 'gdv') return Object.assign({ mood }, decl);
-    if (mood === 'inf') return { mood, voice: p[1], tense: p[2] };
-    if (mood === 'ptc') return Object.assign({ mood, voice: p[1], tense: p[2] }, decl);
-    return { mood, voice: p[1], tense: p[2], person: p[3][0], num: p[3][1] === 's' ? 'sg' : 'pl' };
+    const voice = formVoice(p[1], mood, p[2]);
+    if (mood === 'inf') return { mood, voice, tense: p[2] };
+    if (mood === 'ptc') return Object.assign({ mood, voice, tense: p[2] }, decl);
+    return { mood, voice, tense: p[2], person: p[3][0], num: p[3][1] === 's' ? 'sg' : 'pl' };
   }
   const pCases = df => { const c = C5.filter(x => df.cases.includes(x)); return c.length ? c : C5; };
   const pNums = df => df.nums.length ? ['sg', 'pl'].filter(x => df.nums.includes(x)) : ['sg', 'pl'];
@@ -71,7 +76,7 @@
     const at = attrs(a, null, key);
     if (a.kind !== 'verb') return df.cases.includes(at.case) && df.nums.includes(at.num);
     if (!df.moods.includes(at.mood)) return false;
-    if (at.voice && !df.voices.includes(at.voice)) return false;
+    if (at.voice && !df.voices.includes(isDep(key) ? 'dep' : at.voice)) return false;   // the settings still say active / passive / deponent
     if (at.tense && !df.tenses.includes(at.tense)) return false;
     if ((at.mood === 'ptc' || at.mood === 'gdv') && at.gender) return pCases(df).includes(at.case) && pNums(df).includes(at.num);
     return true;
@@ -84,7 +89,7 @@
     return ix;
   }
   function parses(a, w, form, df) {
-    return (index(a).get(M.normM(form)) || []).filter(k => allowed(a, k, df)).map(k => ({ key: k, at: attrs(a, w, k) }));
+    return (index(a).get(M.normM(form)) || []).filter(k => allowed(a, k, df)).map(k => ({ key: k, at: attrs(a, w, k), dep: a.kind === 'verb' && isDep(k) }));
   }
   // choose a question from one of the typed drills' keys: participles and gerundives get a random gender / case / number
   function pick(a, keys, df, rnd) {
@@ -107,7 +112,8 @@
     const moods = ORDER.mood.filter(m => df.moods.includes(m)), r = [['mood', opts('mood', moods)]];
     const m = mood || (moods.length === 1 ? moods[0] : null);
     if (!m) return r;
-    const tenses = MOOD_T[m] && opts('tense', MOOD_T[m].filter(t => df.tenses.includes(t))), voices = opts('voice', ORDER.voice.filter(v => df.voices.includes(v)));
+    const tenses = MOOD_T[m] && opts('tense', MOOD_T[m].filter(t => df.tenses.includes(t))), dep = df.voices.includes('dep'),
+      voices = opts('voice', ['act', 'pas'].filter(v => df.voices.includes(v) || dep && (v === 'pas' || m === 'ptc' || m === 'inf')));
     if (m === 'ind' || m === 'sub' || m === 'imp') r.push(['tense', tenses], ['voice', voices], ['person', opts('person', m === 'imp' ? ['2', '3'] : ['1', '2', '3'])], ['num', opts('num', ['sg', 'pl'])]);
     else if (m === 'inf') r.push(['tense', tenses], ['voice', voices]);
     else if (m === 'ptc') r.push(['tense', tenses], ['voice', voices], ['case', opts('case', pCases(df))], ['num', opts('num', pNums(df))], ['gender', opts('gender', ['m', 'f', 'n'])]);

@@ -58,9 +58,20 @@ eq('mare', 'marī', Object.assign({}, DEF, { cases: ['dat'] }), ['dat.sg']);    
   ok(I.grade({ mood: 'ger', case: 'acc' }, ps).ok, 'amandum ger'); ok(I.grade({ mood: 'gdv', case: 'nom', num: 'sg', gender: 'n' }, ps).ok, 'amandum gdv');
   ok(!I.grade({ mood: 'ger', case: 'dat' }, ps).ok, 'amandum ger dat'); }
 
+// deponents: voice is identified by form (passive-looking -> Passive; hortāns, hortātūrus -> Active)
+{ const [w, a] = find('hortor'); const v = (f, df) => I.parses(a, w, f, df).map(p => p.at.voice + (p.dep ? '*' : '')).join();
+  ok(v('hortāris', DEF) === 'pas*', 'hortāris passive form', v('hortāris', DEF)); ok(v('hortātur', DEF) === 'pas*', 'hortātur');
+  ok(/^(act\*,)*act\*$/.test(v('hortāns', ALL)), 'hortāns active form', v('hortāns', ALL)); ok(v('hortātus', ALL) === 'pas*', 'hortātus passive form', v('hortātus', ALL));
+  ok(v('hortātūrus', ALL) === 'act*', 'hortātūrus', v('hortātūrus', ALL));
+  ok(I.grade({ mood: 'ind', tense: 'pres', voice: 'pas', person: '2', num: 'sg' }, I.parses(a, w, 'hortāris', DEF)).ok, 'hortāris graded passive');
+  ok(!I.grade({ mood: 'ind', tense: 'pres', voice: 'act', person: '2', num: 'sg' }, I.parses(a, w, 'hortāris', DEF)).ok, 'hortāris active is wrong');
+  const only = Object.assign({}, ALL, { voices: ['dep'] }), r = m => Object.fromEntries(I.rows(a, only, m)).voice.map(x => x[0]).join();
+  ok(r('ind') === 'pas' && r('ptc') === 'act,pas' && r('inf') === 'act,pas', 'deponent-only voice rows', r('ind'), r('ptc'));
+  for (const df of [only, DEF]) ok(!I.rows(a, df, 'ind').some(([k, v]) => v.some(x => x[0] === 'dep')), 'no Deponent chip'); }
+
 // chip rows: one allowed value -> a single option (the app pre-selects and locks it); rows follow the mood
 { const [, a] = find('amō'); const r = I.rows(a, DEF); const o = Object.fromEntries(r.map(([k, v]) => [k, v.map(x => x[0])]));
-  ok(o.mood.join() === 'ind' && o.voice.join() === 'act,dep' && o.person.join() === '1,2,3', 'rows default', JSON.stringify(o));
+  ok(o.mood.join() === 'ind' && o.voice.join() === 'act,pas' && o.person.join() === '1,2,3', 'rows default', JSON.stringify(o));
   ok(I.rows(a, ALL).length === 1, 'mood first when several moods');
   const g = Object.fromEntries(I.rows(a, ALL, 'ger')); ok(Object.keys(g).join() === 'mood,case', 'gerund rows');
   const p = Object.fromEntries(I.rows(a, ALL, 'ptc')); ok(Object.keys(p).join() === 'mood,tense,voice,case,num,gender' && p.tense.map(x => x[0]).join() === 'pres,perf,fut', 'participle rows');
@@ -71,7 +82,8 @@ eq('mare', 'marī', Object.assign({}, DEF, { cases: ['dat'] }), ['dat.sg']);    
 // sweep: for every drillable word and every key in the expanded table, the form's own key is among its parses,
 // and every parse's attributes appear in the chip rows for its mood (so a right answer is always possible)
 let n = 0;
-for (const df of [DEF, ALL]) for (const w of W) {
+const DEP = Object.assign({}, ALL, { voices: ['dep'] }), PAS = Object.assign({}, ALL, { voices: ['pas'] });
+for (const df of [DEF, ALL, DEP, PAS]) for (const w of W) {
   const a = M.analyze(w); if (a.skip || !a.tbl || !['noun', 'adj', 'verb'].includes(a.kind)) continue;
   const x = I.expand(a);
   for (const k in x) {
