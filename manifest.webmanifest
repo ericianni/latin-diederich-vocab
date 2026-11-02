@@ -1,0 +1,15 @@
+{
+  "name": "Latin 1400 · Diederich vocabulary",
+  "short_name": "Latin 1400",
+  "description": "Spaced-repetition flashcards and grammar drills for Paul Diederich's high-frequency Latin word list.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf7f2",
+  "theme_color": "#7a2e1d",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
