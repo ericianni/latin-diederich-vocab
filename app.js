@@ -32,6 +32,10 @@
     }
     s.set.df = Object.assign({}, DF, s.set.df || {});
     s.lessons = s.lessons || {};
+    if (!s.ds) {                               // drill stats: words and form combinations seen (words already drilled count as seen)
+      s.ds = { w: {}, f: {} };
+      for (const k of Object.keys(s.cards)) { const m = k.match(/^d:(\d+):/); if (m) s.ds.w[m[1]] = 1; }
+    }
     return s;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or private mode */ } }
@@ -127,7 +131,7 @@
     const first = !S.cards[k];
     S.cards[k] = sched(S.cards[k] || newCard(), right);
     if (first && item.isNew) { if (k[0] === 'd') d.nd++; else d.nv++; }
-    if (k[0] === 'd') d.dn = (d.dn || 0) + 1;
+    if (k[0] === 'd') { d.dn = (d.dn || 0) + 1; const id = k.split(':')[1]; S.ds.w[id] = (S.ds.w[id] || 0) + 1; if (item.cmb) S.ds.f[item.cmb] = (S.ds.f[item.cmb] || 0) + 1; }
     if (k[0] === 'r' && right && !S.cards['p' + k.slice(1)]) { const p = newCard(); p.due = today() + 1; S.cards['p' + k.slice(1)] = p; }
     save();
     Q.done++;
@@ -268,6 +272,7 @@
     const modeCard = `<div class="card"><div class="small muted chiph" style="margin-top:0">How to answer</div><div class="seg" id="dmode">${MODES.map(([m, l]) => `<button data-m="${m}" class="${S.set.dmode === m ? 'on' : ''}" aria-pressed="${S.set.dmode === m}">${l}</button>`).join('')}</div></div>`;
     V().innerHTML = msg + head + modeCard + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
       <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.length}</b> words match</div>
+      <div class="small muted" style="margin-top:2px">Seen in drills so far: ${plur(Object.keys(S.ds.w).length, 'word')} · ${plur(Object.keys(S.ds.f).length, 'form')}</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
@@ -319,13 +324,13 @@
     const answers = a.tbl[key];
     const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective';
     const ctx = csTarget(a, key);
-    V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}${it.isNew ? ' · <span class="pill">new</span>' : ''}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>
+    V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w, a, key)}
       <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
       <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
       <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
       <div class="small muted" style="margin-top:6px">${macHint()}${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(answers[0]) ? ' Two words, e.g. “amātus est”.' : ''}</div>
-      <button class="primary big" id="chk" style="margin-top:10px">Check</button></div></div>`;
-    $('#cs').onclick = () => openSheet(ctx.id);
+      <button class="primary big" id="chk" style="margin-top:10px">Check</button></div>${newTip(it, a, ctx)}</div>`;
+    $('#cs').onclick = () => openSheet(ctx.id); bindTip(ctx);
     const go = () => {
       const v = $('#typed').value.trim();
       const ok = !!v && Morph.check(v, answers, S.set.strictMac);
@@ -338,6 +343,22 @@
     $('#chk').onclick = go; bindStop(); bindTyped(go);
   }
 
+  // ---------- "new" tags: a word never drilled, or a form (paradigm + attributes) never attempted ----------
+  const plur = (n, x) => `<b>${n}</b> ${x}${n === 1 ? '' : 's'}`;
+  const pdg = a => a.kind === 'verb' ? 'v' + (a.conj === 'irr' ? IRR_ID[a.irr] || 'irr' : conjKey(a)) : a.kind === 'noun' ? 'n' + (a.decl === 3 && a.istem ? '3i' : a.decl) : 'a' + (a.decl === 3 ? '3' : '12');
+  const LESSON_ID = { vpossum: 'sum', vsum: 'sum', veo: 'eo', vfero: 'fero', vvolo: 'volo', a12: 'a12', a3: 'a3' };
+  const lessonOf = a => { const p = pdg(a), id = LESSON_ID[p] || (/^(n[1-5]|n3i|v[1-4]|v3io)$/.test(p) ? p : null); return LS.find(l => l.id === id) || null; };
+  function newTags(it, w, a, key) {
+    it.cmb = pdg(a) + '|' + key; it.nw = !S.ds.w[w.id]; it.nf = !S.ds.f[it.cmb];
+    return it.nw || it.nf ? `<div class="newtags">${it.nw ? '<span class="pill">New word</span>' : ''}${it.nf ? '<span class="pill">New form</span>' : ''}</div>` : '';
+  }
+  function newTip(it, a, ctx) {
+    if (!it.nf) return '';
+    const l = lessonOf(a);
+    return `<div class="newtip small">New form for you. Quick refresher: <button class="link" data-tip="cs">📖 ${esc(ctx.label)}</button>${l ? ` · <button class="link" data-tip="${l.id}">Lesson: ${esc(l.title)}</button> <span class="muted">(leaves the drill; progress is saved)</span>` : ''}</div>`;
+  }
+  const bindTip = ctx => document.querySelectorAll('[data-tip]').forEach(b => b.onclick = () => b.dataset.tip === 'cs' ? openSheet(ctx.id) : (setTab('learn'), openLesson(b.dataset.tip)));
+
   // ---------- identify the form ----------
   // Show a generated form; the user taps one chip per attribute. Any valid parse is accepted (rēgēs: nom. or acc. pl.).
   function renderIdentify(it) {
@@ -347,10 +368,10 @@
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
     const sel = {}; let done = false;
     const entry = w.la.replace(/\s\([^)]*\)$/, '');   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
-    V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form${it.isNew ? ' · <span class="pill">new</span>' : ''}</div>
+    V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w, a, q.key)}
       <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
       <div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button>
-      <div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div></div>`;
+      <div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div>${it.nf ? '<div class="newtip small" id="pretip">New form for you: take your best guess. A refresher link comes with the answer.</div>' : ''}</div>`;
     const draw = () => {
       const rows = Identify.rows(a, df, sel.mood), keep = new Set(rows.map(r => r[0]));
       for (const k of Object.keys(sel)) if (!keep.has(k)) delete sel[k];
@@ -365,7 +386,7 @@
     };
     const go = () => {
       if (done || $('#chk').disabled) return; done = true;
-      const g = Identify.grade(sel, ps), off = new Set(g.off);
+      const g = Identify.grade(sel, ps), off = new Set(g.off); if ($('#pretip')) $('#pretip').remove();
       document.querySelectorAll('#idrows .idrow').forEach(r => { const attr = r.dataset.a, want = g.best.at[attr];
         r.querySelectorAll('button').forEach(b => { b.disabled = true; const v = b.dataset.v;
           if (v === sel[attr]) b.classList.add(off.has(attr) ? 'wrong' : 'right'); else if (off.has(attr) && want != null && Identify.hit(want, v)) b.classList.add('want'); }); });
@@ -377,9 +398,9 @@
         <div class="small muted chiph">${many ? `${ps.length} valid answers (any one counts)` : 'The answer'}</div>
         <ul class="parses">${ps.map(p => `<li${!g.ok && p === g.best ? ' class="near"' : ''}><b>${esc(q.form)}</b> = ${esc(Identify.parseLabel(a, p))}</li>`).join('')}</ul>${lex}
         ${a.tbl[tkey] ? `<div class="forms">${miniTable(a, tkey)}</div>` : ''}
-        <div class="row" style="margin-top:10px"><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>
-        <div class="row" style="margin-top:10px"><button class="primary big" data-r="${g.ok ? 1 : 0}">Next</button></div></div>`;
-      $('#cs').onclick = () => openSheet(ctx.id);
+        ${it.nf ? '' : `<div class="row" style="margin-top:10px"><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>`}
+        ${newTip(it, a, ctx)}<div class="row" style="margin-top:10px"><button class="primary big" data-r="${g.ok ? 1 : 0}">Next</button></div></div>`;
+      if ($('#cs')) $('#cs').onclick = () => openSheet(ctx.id); bindTip(ctx);
       bindRW(it); focusNext();
     };
     draw(); $('#chk').onclick = go; bindStop();
