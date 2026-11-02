@@ -1,5 +1,5 @@
 // Offline-first service worker: precache the whole app, serve from cache, refresh in background.
-const CACHE = 'latin1400-v2';
+const CACHE = 'latin1400-v3';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'morph.js', 'data/words.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });

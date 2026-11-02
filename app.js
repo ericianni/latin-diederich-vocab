@@ -65,7 +65,8 @@
     if (a.kind === 'verb') {
       const [mood, voice, tense] = k;
       if (key === 'ind.act.pres.1s' || key === 'ind.dep.pres.1s') return false;      // that's the headword
-      return df.moods.includes(mood) && df.voices.includes(voice) && (mood === 'imp' || df.tenses.includes(tense));
+      if (mood === 'ger' || mood === 'gdv' || mood === 'sup') return df.moods.includes(mood);   // no voice / tense choice
+      return df.moods.includes(mood) && df.voices.includes(voice) && df.tenses.includes(tense);
     }
     if (a.kind === 'noun') return key !== 'nom.sg' && df.cases.includes(k[0]) && df.nums.includes(k[1]);
     return key !== 'm.nom.sg' && df.cases.includes(k[1]) && df.nums.includes(k[2]);
@@ -227,11 +228,11 @@
   // ---------- drills ----------
   const CHIPS = {
     types: [['verb', 'Verbs'], ['noun', 'Nouns'], ['adj', 'Adjectives']],
-    moods: [['ind', 'Indicative'], ['sub', 'Subjunctive'], ['imp', 'Imperative'], ['inf', 'Infinitive'], ['ptc', 'Participle']],
+    moods: [['ind', 'Indicative'], ['sub', 'Subjunctive'], ['imp', 'Imperative'], ['inf', 'Infinitive'], ['ptc', 'Participle'], ['ger', 'Gerund'], ['gdv', 'Gerundive'], ['sup', 'Supine']],
     voices: [['act', 'Active'], ['pas', 'Passive'], ['dep', 'Deponent']],
     tenses: [['pres', 'Present'], ['impf', 'Imperfect'], ['fut', 'Future'], ['perf', 'Perfect'], ['plup', 'Pluperfect'], ['fperf', 'Fut. perfect']],
     conj: [['1', '1st'], ['2', '2nd'], ['3', '3rd'], ['3io', '3rd -iō'], ['4', '4th'], ['irr', 'Irregular']],
-    cases: [['nom', 'Nom.'], ['gen', 'Gen.'], ['dat', 'Dat.'], ['acc', 'Acc.'], ['abl', 'Abl.']],
+    cases: [['nom', 'Nom.'], ['gen', 'Gen.'], ['dat', 'Dat.'], ['acc', 'Acc.'], ['abl', 'Abl.'], ['voc', 'Voc.'], ['loc', 'Loc.']],
     nums: [['sg', 'Singular'], ['pl', 'Plural']],
     decl: [['1', '1st'], ['2', '2nd'], ['3', '3rd'], ['4', '4th'], ['5', '5th'], ['irr', 'Irregular']],
   };
@@ -251,10 +252,10 @@
     V().innerHTML = head + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
       <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.length}</b> words match</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
-        <h3>Verbs</h3>${chipRow('moods', 'Mood')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
+        <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
         <div class="small muted chiph">New words per day</div><div class="seg" id="sdr">${[3, 5, 10].map(n => `<button data-n="${n}" class="${S.set.drillNew === n ? 'on' : ''}">${n}</button>`).join('')}</div>
-        <p class="small muted">Imperatives are present tense only. Passive appears only for verbs that have one (not sum, eō, volō, intransitives). Deponents always use passive forms.</p></div>` : ''}
+        <p class="small muted">Imperatives come in present and future (use the Tense chips). Gerund, gerundive and supine ignore the voice and tense chips. Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms. Locative exists only for domus, rūs, humus, bellum and mīlitia.</p></div>` : ''}
       </div>
       <div class="card"><button class="big" id="opencs">📖 Cheat sheet — endings tables</button></div>`;
     if ($('#dgo')) $('#dgo').onclick = () => startSession('drill');
@@ -280,10 +281,11 @@
     const k = key.split('.');
     let rows;
     if (a.kind === 'verb') {
-      const pre = k[0] === 'inf' || k[0] === 'ptc' ? k[0] + '.' + k[1] + '.' : k.slice(0, 3).join('.') + '.';
-      rows = Object.keys(a.tbl).filter(x => x.startsWith(pre)).map(x => [x.slice(pre.length).replace(/^(\d)s$/, '$1 sg').replace(/^(\d)p$/, '$1 pl'), x]);
-    } else if (a.kind === 'noun') rows = Morph.CASES.map(c => [c, c + '.' + k[1]]);
-    else rows = Morph.CASES.map(c => [c, k[0] + '.' + c + '.' + k[2]]);
+      const pre = ['ger', 'gdv', 'sup'].includes(k[0]) ? k[0] + '.' : k[0] === 'inf' || k[0] === 'ptc' ? k[0] + '.' + k[1] + '.' : k.slice(0, 3).join('.') + '.';
+      const NM = { m: 'masc.', f: 'fem.', n: 'neut.', um: '-um', u: '-ū' };
+      rows = Object.keys(a.tbl).filter(x => x.startsWith(pre)).map(x => { const r = x.slice(pre.length); return [NM[r] || r.replace(/^(\d)s$/, '$1 sg').replace(/^(\d)p$/, '$1 pl'), x]; });
+    } else if (a.kind === 'noun') rows = Morph.CASES_X.map(c => [c, c + '.' + k[1]]);
+    else rows = Morph.CASES_X.map(c => [c, k[0] + '.' + c + '.' + k[2]]);
     return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(a.tbl[x].join(' / '))}</td></tr>`).join('')}</table>`;
   }
   function renderDrill(it) {
@@ -296,7 +298,7 @@
       <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
       <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
       <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
-      <div class="small muted" style="margin-top:6px">Macrons optional.${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse)$/.test(answers[0]) ? ' Two words, e.g. “amātus est”.' : ''}</div>
+      <div class="small muted" style="margin-top:6px">Macrons optional.${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(answers[0]) ? ' Two words, e.g. “amātus est”.' : ''}</div>
       <button class="primary big" id="chk" style="margin-top:10px">Check</button></div></div>`;
     $('#cs').onclick = () => openSheet(ctx.id);
     const go = () => {
@@ -321,10 +323,16 @@
     if (a.kind === 'verb') {
       const [mood, voice] = key.split('.');
       const base = a.conj === 'irr' ? IRR_ID[a.irr] || 'irr' : String(a.conj);
+      if (mood === 'ger' || mood === 'gdv' || mood === 'sup') {
+        const nm = a.conj === 'irr' ? (a.irr === 'dō' ? '1st conj.' : a.irr) : a.voice === 'dep' ? 'deponent' : ORD[a.conj] + ' conj.';
+        return { id: a.voice === 'dep' ? 'cs-v-dep-ger-act' : `cs-v-${base}-ger-act`, label: `${nm} · ${Morph.MOODS[mood]}` };
+      }
       const v = voice === 'dep' ? 'pas' : voice;
       const name = a.conj === 'irr' ? (a.irr === 'dō' ? '1st conj.' : a.irr) : ORD[a.conj] + ' conj.';
       return { id: `cs-v-${base}-${mood}-${v}`, label: `${name} · ${Morph.MOODS[mood]}${voice === 'pas' || voice === 'dep' ? ' passive' : ''}` };
     }
+    const kc = key.split('.')[a.kind === 'noun' ? 0 : 1];
+    if (kc === 'voc' || kc === 'loc') return { id: 'cs-vl', label: kc === 'voc' ? 'vocative' : 'locative' };
     if (a.kind === 'noun') {
       const id = a.decl === 'irr' ? 'irr' : a.decl === 3 && a.istem ? '3i' : String(a.decl);
       return { id: 'cs-n-' + id, label: a.decl === 'irr' ? 'irregular nouns' : ORD[a.decl] + ' declension' + (id === '3i' ? ' (i-stem)' : '') };
@@ -346,13 +354,13 @@
     const stem = a.decl === 'irr' ? null : [g.replace(/(ae|ī|is|ūs|ēī|eī)$/, '')];
     const nums = ['sg', 'pl'].filter(n => a.tbl['nom.' + n]);
     return `<div class="cst"><div class="csh">${esc(w.la.split(',').slice(0, 2).join(','))} <span class="muted">${esc(note || '')}</span></div><table><tr><th></th>${nums.map(n => `<th>${n === 'sg' ? 'singular' : 'plural'}</th>`).join('')}</tr>
-      ${Morph.CASES.map(c => `<tr><th>${c}.</th>${nums.map(n => `<td>${cell(a, c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table></div>`;
+      ${Morph.CASES_X.filter(c => nums.some(n => a.tbl[c + '.' + n])).map(c => `<tr><th>${c}.</th>${nums.map(n => `<td>${cell(a, c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table></div>`;
   }
   function adjTable(h, note) {
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
     const g = a.tbl['m.gen.sg'][0], stem = [g.replace(/(īus|ī|is)$/, '')];
     const gs = ['m', 'f', 'n'].filter(x => a.tbl[x + '.nom.sg']);
-    const one = n => `<table><tr><th>${n === 'sg' ? 'sg.' : 'pl.'}</th>${gs.map(x => `<th>${{ m: 'masc.', f: 'fem.', n: 'neut.' }[x]}</th>`).join('')}</tr>${Morph.CASES.map(c => `<tr><th>${c}.</th>${gs.map(x => `<td>${cell(a, x + '.' + c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table>`;
+    const one = n => `<table><tr><th>${n === 'sg' ? 'sg.' : 'pl.'}</th>${gs.map(x => `<th>${{ m: 'masc.', f: 'fem.', n: 'neut.' }[x]}</th>`).join('')}</tr>${Morph.CASES_X.filter(c => gs.some(x => a.tbl[x + '.' + c + '.' + n])).map(c => `<tr><th>${c}.</th>${gs.map(x => `<td>${cell(a, x + '.' + c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table>`;
     return `<div class="cst"><div class="csh">${esc(w.la.split(',').slice(0, 3).join(','))} <span class="muted">${esc(note || '')}</span></div>${one('sg')}<div style="height:6px"></div>${one('pl')}</div>`;
   }
   // full verb tables, grouped by mood and voice; `id` gives each group an anchor
@@ -366,7 +374,10 @@
       const vName = v === 'dep' ? 'deponent (passive forms)' : Morph.VOICES[v];
       const anchor = id ? ` id="${id}-${m}-${v === 'dep' ? 'pas' : v}"` : '';
       let body;
-      if (m === 'imp') body = `<table><tr><th>2 sg</th><td>${cell(a, `imp.${v}.pres.2s`, stems)}</td><th>2 pl</th><td>${cell(a, `imp.${v}.pres.2p`, stems)}</td></tr></table>`;
+      if (m === 'imp') {
+        const ps = ['2s', '3s', '2p', '3p'], ts = ['pres', 'fut'].filter(t => has(`imp.${v}.${t}`));
+        body = `<table><tr><th></th>${ts.map(t => `<th>${Morph.TENSES[t]}</th>`).join('')}</tr>${ps.filter(p => ts.some(t => a.tbl[`imp.${v}.${t}.${p}`])).map(p => `<tr><th>${p}</th>${ts.map(t => `<td>${cell(a, `imp.${v}.${t}.${p}`, stems)}</td>`).join('')}</tr>`).join('')}</table>`;
+      }
       else if (m === 'ind') body = fin(m, v, ['pres', 'impf', 'fut']) + '<div style="height:6px"></div>' + (has(`ind.${v}.perf`) ? fin(m, v, ['perf', 'plup', 'fperf']) : '');
       else body = fin(m, v, ['pres', 'impf']) + '<div style="height:6px"></div>' + (has(`sub.${v}.perf`) ? fin(m, v, ['perf', 'plup']) : '');
       out.push(`<div class="csg"${anchor}><div class="csh">${Morph.MOODS[m]} · ${vName}</div><div class="forms">${body}</div></div>`);
@@ -375,7 +386,15 @@
       const ks = Object.keys(a.tbl).filter(k => k.startsWith(m + '.')); if (!ks.length) return '';
       return `<div class="csg" ${id ? `id="${id}-${m}-act"` : ''}><div class="csh">${Morph.MOODS[m]}s</div><table>${ks.map(k => `<tr><th>${esc(Morph.label('verb', k).replace(/ (infinitive|participle)/, '').replace(' (nom. masc. sg.)', ''))}</th><td>${cell(a, k, stems)}</td></tr>`).join('')}</table></div>`;
     }).join('');
-    return out.join('') + nf;
+    let gx = '';
+    if (has('ger.') || has('sup.')) {
+      const row = (l, k) => a.tbl[k] ? `<tr><th>${l}</th><td>${cell(a, k, stems)}</td></tr>` : '';
+      gx = `<div class="csg" ${id ? `id="${id}-ger-act"` : ''}><div class="csh">gerund · gerundive · supine</div><table>
+        ${['gen', 'dat', 'acc', 'abl'].map(c => row('gerund ' + c + '.', 'ger.' + c)).join('')}
+        ${a.tbl['gdv.m'] ? `<tr><th>gerundive</th><td>${['m', 'f', 'n'].map(g => cell(a, 'gdv.' + g, stems)).join(', ')}</td></tr>` : ''}
+        ${row('supine -um', 'sup.um')}${row('supine -ū', 'sup.u')}</table></div>`;
+    }
+    return out.join('') + nf + gx;
   }
   function verbBlock(h, id, title, note) {
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
@@ -385,6 +404,23 @@
     return `<details class="cs" id="${id}"><summary><b>${esc(title)}</b> <span class="muted">${esc(w.la.replace(/\s\([^)]*\)/g, ''))}</span></summary>${note ? `<p class="small muted">${note}</p>` : ''}${verbGroups(a, stems, id)}</details>`;
   }
   const det = (id, title, body, note) => `<details class="cs" id="${id}"><summary><b>${title}</b></summary>${note ? `<p class="small muted">${note}</p>` : ''}${body}</details>`;
+  function vocLocHTML() {
+    const rows = [['dominus'], ['fīlius'], ['puer'], ['deus'], ['puella'], ['rēx']].map(([h]) => { const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
+      return `<tr><th>${esc(h)}</th><td>${esc(a.tbl['voc.sg'].join(' / '))}</td><td>${esc((a.tbl['voc.pl'] || ['–']).join(' / '))}</td></tr>`; }).join('');
+    const adjs = ['bonus', 'ēgregius', 'meus'].map(h => { const w = findW(h); if (!w) return ''; const a = an(w); return a.skip ? '' : `<tr><th>${esc(h)}</th><td>${esc(a.tbl['m.voc.sg'].join(' / '))}</td><td>${esc(a.tbl['m.voc.pl'].join(' / '))}</td></tr>`; }).join('');
+    const locs = ['domus', 'rūs', 'humus', 'bellum', 'mīlitia'].map(h => { const w = findW(h); if (!w) return ''; const a = an(w); return a.skip || !a.tbl['loc.sg'] ? '' : `<tr><th>${esc(h)}</th><td>${esc(a.tbl['loc.sg'].join(' / '))}</td></tr>`; }).join('');
+    return `<div class="cst"><div class="csh">Vocative</div><table><tr><th></th><th>singular</th><th>plural</th></tr>${rows}${adjs}</table></div>
+      <div class="cst"><div class="csh">Locative <span class="muted">(“at / in”; only these words on the list take it)</span></div><table>${locs}</table>
+      <p class="small muted">Rule: 1st/2nd-decl. singular = genitive (Rōmae, bellī); plural and 3rd decl. = ablative (Athēnīs, rūre / rūrī). Diederich’s list has no city names, so city locatives aren’t drilled.</p></div>`;
+  }
+  function gxSummary() {
+    const L = [['amō', '1st'], ['moneō', '2nd'], ['regō', '3rd'], ['capiō', '3rd -iō'], ['audiō', '4th'], ['hortor', 'deponent']];
+    const rows = L.map(([h, l]) => { const w = findW(h); if (!w) return []; const a = an(w), T = a.tbl, v = a.voice === 'dep' ? 'dep' : 'act', g = k => T[k] ? esc(T[k][0]) : '–';
+      return [`<tr><th>${l}</th><td>${g('ger.gen')}</td><td>${g('gdv.m')}</td><td>${g('sup.um')}</td></tr>`, `<tr><th>${l}</th><td>${g(`imp.${v}.fut.2s`)}</td><td>${g(`imp.${v}.fut.3p`)}</td></tr>`]; });
+    return `<div class="cst"><table><tr><th></th><th>gerund (gen.)</th><th>gerundive</th><th>supine</th></tr>${rows.map(r => r[0] || '').join('')}</table></div>
+      <div class="cst"><div class="csh">Future imperative</div><table><tr><th></th><th>2nd sg</th><th>3rd pl</th></tr>${rows.map(r => r[1] || '').join('')}</table>
+      <p class="small muted">Future imperative active: -tō, -tō, -tōte, -ntō (amātō, amantō); passive: -tor, -tor, -ntor. Irregular: estō / suntō, ītō / euntō, fertō / feruntō, nōlītō / nōluntō. No gerund or supine for sum, possum, nōlō, mālō, fīō; eō has a gerund (eundī) and supine (itum) but no gerundive; ferō has ferendus.</p></div>`;
+  }
   let CHEAT = null;
   function cheatHTML() {
     if (CHEAT) return CHEAT;
@@ -398,11 +434,13 @@
     ${det('cs-n-4', '4th declension', nounTable('manus', 'f.') + nounTable('cornū', 'neuter'), 'Gen. sg. -ūs.')}
     ${det('cs-n-5', '5th declension', nounTable('rēs', 'f.') + nounTable('diēs', 'm.'), 'Gen. sg. -eī / -ēī.')}
     ${det('cs-n-irr', 'Irregular nouns', nounTable('domus') + nounTable('vīs') + nounTable('deus'))}
+    ${det('cs-vl', 'Vocative &amp; locative', vocLocHTML(), 'Vocative (calling someone): same as the nominative, except 2nd-declension masculine -us → -e (domine, bone) and -ius → -ī (fīlī; common nouns also -ie). deus → deus (pl. dī); meus → mī. Plural vocative = nominative plural.')}
     <h2 id="cs-adjs">Adjectives</h2>
     ${det('cs-a-12', '1st/2nd declension', adjTable('bonus') + adjTable('līber', '-er, keeps e') + adjTable('pulcher', '-er, drops e') + adjTable('tōtus', 'gen. -īus, dat. -ī'), 'Feminine like puella; masculine and neuter like dominus and bellum. ūnus, sōlus, tōtus, nūllus, alius etc. have gen. sg. -īus and dat. sg. -ī.')}
     ${det('cs-a-3', '3rd declension', adjTable('ācer', 'three endings') + adjTable('omnis', 'two endings') + adjTable('ingēns', 'one ending') + adjTable('melior', 'comparative (not i-stem)'), 'i-stems: abl. sg. -ī, gen. pl. -ium, neut. pl. -ia. Comparatives use -e, -um, -a.')}
     <h2 id="cs-verbs">Verbs</h2>
     <p class="small muted">Perfect passive forms (and all deponent perfects) = perfect participle + a form of <i>sum</i>; the participle agrees with the subject (amātus / amāta / amātum est).</p>
+    ${det('cs-v-gx', 'At a glance: gerund, gerundive, supine, future imperative', gxSummary(), 'Gerund = verbal noun (amandī “of loving”); no nominative — use the infinitive. Gerundive = passive verbal adjective, “to be …” (amandus, -a, -um), declined like bonus; deponent gerundives are passive in meaning too (hortandus “to be encouraged”). Supine in -um after verbs of motion (vēnit spectātum), in -ū with adjectives (facile dictū). Future passive infinitive = supine + īrī (amātum īrī).')}
     ${verbBlock('amō', 'cs-v-1', '1st conjugation')}
     ${verbBlock('moneō', 'cs-v-2', '2nd conjugation')}
     ${verbBlock('regō', 'cs-v-3', '3rd conjugation', 'dīcō, dūcō and faciō have short imperatives: dīc, dūc, fac.')}
@@ -514,8 +552,8 @@
     if (!a.skip) {
       const T = (cols, rows, get) => `<table><tr><th></th>${cols.map(c => `<th>${c}</th>`).join('')}</tr>${rows.map(r => `<tr><th>${r}</th>${cols.map(c => `<td>${esc((get(r, c) || ['–']).join(' / '))}</td>`).join('')}</tr>`).join('')}</table>`;
       if (a.kind === 'verb') forms = verbGroups(a, null, null) + (a.noPassiveWhy ? `<div class="small muted">No passive: ${esc(a.noPassiveWhy)}.</div>` : '') + (a.note ? `<div class="small muted">${esc(a.note)}</div>` : '');
-      else if (a.kind === 'noun') forms = T(['sg', 'pl'].filter(n => a.tbl['nom.' + n] || a.tbl['gen.' + n]), Morph.CASES, (r, c) => a.tbl[r + '.' + c]);
-      else forms = ['sg', 'pl'].map(n => T(['m', 'f', 'n'].filter(g => a.tbl[g + '.nom.' + n]), Morph.CASES, (r, g) => a.tbl[g + '.' + r + '.' + n])).join('<div style="height:6px"></div>');
+      else if (a.kind === 'noun') forms = T(['sg', 'pl'].filter(n => a.tbl['nom.' + n] || a.tbl['gen.' + n]), Morph.CASES_X.filter(r => a.tbl[r + '.sg'] || a.tbl[r + '.pl']), (r, c) => a.tbl[r + '.' + c]);
+      else forms = ['sg', 'pl'].map(n => T(['m', 'f', 'n'].filter(g => a.tbl[g + '.nom.' + n]), Morph.CASES_X.filter(r => a.tbl['m.' + r + '.' + n] || a.tbl['f.' + r + '.' + n]), (r, g) => a.tbl[g + '.' + r + '.' + n])).join('<div style="height:6px"></div>');
     }
     return `<div class="answer small"><div>Diederich section ${w.s || '–'}.${w.ss || ''} · frequency ${w.f != null ? w.f : '–'} · ${POS_SHORT[w.pos]}</div>
       <div>Latin→English: ${status('r:' + w.id)} · English→Latin: ${status('p:' + w.id)}${a.skip ? '' : ' · drill: ' + status(unitOf(w, a))}</div>

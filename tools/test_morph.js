@@ -4,7 +4,7 @@ const find = h => { const e = W.find(x => M.plain(x.la.split(/[ ,]/)[0]) === M.p
 let pass = 0, fail = 0;
 function t(h, key, exp) {
   const [e, a] = find(h);
-  if (a.kind === 'verb' && key.split('.').length === 2) key = 'ind.' + a.voice + '.' + key;   // short form: indicative, word's own voice
+  if (a.kind === 'verb' && key.split('.').length === 2 && !/^(ger|gdv|sup)\./.test(key)) key = 'ind.' + a.voice + '.' + key;   // short form: indicative, word's own voice
   const got = a.tbl && a.tbl[key];
   const ok = got && got[0] === exp;
   ok ? pass++ : fail++;
@@ -110,6 +110,49 @@ const A = [
 for (const x of [...V, ...V2, ...N, ...A]) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
 for (const [h, key] of NONE) { const [e, a] = find(h); const ok = !(a.tbl && a.tbl[key]); ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
 for (const [h, key, inp] of ALT) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key])); ok ? pass++ : fail++; if (!ok) console.log('FAIL alt not accepted', e.la, key, inp, a.tbl && a.tbl[key]); }
+// ---- v3: gerund, gerundive, supine, future imperative, future passive infinitive, vocative, locative ----
+const V3 = [
+  ['amō', 'ger.gen', 'amandī'], ['amō', 'ger.dat', 'amandō'], ['amō', 'ger.acc', 'amandum'], ['amō', 'ger.abl', 'amandō'], ['amō', 'gdv.m', 'amandus'], ['amō', 'gdv.f', 'amanda'], ['amō', 'gdv.n', 'amandum'],
+  ['amō', 'sup.um', 'amātum'], ['amō', 'sup.u', 'amātū'], ['amō', 'inf.pas.fut', 'amātum īrī'],
+  ['amō', 'imp.act.fut.2s', 'amātō'], ['amō', 'imp.act.fut.3s', 'amātō'], ['amō', 'imp.act.fut.2p', 'amātōte'], ['amō', 'imp.act.fut.3p', 'amantō'],
+  ['amō', 'imp.pas.fut.2s', 'amātor'], ['amō', 'imp.pas.fut.3p', 'amantor'],
+  ['moneō', 'ger.gen', 'monendī'], ['moneō', 'gdv.m', 'monendus'], ['moneō', 'sup.um', 'monitum'], ['moneō', 'imp.act.fut.2s', 'monētō'], ['moneō', 'imp.act.fut.3p', 'monentō'], ['moneō', 'imp.pas.fut.3s', 'monētor'],
+  ['regō', 'ger.gen', 'regendī'], ['regō', 'gdv.f', 'regenda'], ['regō', 'sup.um', 'rēctum'], ['regō', 'sup.u', 'rēctū'], ['regō', 'inf.pas.fut', 'rēctum īrī'], ['regō', 'imp.act.fut.2s', 'regitō'], ['regō', 'imp.act.fut.3p', 'reguntō'], ['regō', 'imp.pas.fut.3p', 'reguntor'],
+  ['capiō', 'ger.gen', 'capiendī'], ['capiō', 'gdv.m', 'capiendus'], ['capiō', 'sup.um', 'captum'], ['capiō', 'imp.act.fut.2s', 'capitō'], ['capiō', 'imp.act.fut.3p', 'capiuntō'], ['capiō', 'imp.pas.fut.3p', 'capiuntor'],
+  ['audiō', 'ger.abl', 'audiendō'], ['audiō', 'gdv.n', 'audiendum'], ['audiō', 'sup.u', 'audītū'], ['audiō', 'imp.act.fut.2p', 'audītōte'], ['audiō', 'imp.act.fut.3p', 'audiuntō'], ['audiō', 'imp.pas.fut.2s', 'audītor'],
+  ['dīcō', 'sup.u', 'dictū'], ['faciō', 'gdv.m', 'faciendus'], ['faciō', 'sup.um', 'factum'], ['dūcō', 'imp.act.fut.2s', 'dūcitō'],
+  ['dō', 'ger.gen', 'dandī'], ['dō', 'gdv.m', 'dandus'], ['dō', 'sup.um', 'datum'], ['dō', 'imp.act.fut.2s', 'datō'], ['dō', 'imp.act.fut.3p', 'dantō'], ['dō', 'inf.pas.fut', 'datum īrī'],
+  ['veniō', 'ger.gen', 'veniendī'], ['veniō', 'sup.um', 'ventum'], ['veniō', 'imp.act.fut.3p', 'veniuntō'],
+  ['hortor', 'ger.gen', 'hortandī'], ['hortor', 'gdv.m', 'hortandus'], ['hortor', 'sup.um', 'hortātum'], ['hortor', 'imp.dep.fut.2s', 'hortātor'], ['hortor', 'imp.dep.fut.3p', 'hortantor'],
+  ['vereor', 'gdv.m', 'verendus'], ['loquor', 'ger.gen', 'loquendī'], ['loquor', 'sup.um', 'locūtum'], ['loquor', 'imp.dep.fut.3s', 'loquitor'], ['patior', 'gdv.m', 'patiendus'], ['experior', 'ger.gen', 'experiendī'],
+  ['ūtor', 'gdv.m', 'ūtendus'], ['ūtor', 'sup.um', 'ūsum'], ['sequor', 'gdv.m', 'sequendus'], ['morior', 'ger.gen', 'moriendī'], ['orior', 'ger.gen', 'oriendī'], ['nāscor', 'ger.gen', 'nāscendī'],
+  ['audeō', 'ger.gen', 'audendī'], ['audeō', 'gdv.m', 'audendus'], ['gaudeō', 'ger.gen', 'gaudendī'], ['timeō', 'gdv.m', 'timendus'], ['fugiō', 'gdv.m', 'fugiendus'],
+  ['sum', 'imp.act.fut.2s', 'estō'], ['sum', 'imp.act.fut.2p', 'estōte'], ['sum', 'imp.act.fut.3p', 'suntō'], ['adsum', 'imp.act.fut.2s', 'adestō'], ['prōsum', 'imp.act.fut.2s', 'prōdestō'],
+  ['eō', 'imp.act.fut.2s', 'ītō'], ['eō', 'imp.act.fut.3p', 'euntō'], ['eō', 'ger.gen', 'eundī'], ['eō', 'sup.um', 'itum'], ['eō', 'sup.u', 'itū'], ['redeō', 'ger.gen', 'redeundī'], ['redeō', 'imp.act.fut.3p', 'redeuntō'],
+  ['ferō', 'imp.act.fut.2s', 'fertō'], ['ferō', 'imp.act.fut.3p', 'feruntō'], ['ferō', 'imp.pas.fut.2s', 'fertor'], ['ferō', 'imp.pas.fut.3p', 'feruntor'], ['ferō', 'ger.gen', 'ferendī'], ['ferō', 'gdv.m', 'ferendus'],
+  ['ferō', 'sup.um', 'lātum'], ['ferō', 'sup.u', 'lātū'], ['ferō', 'inf.pas.fut', 'lātum īrī'], ['referō', 'sup.um', 'relātum'],
+  ['volō', 'ger.gen', 'volendī'], ['nōlō', 'imp.act.fut.2s', 'nōlītō'], ['nōlō', 'imp.act.fut.2p', 'nōlītōte'], ['nōlō', 'imp.act.fut.3p', 'nōluntō'],
+  // vocative / locative
+  ['dominus', 'voc.sg', 'domine'], ['dominus', 'voc.pl', 'dominī'], ['fīlius', 'voc.sg', 'fīlī'], ['socius', 'voc.sg', 'socī'], ['deus', 'voc.sg', 'deus'], ['deus', 'voc.pl', 'dī'],
+  ['puer', 'voc.sg', 'puer'], ['puella', 'voc.sg', 'puella'], ['rēx', 'voc.sg', 'rēx'], ['rēx', 'voc.pl', 'rēgēs'], ['bellum', 'voc.sg', 'bellum'], ['manus', 'voc.sg', 'manus'],
+  ['domus', 'loc.sg', 'domī'], ['rūs', 'loc.sg', 'rūrī'], ['humus', 'loc.sg', 'humī'], ['bellum', 'loc.sg', 'bellī'], ['mīlitia', 'loc.sg', 'mīlitiae'],
+  ['bonus', 'm.voc.sg', 'bone'], ['bonus', 'f.voc.sg', 'bona'], ['bonus', 'n.voc.sg', 'bonum'], ['bonus', 'm.voc.pl', 'bonī'], ['meus', 'm.voc.sg', 'mī'], ['ēgregius', 'm.voc.sg', 'ēgregie'],
+  ['pulcher', 'm.voc.sg', 'pulcher'], ['omnis', 'm.voc.sg', 'omnis'], ['ācer', 'm.voc.sg', 'ācer'], ['ingēns', 'n.voc.pl', 'ingentia'],
+];
+const NONE3 = [
+  ['sum', 'ger.gen'], ['sum', 'sup.um'], ['sum', 'gdv.m'], ['adsum', 'ger.gen'], ['possum', 'ger.gen'], ['possum', 'imp.act.fut.2s'],
+  ['eō', 'gdv.m'], ['eō', 'inf.pas.fut'], ['eō', 'imp.pas.fut.2s'], ['nōlō', 'ger.gen'], ['mālō', 'ger.gen'], ['mālō', 'imp.act.fut.2s'], ['fīō', 'ger.gen'], ['fīō', 'sup.um'], ['volō', 'gdv.m'],
+  ['veniō', 'gdv.m'], ['veniō', 'inf.pas.fut'], ['veniō', 'imp.pas.fut.2s'], ['gaudeō', 'gdv.m'], ['gaudeō', 'sup.um'],
+  ['morior', 'gdv.m'], ['morior', 'sup.um'], ['orior', 'gdv.m'], ['nāscor', 'gdv.m'], ['īrāscor', 'gdv.m'], ['hortor', 'inf.pas.fut'], ['hortor', 'imp.dep.fut.2p'],
+  ['timeō', 'sup.um'], ['dominus', 'loc.sg'], ['rēx', 'loc.sg'], ['amō', 'imp.pas.fut.2p'],
+];
+const ALT3 = [['socius', 'voc.sg', 'socie'], ['ēgregius', 'm.voc.sg', 'ēgregī'], ['deus', 'voc.pl', 'deī'], ['rūs', 'loc.sg', 'rūre'], ['amō', 'inf.pas.fut', 'amatum iri']];
+for (const x of V3) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
+for (const [h, key] of NONE3) { const [e, a] = find(h); const ok = !(a.tbl && a.tbl[key]); ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
+for (const [h, key, inp] of ALT3) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key])); ok ? pass++ : fail++; if (!ok) console.log('FAIL alt not accepted', e.la, key, inp, a.tbl && a.tbl[key]); }
+// labels for the new keys
+for (const [k, exp] of [['ger.gen', 'gerund · genitive'], ['gdv.f', 'gerundive · feminine nom. sg.'], ['sup.u', 'supine in -ū (ablative)'], ['imp.act.fut.3p', 'future']]) { const l = M.label('verb', k); const ok = l.includes(exp); ok ? pass++ : fail++; if (!ok) console.log('FAIL label', k, l); }
+for (const [kind, k, exp] of [['noun', 'voc.sg', 'vocative'], ['noun', 'loc.sg', 'locative'], ['adj', 'm.voc.sg', 'vocative']]) { const l = M.label(kind, k); const ok = l.includes(exp); ok ? pass++ : fail++; if (!ok) console.log('FAIL label', k, l); }
 // every drillable word: no empty / undefined forms, labels resolve
 let words = 0;
 for (const e of W.filter(x => !x.d)) { const a = M.analyze(e); if (a.skip || !a.tbl) continue; words++;
