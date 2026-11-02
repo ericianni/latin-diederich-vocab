@@ -186,7 +186,7 @@
     if (DEFECTIVE.includes(p1) || ends(p1, 'ī') && /isse/.test(parts[1] || '')) return { skip: 'defective verb' };
     if (/et$/.test(p1) && /uit|^-?ēre/.test(parts.slice(1).join(' '))) return { skip: 'impersonal verb' };
     const infRaw = parts[1] || '';
-    const stem0 = p1.replace(/(ior|eor|or|iō|eō|ō|io|eo|o|m)$/, '');
+    const stem0 = /^-?ār[eiī]$/.test(infRaw) ? p1.replace(/(or|ō|o)$/, '') : p1.replace(/(ior|eor|or|iō|eō|ō|io|eo|o|m)$/, '');   // 1st conj. keeps its i/e: creō, -āre, -āvī
     let inf = expandPart(p1, stem0, infRaw) || '';
     let pp3 = PERF_FIX[p1] || (parts[2] ? expandPart(p1, stem0, parts[2]) : null);
     if (parts[2] === '-uī' && /u$/.test(stem0)) pp3 = stem0 + 'ī';                       // īnstituō -uī -> īnstituī
@@ -310,7 +310,7 @@
     }
     if (CONJ_FIX[p1]) flag = CONJ_FIX[p1][0];
     if (!conj) return { skip: 'could not determine conjugation' };
-    const stem = dep ? p1.replace(/(ior|eor|or)$/, '') : p1.replace(/(iō|eō|ō|io|eo|o)$/, '');
+    const stem = conj === 1 ? p1.replace(/(or|ō|o)$/, '') : dep ? p1.replace(/(ior|eor|or)$/, '') : p1.replace(/(iō|eō|ō|io|eo|o)$/, '');   // 1st conj. keeps its i: nūntiō, nūntiāre
     if (!stem || stem === p1) return { skip: 'unrecognized first principal part' };
     if (dep) {
       const raw = (parts[2] || '').replace(/\s*sum$/, '').trim();

@@ -150,6 +150,8 @@ const ALT3 = [['socius', 'voc.sg', 'socie'], ['ēgregius', 'm.voc.sg', 'ēgregī
 for (const x of V3) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
 for (const [h, key] of NONE3) { const [e, a] = find(h); const ok = !(a.tbl && a.tbl[key]); ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
 for (const [h, key, inp] of ALT3) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key])); ok ? pass++ : fail++; if (!ok) console.log('FAIL alt not accepted', e.la, key, inp, a.tbl && a.tbl[key]); }
+// 1st-conjugation verbs whose stem ends in -i / -e keep it (were nūntō / crāvit)
+for (const [h, k, f] of [['nūntiō', 'pres.3s', 'nūntiat'], ['nūntiō', 'perf.1s', 'nūntiāvī'], ['nūntiō', 'ptc.act.pres', 'nūntiāns'], ['creō', 'pres.1p', 'creāmus'], ['creō', 'perf.3s', 'creāvit'], ['creō', 'sub.act.pres.3s', 'creet'], ['creō', 'ptc.pas.perf', 'creātus']]) t(h, k, f);
 // strict (macrons required) vs lenient comparison
 for (const [inp, ans, strict, exp] of [['amabatis', ['amābātis'], false, true], ['amabatis', ['amābātis'], true, false], ['amābatis', ['amābātis'], true, false],
   ['amābātis', ['amābātis'], true, true], ['AMĀBĀTIS ', ['amābātis'], true, true], ['iūs', ['jūs'], true, true], ['amāta est', ['amātus est'], true, true], ['amata est', ['amātus est'], true, false],

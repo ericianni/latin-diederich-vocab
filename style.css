@@ -74,3 +74,11 @@ details.cs summary{cursor:pointer;padding:6px 0;list-style-position:outside}
 .lesson p{margin:8px 0;line-height:1.5}.ll{padding-left:20px;margin:6px 0}.ll li{margin:5px 0;line-height:1.45}
 .lex{padding:8px 0;border-bottom:1px solid var(--line)}.lex:last-child{border-bottom:0}.lex .latin{font-size:1.1rem}
 td.en{font-family:inherit;color:var(--muted);white-space:normal}
+/* identify the form */
+.idrow{margin-top:6px}.idrow.locked{opacity:.55}
+.idc{gap:8px}.idc button{min-height:44px;min-width:56px;padding:9px 14px;font-size:.95rem}
+.idc button:disabled{cursor:default}.idrow.locked .idc button.on{opacity:1}
+.idc button.right{background:var(--good);border-color:var(--good);color:#fff}
+.idc button.wrong{background:var(--bad);border-color:var(--bad);color:#fff}
+.idc button.want{border:2px dashed var(--good);color:var(--good);font-weight:600}
+.parses{padding-left:18px;margin:4px 0 8px}.parses li{margin:4px 0;line-height:1.4}.parses li.near{font-weight:600}

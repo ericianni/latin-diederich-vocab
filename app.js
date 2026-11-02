@@ -19,7 +19,7 @@
   function boxFromIvl(c) { const i = c.ivl || 0; if (i <= 0) return c.reps > 0 ? 1 : 0; return i <= 2 ? 1 : i <= 6 ? 2 : i <= 13 ? 3 : i <= 29 ? 4 : i <= 59 ? 5 : i <= 119 ? 6 : 7; }
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
-    s.set = Object.assign({ newPerDay: 10, drillNew: 5, strictMac: false }, s.set || {});
+    s.set = Object.assign({ newPerDay: 10, drillNew: 5, strictMac: false, dmode: 'type' }, s.set || {});
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
         const c = s.cards[k];
@@ -203,7 +203,7 @@
   const macHint = () => S.set.strictMac ? 'Macrons required.' : 'Macrons optional.';
   function bindTyped(go) {
     const t = $('#typed'); if (!t) return;
-    t.onkeydown = e => { if (e.key === 'Enter') go(); };
+    t.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
     document.querySelectorAll('#mac button').forEach(b => {
       b.onpointerdown = e => e.preventDefault();          // keep focus (and the phone keyboard) on the input
       b.onclick = () => { const a = t.selectionStart ?? t.value.length, z = t.selectionEnd ?? a; t.setRangeText(b.dataset.c, a, z, 'end'); t.focus({ preventScroll: true }); };
@@ -263,9 +263,10 @@
         : `<div class="card"><div class="prompt-kind">Today’s drills · one form per word</div>
           <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${c.dNew}</b><span>new words</span></div><div class="stat"><b>${c.dDue}</b><span>reviews</span></div></div>
           <button class="primary big" id="dgo">Start drills</button>
-          <p class="small muted center" style="margin:10px 0 0">Type the form; ${S.set.strictMac ? 'macrons required' : 'macrons optional'}. ${d.dn ? d.dn + ' done today.' : ''}</p></div>`;
+          <p class="small muted center" style="margin:10px 0 0">${modeTxt()} ${d.dn ? d.dn + ' done today.' : ''}</p></div>`;
     const msg = drillMsg ? `<div class="card small" id="dmsg">${esc(drillMsg)}</div>` : ''; drillMsg = '';
-    V().innerHTML = msg + head + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
+    const modeCard = `<div class="card"><div class="small muted chiph" style="margin-top:0">How to answer</div><div class="seg" id="dmode">${MODES.map(([m, l]) => `<button data-m="${m}" class="${S.set.dmode === m ? 'on' : ''}" aria-pressed="${S.set.dmode === m}">${l}</button>`).join('')}</div></div>`;
+    V().innerHTML = msg + head + modeCard + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
       <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.length}</b> words match</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
@@ -287,7 +288,11 @@
       save(); UNITS = buildUnits(); renderDrills();
     });
     document.querySelectorAll('#sdr button').forEach(b => b.onclick = () => { S.set.drillNew = +b.dataset.n; save(); renderDrills(); });
+    document.querySelectorAll('#dmode button').forEach(b => b.onclick = () => { S.set.dmode = b.dataset.m; save(); renderDrills(); });
   }
+  const MODES = [['type', 'Type the form'], ['id', 'Identify the form'], ['mix', 'Mix']];
+  const modeTxt = () => S.set.dmode === 'id' ? 'Tap what each form is: case, number, gender… or person, tense, voice, mood.'
+    : (S.set.dmode === 'mix' ? 'Some forms to type, some to identify; ' : 'Type the form; ') + (S.set.strictMac ? 'macrons required.' : 'macrons optional.');
   function dfSummary() {
     const df = S.set.df, names = (g) => CHIPS[g].filter(([v]) => df[g].includes(v)).map(x => x[1].toLowerCase());
     const all = g => df[g].length === CHIPS[g].length;
@@ -308,6 +313,7 @@
     return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(a.tbl[x].join(' / '))}</td></tr>`).join('')}</table>`;
   }
   function renderDrill(it) {
+    if (S.set.dmode === 'id' || S.set.dmode === 'mix' && Math.random() < 0.5) { if (renderIdentify(it)) return; }
     const [, id] = it.k.split(':'); const w = BY[id]; const a = an(w);
     const keys = drillKeys(a); const key = keys[Math.floor(Math.random() * keys.length)];
     const answers = a.tbl[key];
@@ -330,6 +336,52 @@
       bindRW(it); focusNext();
     };
     $('#chk').onclick = go; bindStop(); bindTyped(go);
+  }
+
+  // ---------- identify the form ----------
+  // Show a generated form; the user taps one chip per attribute. Any valid parse is accepted (rēgēs: nom. or acc. pl.).
+  function renderIdentify(it) {
+    const [, id] = it.k.split(':'); const w = BY[id]; const a = an(w), df = S.set.df;
+    const q = Identify.pick(a, drillKeys(a), df); if (!q) return false;
+    const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
+    const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
+    const sel = {}; let done = false;
+    V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form${it.isNew ? ' · <span class="pill">new</span>' : ''}</div>
+      <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</b> · ${esc(w.en.slice(0, 80))}</div>
+      <div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button>
+      <div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div></div>`;
+    const draw = () => {
+      const rows = Identify.rows(a, df, sel.mood), keep = new Set(rows.map(r => r[0]));
+      for (const k of Object.keys(sel)) if (!keep.has(k)) delete sel[k];
+      for (const [attr, op] of rows) { if (op.length === 1) sel[attr] = op[0][0]; else if (sel[attr] && !op.some(o => o[0] === sel[attr])) delete sel[attr]; }
+      $('#idrows').innerHTML = rows.map(([attr, op]) => { const lock = op.length === 1;
+        return `<div class="idrow${lock ? ' locked' : ''}" data-a="${attr}"><div class="small muted chiph">${Identify.TITLE[attr]}${lock ? ' · set by your drill choices' : ''}</div>
+          <div class="chips idc">${op.map(([v, l]) => `<button type="button" data-v="${v}" class="${sel[attr] === v ? 'on' : ''}" aria-pressed="${sel[attr] === v}"${lock ? ' disabled' : ''}>${l}</button>`).join('')}</div></div>`; }).join('');
+      document.querySelectorAll('#idrows .idrow:not(.locked) button').forEach(b => b.onclick = () => { if (done) return; sel[b.closest('.idrow').dataset.a] = b.dataset.v; draw(); });
+      const full = rows.every(([attr]) => sel[attr] != null) && (a.kind !== 'verb' || sel.mood);
+      $('#chk').disabled = !full; $('#idhint').style.visibility = full ? 'hidden' : '';
+      if (matchMedia('(hover:hover)').matches) { const nx = full ? $('#chk') : document.querySelector('#idrows .idrow:not(.locked) .chips:not(:has(.on)) button'); if (nx) nx.focus({ preventScroll: true }); }
+    };
+    const go = () => {
+      if (done || $('#chk').disabled) return; done = true;
+      const g = Identify.grade(sel, ps), off = new Set(g.off);
+      document.querySelectorAll('#idrows .idrow').forEach(r => { const attr = r.dataset.a, want = g.best.at[attr];
+        r.querySelectorAll('button').forEach(b => { b.disabled = true; const v = b.dataset.v;
+          if (v === sel[attr]) b.classList.add(off.has(attr) ? 'wrong' : 'right'); else if (off.has(attr) && want != null && Identify.hit(want, v)) b.classList.add('want'); }); });
+      const many = ps.length > 1, lex = a.kind === 'noun' ? `<div class="small muted">${esc(w.la.split(',').slice(0, 2).join(','))}: ${Identify.genders(w, a).map(x => ({ m: 'masculine', f: 'feminine', n: 'neuter' })[x]).join(' or ')}, ${a.decl === 'irr' ? 'irregular' : ORD[a.decl] + ' declension'}</div>`
+        : a.kind === 'adj' ? `<div class="small muted">${a.decl === 3 ? '3rd' : '1st/2nd'}-declension adjective</div>` : '';
+      const offTxt = g.off.map(x => Identify.TITLE[x].toLowerCase().replace('mood / form', 'mood')).join(', ');
+      $('#ans').innerHTML = `<div class="answer">${g.ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong${offTxt ? ' — check the ' + esc(offTxt) : ''}</div>`}
+        <div class="small muted chiph">${many ? `${ps.length} valid answers (any one counts)` : 'The answer'}</div>
+        <ul class="parses">${ps.map(p => `<li${!g.ok && p === g.best ? ' class="near"' : ''}><b>${esc(q.form)}</b> = ${esc(Identify.parseLabel(a, p))}</li>`).join('')}</ul>${lex}
+        ${a.tbl[tkey] ? `<div class="forms">${miniTable(a, tkey)}</div>` : ''}
+        <div class="row" style="margin-top:10px"><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>
+        <div class="row" style="margin-top:10px"><button class="primary big" data-r="${g.ok ? 1 : 0}">Next</button></div></div>`;
+      $('#cs').onclick = () => openSheet(ctx.id);
+      bindRW(it); focusNext();
+    };
+    draw(); $('#chk').onclick = go; bindStop();
+    return true;
   }
 
   // ---------- cheat sheet ----------
