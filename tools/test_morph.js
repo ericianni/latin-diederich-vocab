@@ -158,6 +158,17 @@ for (const [inp, ans, strict, exp] of [['amabatis', ['amābātis'], false, true]
 // labels for the new keys
 for (const [k, exp] of [['ger.gen', 'gerund · genitive'], ['gdv.f', 'gerundive · feminine nom. sg.'], ['sup.u', 'supine in -ū (ablative)'], ['imp.act.fut.3p', 'future']]) { const l = M.label('verb', k); const ok = l.includes(exp); ok ? pass++ : fail++; if (!ok) console.log('FAIL label', k, l); }
 for (const [kind, k, exp] of [['noun', 'voc.sg', 'vocative'], ['noun', 'loc.sg', 'locative'], ['adj', 'm.voc.sg', 'vocative']]) { const l = M.label(kind, k); const ok = l.includes(exp); ok ? pass++ : fail++; if (!ok) console.log('FAIL label', k, l); }
+// Learn tab: every Latin form quoted in a lesson's prose, and every table / example word, must match the generator
+{ const L = require('../lessons.js'), WL = W.filter(x => !x.d), fw = h => WL.find(x => M.plain(x.la.split(/[ ,]/)[0]) === M.plain(h));
+  for (const l of L) {
+    for (const [h, k, v] of l.facts) { const w = fw(h), a = w && M.analyze(w), ok = !!(a && a.tbl && a.tbl[k] && a.tbl[k].includes(v)); ok ? pass++ : fail++; if (!ok) console.log('FAIL lesson fact', l.id, h, k, v, a && a.tbl && a.tbl[k]); }
+    for (const h of [...l.tables.flatMap(t => [t.h, ...(t.rows || []).map(r => r[1]), ...(t.cols || []).map(c => c[0])]), ...(l.ex || [])].filter(Boolean)) { const w = fw(h), ok = !!(w && !M.analyze(w).skip); ok ? pass++ : fail++; if (!ok) console.log('FAIL lesson word', l.id, h); }
+    const tk = l.tables.flatMap(t => (t.rows || []).map(r => [r[1], r[2]]).concat((t.cols || []).flatMap(c => M.P.map(p => [c[0], c[1] + '.' + p]))));
+    for (const [h, k] of tk) { const a = M.analyze(fw(h)), ok = !!(a.tbl && a.tbl[k]); ok ? pass++ : fail++; if (!ok) console.log('FAIL lesson table cell', l.id, h, k); }
+    if (l.pick) { const n = WL.filter(w => { const a = M.analyze(w); if (a.skip || a.flag || a.kind !== l.pick.kind) return false; if (a.kind === 'noun') return a.decl === l.pick.decl && (l.pick.istem == null || a.istem === l.pick.istem); if (a.kind === 'adj') return a.decl === l.pick.decl; return l.pick.irr ? l.pick.irr.includes(a.irr) : a.conj === l.pick.conj; }).length;
+      const ok = n >= 3; ok ? pass++ : fail++; if (!ok) console.log('FAIL lesson pool too small', l.id, n); }
+  }
+}
 // every drillable word: no empty / undefined forms, labels resolve
 let words = 0;
 for (const e of W.filter(x => !x.d)) { const a = M.analyze(e); if (a.skip || !a.tbl) continue; words++;

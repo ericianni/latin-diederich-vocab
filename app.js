@@ -31,6 +31,7 @@
       s.v = 2;
     }
     s.set.df = Object.assign({}, DF, s.set.df || {});
+    s.lessons = s.lessons || {};
     return s;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or private mode */ } }
@@ -146,7 +147,7 @@
     TAB = t;
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'quiz' ? 'today' : t)));
     Q = null; closeSheet();
-    ({ today: renderToday, drills: renderDrills, cheat: renderCheat, quiz: renderQuiz, list: renderList, about: renderAbout })[t]();
+    ({ today: renderToday, learn: renderLearn, drills: renderDrills, cheat: renderCheat, quiz: renderQuiz, list: renderList, about: renderAbout })[t]();
     window.scrollTo(0, 0);
   }
 
@@ -251,7 +252,7 @@
     decl: [['1', '1st'], ['2', '2nd'], ['3', '3rd'], ['4', '4th'], ['5', '5th'], ['irr', 'Irregular']],
   };
   const chipRow = (g, title) => `<div class="small muted chiph">${title}</div><div class="chips" data-g="${g}">${CHIPS[g].map(([v, l]) => `<button data-v="${v}" class="${S.set.df[g].includes(v) ? 'on' : ''}" aria-pressed="${S.set.df[g].includes(v)}">${l}</button>`).join('')}</div>`;
-  let showSet = false;
+  let showSet = false, drillMsg = '';
   function renderDrills() {
     $('#sub').textContent = 'Form drills';
     const c = counts(), d = day(), tot = c.dDue + c.dNew;
@@ -263,7 +264,8 @@
           <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${c.dNew}</b><span>new words</span></div><div class="stat"><b>${c.dDue}</b><span>reviews</span></div></div>
           <button class="primary big" id="dgo">Start drills</button>
           <p class="small muted center" style="margin:10px 0 0">Type the form; ${S.set.strictMac ? 'macrons required' : 'macrons optional'}. ${d.dn ? d.dn + ' done today.' : ''}</p></div>`;
-    V().innerHTML = head + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
+    const msg = drillMsg ? `<div class="card small" id="dmsg">${esc(drillMsg)}</div>` : ''; drillMsg = '';
+    V().innerHTML = msg + head + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
       <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.length}</b> words match</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
@@ -411,11 +413,14 @@
     }
     return out.join('') + nf + gx;
   }
-  function verbBlock(h, id, title, note) {
-    const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
+  function verbStems(a) {
     const T = a.tbl, ind = a.voice === 'dep' ? 'dep' : 'act';
     const p1 = (T[`ind.${ind}.pres.1s`] || [''])[0];
-    const stems = a.conj === 'irr' ? null : [p1.replace(/(iō|eō|ō|ior|eor|or)$/, ''), T['ind.act.perf.1s'] ? T['ind.act.perf.1s'][0].replace(/ī$/, '') : null, (T['ptc.pas.perf'] || T['ptc.dep.perf'] || [''])[0].replace(/us$/, '')];
+    return a.conj === 'irr' ? null : [p1.replace(/(iō|eō|ō|ior|eor|or)$/, ''), T['ind.act.perf.1s'] ? T['ind.act.perf.1s'][0].replace(/ī$/, '') : null, (T['ptc.pas.perf'] || T['ptc.dep.perf'] || [''])[0].replace(/us$/, '')];
+  }
+  function verbBlock(h, id, title, note) {
+    const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
+    const stems = verbStems(a);
     return `<details class="cs" id="${id}"><summary><b>${esc(title)}</b> <span class="muted">${esc(w.la.replace(/\s\([^)]*\)/g, ''))}</span></summary>${note ? `<p class="small muted">${note}</p>` : ''}${verbGroups(a, stems, id)}</details>`;
   }
   const det = (id, title, body, note) => `<details class="cs" id="${id}"><summary><b>${title}</b></summary>${note ? `<p class="small muted">${note}</p>` : ''}${body}</details>`;
@@ -495,6 +500,170 @@
     setTimeout(() => gotoAnchor(o.querySelector('.ovbody'), id), 0);
   }
   function closeSheet() { const o = $('#overlay'); if (o) o.remove(); document.body.style.overflow = ''; }
+
+
+  // ---------- lessons ----------
+  // Prose lives in lessons.js; every table and quick-check question here comes from the generator.
+  const LS = window.LESSONS || [];
+  const lessonDone = id => !!S.lessons[id];
+  const isFin = a => a.kind === 'verb' && a.conj !== 'irr';
+  function specOk(a, sp) {
+    if (a.skip || a.flag || a.kind !== sp.kind) return false;
+    if (a.kind === 'noun') return !a.plOnly && a.decl === sp.decl && (sp.istem == null || a.istem === sp.istem);
+    if (a.kind === 'adj') return a.decl === sp.decl;
+    return sp.irr ? sp.irr.includes(a.irr) : a.conj === sp.conj;
+  }
+  const lessonHeads = l => l.tables.flatMap(t => [t.h, ...(t.rows || []).map(r => r[1]), ...(t.cols || []).map(c => c[0])]).filter(Boolean).map(Morph.plain);
+  function lessonExamples(l) {
+    if (l.ex) return l.ex.map(findW).filter(Boolean);
+    const used = lessonHeads(l), all = W.filter(w => specOk(an(w), l.pick));
+    const fresh = all.filter(w => !used.includes(Morph.plain(w.la.split(/[ ,]/)[0])));
+    return (fresh.length >= 2 ? fresh : all).slice(0, 3);
+  }
+  function lessonVerb(h) {
+    const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
+    const st = verbStems(a), v = a.voice === 'dep' ? 'dep' : 'act';
+    const fin = ts => `<table><tr><th></th>${ts.map(t => `<th>${Morph.TENSES[t]}</th>`).join('')}</tr>${Morph.P.map(p => `<tr><th>${p}</th>${ts.map(t => `<td>${cell(a, `ind.${v}.${t}.${p}`, st)}</td>`).join('')}</tr>`).join('')}</table>`;
+    const ex = [['infinitive', `inf.${v}.pres`], ['imperative', `imp.${v}.pres.2s`], ['imperative pl.', `imp.${v}.pres.2p`]].filter(r => a.tbl[r[1]]);
+    return `<div class="cst"><div class="csh">${esc(w.la.replace(/\s\([^)]*\)/g, ''))} <span class="muted">indicative ${v === 'dep' ? 'deponent' : 'active'}</span></div><div class="forms">${fin(['pres', 'impf', 'fut'])}<div style="height:6px"></div>${fin(['perf', 'plup', 'fperf'])}</div>
+      <table style="margin-top:6px">${ex.map(([l, k]) => `<tr><th>${l}</th><td>${cell(a, k, st)}</td></tr>`).join('')}</table></div>`;
+  }
+  function lessonTable(t) {
+    if (t.t === 'noun') return nounTable(t.h, t.note);
+    if (t.t === 'adj') return adjTable(t.h, t.note);
+    if (t.t === 'verb') return lessonVerb(t.h);
+    const A = h => an(findW(h)), F = (h, k) => { const a = A(h); return a.tbl[k] ? esc(a.tbl[k].join(' / ')) : '–'; };
+    if (t.t === 'cmp') return `<div class="cst"><div class="csh">${esc(t.title)}</div><div class="forms"><table><tr><th></th>${t.cols.map(c => `<th>${esc(c[2])}</th>`).join('')}</tr>${Morph.P.map(p => `<tr><th>${p}</th>${t.cols.map(c => `<td>${F(c[0], c[1] + '.' + p)}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
+    return `<div class="cst"><div class="csh">${esc(t.title)}</div><div class="forms"><table>${t.rows.map(r => `<tr><th>${esc(r[0])}</th><td>${F(r[1], r[2])}</td>${r[3] ? `<td class="en">${esc(r[3])}</td>` : ''}</tr>`).join('')}</table></div></div>`;
+  }
+  function renderLearn() {
+    $('#sub').textContent = 'Grammar lessons';
+    const n = LS.filter(l => lessonDone(l.id)).length;
+    const secs = [...new Set(LS.map(l => l.sec))];
+    V().innerHTML = `<div class="card"><div class="prompt-kind">Lessons · about 5–10 minutes each</div>
+      <p class="small muted" style="margin:6px 0 10px">What each case, declension, and conjugation does and how to spot it, with endings tables and a short quick check. <b>${n}</b> of ${LS.length} done.</p>
+      <div class="bar"><i style="width:${(100 * n / LS.length).toFixed(1)}%"></i></div></div>
+      ${secs.map(sec => `<h3>${esc(sec)}</h3><div class="card llist">${LS.filter(l => l.sec === sec).map(l => `<button class="lrow" data-l="${l.id}"><span class="lck${lessonDone(l.id) ? ' on' : ''}" aria-label="${lessonDone(l.id) ? 'done' : 'not done'}">${lessonDone(l.id) ? '✓' : LS.indexOf(l) + 1}</span><span class="grow"><b>${esc(l.title)}</b><br><span class="small muted">${esc(l.sum)}</span></span><span class="muted">›</span></button>`).join('')}</div>`).join('')}`;
+    document.querySelectorAll('.lrow').forEach(b => b.onclick = () => openLesson(b.dataset.l));
+  }
+  function markLesson(id, score, total) {
+    const o = S.lessons[id] || {};
+    S.lessons[id] = { d: today(), s: score != null ? Math.max(score, o.s || 0) : o.s, n: total || o.n };
+    save();
+  }
+  function openLesson(id) {
+    const i = LS.findIndex(l => l.id === id), l = LS[i]; if (!l) return renderLearn();
+    const nx = LS[i + 1], st = S.lessons[id];
+    $('#sub').textContent = 'Lesson ' + (i + 1) + ' of ' + LS.length;
+    const ex = lessonExamples(l);
+    V().innerHTML = `<div class="row"><button class="link" id="lback">‹ All lessons</button><span class="grow"></span>${st ? '<span class="ok small">✓ Done</span>' : ''}</div>
+      <div class="card lesson"><div class="prompt-kind">${esc(l.sec)}</div><h2 style="margin:4px 0 8px">${esc(l.title)}</h2>${l.body}</div>
+      <div class="card"><h3 style="margin-top:0">${l.tables[0].t === 'rows' || l.tables[0].t === 'cmp' ? 'Forms' : 'Endings'}</h3>${['noun', 'adj', 'verb'].includes(l.tables[0].t) ? '<p class="small muted" style="margin:2px 0 0">Endings are in <b>bold</b>.</p>' : ''}${l.tables.map(lessonTable).join('')}</div>
+      <div class="card"><h3 style="margin-top:0">From your word list</h3>${ex.map(w => `<div class="lex"><span class="latin">${esc(w.la.replace(/\s\([^)]*\)/g, ''))}</span><div class="small muted">${esc(w.en.length > 80 ? w.en.slice(0, 78) + '…' : w.en)}</div></div>`).join('')}</div>
+      <div class="card"><button class="primary big" id="lq">Quick check · ${quizItems(l).length} questions</button>
+        ${l.drill ? '<button class="big" id="ldr" style="margin-top:10px">Practice this in Drills</button>' : ''}
+        <div class="row" style="margin-top:10px">${st ? '' : '<button class="grow" id="lmark">Mark as done</button>'}${nx ? `<button class="grow" id="lnext">Next: ${esc(nx.title)} ›</button>` : ''}</div>
+        <p class="small muted center" style="margin:8px 0 0">The quick check doesn’t change your review schedule.</p></div>`;
+    $('#lback').onclick = renderLearn;
+    $('#lq').onclick = () => runLessonQuiz(l, quizItems(l));
+    if ($('#ldr')) $('#ldr').onclick = () => practiceLesson(l);
+    if ($('#lmark')) $('#lmark').onclick = () => { markLesson(id); openLesson(id); };
+    if ($('#lnext')) $('#lnext').onclick = () => { openLesson(nx.id); window.scrollTo(0, 0); };
+  }
+  function practiceLesson(l) {
+    const df = S.set.df;
+    Object.assign(df, JSON.parse(JSON.stringify(l.drill)));
+    for (const g of ['cases', 'nums', 'tenses', 'voices']) if (!df[g].length) df[g] = DF[g].slice();
+    save(); UNITS = buildUnits();
+    drillMsg = `Drills now show ${l.drill.conj && l.drill.conj[0] === 'irr' ? 'all irregular verbs' : l.title.replace(/ i-stems$/, '') + (l.drill.types[0] === 'verb' ? ' verbs (indicative)' : l.drill.types[0] === 'noun' ? ' nouns' : '')}. Change this any time under “What to drill.”`;
+    setTab('drills');
+  }
+  // Quick-check questions. Typed forms reuse the drill check; the verb-basics lessons ask multiple choice.
+  function quizItems(l) {
+    const q = l.quiz, N = 4, out = [];
+    if (q.t === 'mc') return shuffle(q.qs.map(([p, o, ans]) => ({ t: 'mc', prompt: esc(p), opts: o, ans: o[ans] })));
+    if (q.t === 'form') {
+      const pool = shuffle(W.filter(w => specOk(an(w), l.pick)).slice(0, 30));
+      const keysOf = a => Object.keys(a.tbl).filter(k => {
+        const p = k.split('.');
+        if (a.kind === 'noun') return k !== 'nom.sg' && Morph.CASES.includes(p[0]) && (!q.keys || q.keys.includes(k));
+        if (a.kind === 'adj') return k !== 'm.nom.sg' && Morph.CASES.includes(p[1]);
+        return p[0] === 'ind' && (p[1] === 'act' || p[1] === 'dep') && ['pres', 'impf', 'fut', 'perf'].includes(p[2]) && !(p[2] === 'pres' && p[3] === '1s');
+      });
+      for (let i = 0; out.length < N && i < pool.length * 3; i++) {
+        const w = pool[i % pool.length], a = an(w), ks = keysOf(a); if (!ks.length) continue;
+        const key = ks[Math.floor(Math.random() * ks.length)];
+        if (out.some(x => x.w === w && x.key === key) || (pool.length >= N && i < pool.length && out.some(x => x.w === w))) continue;
+        out.push({ t: 'form', w, a, key });
+      }
+      return out;
+    }
+    // tense / voice / mood: show a generated form, ask which one it is; skip forms that are ambiguous
+    const verbs = W.filter(w => { const a = an(w); return isFin(a) && !a.skip && !a.flag && a.voice === 'act' && (q.t !== 'voice' || !a.noPassive) && a.tbl['ind.act.perf.1s']; }).slice(0, 40);
+    const C = {
+      tense: { opts: Object.keys(Morph.TENSES), name: t => Morph.TENSES[t], keys: a => Object.keys(a.tbl).filter(k => /^ind\.act\./.test(k)), of: k => k.split('.')[2], cmp: (a, k) => Object.keys(a.tbl).filter(x => /^ind\.act\./.test(x)) },
+      voice: { opts: ['act', 'pas'], name: v => Morph.VOICES[v], keys: a => Object.keys(a.tbl).filter(k => /^ind\.(act|pas)\.(pres|impf|fut|perf)\./.test(k)), of: k => k.split('.')[1], cmp: a => Object.keys(a.tbl).filter(x => /^(ind|sub|imp|inf)\./.test(x)) },
+      mood: { opts: ['ind', 'sub', 'imp', 'inf'], name: m => Morph.MOODS[m], keys: a => Object.keys(a.tbl).filter(k => /^(ind\.act\.(pres|impf|fut)\.|sub\.act\.(pres|impf)\.|imp\.act\.pres\.2|inf\.act\.pres)/.test(k)), of: k => k.split('.')[0], cmp: a => Object.keys(a.tbl).filter(x => x.split('.')[0] !== 'ptc') },
+    }[q.t];
+    for (let i = 0; out.length < N && i < 200; i++) {
+      const w = verbs[Math.floor(Math.random() * verbs.length)], a = an(w);
+      const want = C.opts[Math.floor(Math.random() * C.opts.length)];
+      const ks = C.keys(a).filter(k => C.of(k) === want); if (!ks.length) continue;
+      const key = ks[Math.floor(Math.random() * ks.length)], form = a.tbl[key][0];
+      if (C.cmp(a).some(k => C.of(k) !== want && a.tbl[k].includes(form))) continue;   // ambiguous
+      if (out.some(x => x.form === form)) continue;
+      out.push({ t: 'mc', form, w, key, prompt: `Which ${q.t} is <span class="latin">${esc(form)}</span>?<div class="small muted" style="margin-top:4px">from ${esc(w.la.split(',')[0])} — ${esc(w.en.slice(0, 50))}</div>`, opts: C.opts.map(C.name), ans: C.name(want) });
+    }
+    return out;
+  }
+  function runLessonQuiz(l, qs) {
+    let i = 0, score = 0;
+    const head = () => `<div class="row small muted"><span class="grow">${esc(l.title)} · quick check ${Math.min(i + 1, qs.length)} / ${qs.length}</span><button class="link" id="lqstop">Back to lesson</button></div>`;
+    const nextBtn = () => `<button class="primary big" style="margin-top:12px" id="qnext">${i + 1 < qs.length ? 'Next' : 'Finish'}</button>`;
+    const bindNext = () => { $('#qnext').onclick = () => { i++; ask(); }; focusNext(); };
+    const ask = () => {
+      if (i >= qs.length) {
+        markLesson(l.id, score, qs.length);
+        const nx = LS[LS.indexOf(l) + 1];
+        V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>${score} / ${qs.length}</h2><p class="muted">${esc(l.title)} is marked done.${score < qs.length ? ' Look over the table once more, then try again.' : ''}</p>
+          <button class="big" id="lagain">Try another quick check</button><button class="big" id="lback2" style="margin-top:10px">Back to lesson</button>
+          ${l.drill ? '<button class="big" id="ldr" style="margin-top:10px">Practice this in Drills</button>' : ''}
+          ${nx ? `<button class="primary big" id="lnext" style="margin-top:10px">Next: ${esc(nx.title)} ›</button>` : '<button class="primary big" id="lall" style="margin-top:10px">All lessons</button>'}</div>`;
+        $('#lagain').onclick = () => runLessonQuiz(l, quizItems(l));
+        $('#lback2').onclick = () => openLesson(l.id);
+        if ($('#ldr')) $('#ldr').onclick = () => practiceLesson(l);
+        if ($('#lnext')) $('#lnext').onclick = () => openLesson(nx.id);
+        if ($('#lall')) $('#lall').onclick = renderLearn;
+        window.scrollTo(0, 0); return;
+      }
+      const it = qs[i];
+      if (it.t === 'mc') {
+        V().innerHTML = `${head()}<div class="card"><div class="english">${it.prompt}</div><div class="opts">${it.opts.map(o => `<button data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div><div id="ans"></div></div>`;
+        document.querySelectorAll('.opts button').forEach(b => b.onclick = () => {
+          const right = b.dataset.o === it.ans; if (right) score++;
+          document.querySelectorAll('.opts button').forEach(x => { x.disabled = true; if (x.dataset.o === it.ans) x.classList.add('right'); });
+          if (!right) b.classList.add('wrong');
+          $('#ans').innerHTML = `${it.key ? `<p class="small muted" style="margin:10px 0 0"><b>${esc(it.form)}</b>: ${esc(Morph.label('verb', it.key))}</p>` : ''}${nextBtn()}`;
+          bindNext();
+        });
+      } else {
+        const { w, a, key } = it, answers = a.tbl[key];
+        V().innerHTML = `${head()}<div class="card"><div class="prompt-kind">${a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective'}</div>
+          <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
+          <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
+          <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
+          <div class="small muted" style="margin-top:6px">${macHint()}</div><button class="primary big" id="chk" style="margin-top:10px">Check</button></div></div>`;
+        const go = () => {
+          const v = $('#typed').value.trim(), ok = !!v && Morph.check(v, answers, S.set.strictMac); if (ok) score++;
+          $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : wrongMsg(v, answers)}<div class="latin">${esc(answers.join(' / '))}</div><div class="forms">${miniTable(a, key)}</div>${nextBtn()}</div>`;
+          bindNext();
+        };
+        $('#chk').onclick = go; bindTyped(go);
+      }
+      $('#lqstop').onclick = () => openLesson(l.id);
+    };
+    ask();
+  }
 
   // ---------- quiz ----------
   let quizPool = 250;
@@ -613,7 +782,7 @@
     UNITS = buildUnits();
     const t = (location.hash || '').slice(1);
     save();   // persist any v1 -> v2 migration
-    setTab(['drills', 'cheat', 'quiz', 'list', 'about'].includes(t) ? t : 'today');
+    setTab(['learn', 'drills', 'cheat', 'quiz', 'list', 'about'].includes(t) ? t : 'today');
   }).catch(() => { V().innerHTML = '<p class="card">Could not load the word list. Check your connection and reload.</p>'; });
   // No service worker inside the Capacitor WebView: assets are already bundled in the APK.
   if ('serviceWorker' in navigator && !window.Capacitor) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
