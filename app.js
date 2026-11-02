@@ -255,12 +255,15 @@
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
         <div class="small muted chiph">New words per day</div><div class="seg" id="sdr">${[3, 5, 10].map(n => `<button data-n="${n}" class="${S.set.drillNew === n ? 'on' : ''}">${n}</button>`).join('')}</div>
-        <p class="small muted">Imperatives come in present and future (use the Tense chips). Gerund, gerundive and supine ignore the voice and tense chips. Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms. Locative exists only for domus, rūs, humus, bellum and mīlitia.</p></div>` : ''}
+        <p class="small muted">Imperatives come in present and future (use the Tense chips). Gerund, gerundive and supine ignore the voice and tense chips. Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms. Locative exists only for domus, rūs, humus, bellum and mīlitia.</p>
+        <button class="primary big" id="tdone">Done</button>
+        <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}
       </div>
       <div class="card"><button class="big" id="opencs">📖 Cheat sheet — endings tables</button></div>`;
     if ($('#dgo')) $('#dgo').onclick = () => startSession('drill');
     if ($('#dmore')) $('#dmore').onclick = () => { day().dx = (day().dx || 0) + 5; save(); startSession('drill'); };
     $('#tset').onclick = () => { showSet = !showSet; renderDrills(); };
+    if ($('#tdone')) $('#tdone').onclick = () => { showSet = false; renderDrills(); window.scrollTo(0, 0); };
     $('#opencs').onclick = () => setTab('cheat');
     document.querySelectorAll('.chips button').forEach(b => b.onclick = () => {
       const g = b.parentNode.dataset.g, v = b.dataset.v, arr = S.set.df[g];
