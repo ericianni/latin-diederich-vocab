@@ -1,0 +1,141 @@
+// Headless-browser check that drills follow the drill settings (node tools/test_drills_browser.js).
+// Plays sets in Identify and Type modes under narrow settings (one tense / voice / mood / case / number) and checks that
+// every question, every valid answer and every answer chip stays inside the settings, and that one-option rows are pre-selected.
+// Needs puppeteer-core (npm i --no-save puppeteer-core, or set PUPPETEER_DIR) and Chrome (CHROME=/path/to/chrome).
+let puppeteer; try { puppeteer = require(process.env.PUPPETEER_DIR || 'puppeteer-core'); } catch (e) { console.log('SKIPPED: puppeteer-core not installed'); process.exit(0); }
+const http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = path.join(__dirname, '..'), TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
+const srv = http.createServer((q, r) => { const p = path.join(ROOT, decodeURIComponent(q.url.split(/[?#]/)[0]).replace(/\/$/, '/index.html'));
+  if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': TYPES[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(r); });
+let URL;
+const ALL = { types: ['verb', 'noun', 'adj'], moods: ['ind', 'sub', 'imp', 'inf', 'ptc', 'ger', 'gdv', 'sup'], voices: ['act', 'pas', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'], persons: ['1', '2', '3'], vnums: ['sg', 'pl'],
+  conj: ['1', '2', '3', '3io', '4', 'irr'], cases: ['nom', 'gen', 'dat', 'acc', 'abl', 'voc', 'loc'], nums: ['sg', 'pl'], decl: ['1', '2', '3', '4', '5', 'irr'] };
+const SC = [
+  { name: 'perfect passive only (verbs, all moods)', df: { types: ['verb'], tenses: ['perf'], voices: ['pas'] } },
+  { name: 'subjunctive only', df: { types: ['verb'], moods: ['sub'], voices: ['act'] } },
+  { name: 'ablative plural only (nouns+adj)', df: { types: ['noun', 'adj'], cases: ['abl'], nums: ['pl'] } },
+  { name: 'ptc/ger/gdv/sup, perf, abl sg', df: { types: ['verb'], moods: ['ptc', 'ger', 'gdv', 'sup'], tenses: ['perf'], cases: ['abl'], nums: ['sg'] } },
+  { name: 'gerund only, dative only', df: { types: ['verb'], moods: ['ger'], cases: ['dat'] } },
+  { name: '3rd person plural only (all moods)', df: { types: ['verb'], persons: ['3'], vnums: ['pl'] } },
+  { name: '1st person singular, ind + imp (imperative impossible)', df: { types: ['verb'], moods: ['ind', 'imp'], persons: ['1'], vnums: ['sg'] } },
+  { name: 'imperative 2nd sg only', df: { types: ['verb'], moods: ['imp'], persons: ['2'], vnums: ['sg'] } },
+];
+const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'infinitive', ptc: 'participle', ger: 'gerund', gdv: 'gerundive', sup: 'supine' };
+(async () => {
+  await new Promise(r => srv.listen(0, '127.0.0.1', r)); URL = 'http://127.0.0.1:' + srv.address().port + '/';
+  const br = await puppeteer.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  let bad = 0;
+  for (const mode of ['id', 'type']) for (const sc of SC) {
+    const df = Object.assign({}, ALL, sc.df);
+    const pg = await br.newPage();
+    await pg.goto(URL + 'manifest.webmanifest'); await pg.evaluate((df, mode) => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, set: { dmode: mode, dlen: 20, df } })); }, df, mode);
+    await pg.goto(URL + '#drills'); await pg.waitForSelector('#dgo'); await pg.evaluate(() => document.querySelector('#dgo').click());
+    const issues = new Set(); let n = 0;
+    for (let i = 0; i < 20; i++) {
+      await pg.waitForSelector('.prompt-kind');
+      const st = await pg.evaluate(() => {
+        if (document.querySelector('#idrows')) return { id: true, form: document.querySelector('.latin').textContent, rows: [...document.querySelectorAll('#idrows .idrow')].map(r => ({ a: r.dataset.a, locked: r.classList.contains('locked'), opts: [...r.querySelectorAll('button')].map(b => ({ v: b.dataset.v, on: b.classList.contains('on') })) })) };
+        const e = document.querySelector('.english b'); return e ? { id: false, label: e.textContent } : null;
+      });
+      if (!st) break; n++;
+      const check = (label, where) => {
+        const L = label.toLowerCase();
+        if (df.types.length === 1 && df.types[0] === 'verb') {
+          const m = Object.keys(lab).filter(k => new RegExp('\\b' + lab[k] + '\\b').test(L));
+          if (!m.some(k => df.moods.includes(k))) issues.add(where + ' mood off: ' + label);
+          if (!/gerund|supine/.test(L) || /gerundive/.test(L) && false) {
+            const t = /future perfect/.test(L) ? 'fperf' : /pluperfect/.test(L) ? 'plup' : /\bperfect\b/.test(L) ? 'perf' : /imperfect/.test(L) ? 'impf' : /future/.test(L) ? 'fut' : /present/.test(L) ? 'pres' : null;
+            if (t && !df.tenses.includes(t)) issues.add(where + ' tense off: ' + label);
+            const v = /deponent/.test(L) ? 'dep' : /passive/.test(L) ? 'pas' : /active/.test(L) ? 'act' : null;
+            if (v && !df.voices.includes(v) && !(where === 'parse' && df.voices.includes('dep'))) issues.add(where + ' voice off: ' + label);
+          }
+        }
+        const pm = label.match(/^([123])(?:st|nd|rd) (sg|pl) · /);   // finite verb: "3rd pl · present active indicative"
+        if (pm && (!df.persons.includes(pm[1]) || !df.vnums.includes(pm[2]))) issues.add(where + ' person/number off: ' + label);
+        const C = { nominative: 'nom', genitive: 'gen', dative: 'dat', accusative: 'acc', ablative: 'abl', vocative: 'voc', locative: 'loc' };
+        for (const [w, c] of Object.entries(C)) if (new RegExp('\\b' + w + '\\b').test(L) && !df.cases.includes(c) ) issues.add(where + ' case off: ' + label);
+        if (/\bsingular\b|\bsg\b/.test(L) && !df.nums.includes('sg') && /participle|gerundive|^(?!.*\d(st|nd|rd)).*$/.test(L)) issues.add(where + ' num off: ' + label);
+        if (/nom\. (masc\. )?sg\./.test(L) && (!df.cases.includes('nom') || !df.nums.includes('sg'))) issues.add(where + ' principal nom. sg. asked: ' + label);
+        if (/\bplural\b/.test(L) && !df.nums.includes('pl')) issues.add(where + ' num off: ' + label);
+      };
+      if (st.id) {
+        const ALLOW = { mood: df.moods, tense: df.tenses, case: df.cases, num: null };
+        for (const r of st.rows) {
+          if (r.a === 'mood' || r.a === 'tense' || r.a === 'case') { const off = r.opts.filter(o => !df[{ mood: 'moods', tense: 'tenses', case: 'cases' }[r.a]].includes(o.v)); if (off.length && !(r.a === 'case' && st.rows.some(x => x.a === 'mood' && x.opts.find(o => o.on && ['ger','sup','ptc','gdv'].includes(o.v)) && false))) issues.add('chip row ' + r.a + ' shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
+          if (r.a === 'voice') { const okv = ['act', 'pas'].filter(v => df.voices.includes(v) || df.voices.includes('dep')); const off = r.opts.filter(o => !okv.includes(o.v)); if (off.length) issues.add('chip row voice shows ' + off.map(o => o.v)); }
+          if (r.a === 'num' && (df.types.includes('noun') || df.types.includes('adj') || st.rows.some(x => x.a === 'gender'))) { const off = r.opts.filter(o => !df.nums.includes(o.v)); if (off.length) issues.add('chip row num shows ' + off.map(o => o.v)); }
+          if (r.opts.length === 1 && !r.opts[0].on) issues.add('single option not auto-selected: ' + r.a);
+        }
+        // answer: pick first in every open row until check enabled
+        for (let k = 0; k < 12; k++) {
+          const done = await pg.evaluate(() => { const r = document.querySelector('#idrows .idrow:not(.locked) .chips:not(:has(.on)) button'); if (r) { r.click(); return false; } return true; });
+          // after mood chosen, re-check new rows
+          const rows2 = await pg.evaluate(() => [...document.querySelectorAll('#idrows .idrow')].map(r => ({ a: r.dataset.a, opts: [...r.querySelectorAll('button')].map(b => ({ v: b.dataset.v, on: b.classList.contains('on') })) })));
+          for (const r of rows2) {
+            const g = { mood: 'moods', tense: 'tenses', case: 'cases' }[r.a];
+            if (g) { const off = r.opts.filter(o => !df[g].includes(o.v)); if (off.length) issues.add('chip row ' + r.a + ' shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
+            if (r.a === 'mood' && r.opts.some(o => o.v === 'imp') && !df.persons.some(x => x !== '1')) issues.add('imperative offered with only 1st person');
+            if (r.a === 'person') { const off = r.opts.filter(o => !df.persons.includes(o.v)); if (off.length) issues.add('chip row person shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
+            if (r.a === 'num' && rows2.some(x => x.a === 'person')) { const off = r.opts.filter(o => !df.vnums.includes(o.v)); if (off.length) issues.add('verb chip row num shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
+            else if (r.a === 'num' && r.opts.length > 1 && df.nums.length === 1) issues.add('chip row num shows both (form ' + st.form + ', ' + rows2.map(x => x.a) + ')');
+            if (r.opts.length === 1 && !r.opts[0].on) issues.add('single option not auto-selected after mood: ' + r.a);
+          }
+          if (done) break;
+        }
+        await pg.evaluate(() => document.querySelector('#chk').click());
+        const parses = await pg.$$eval('.parses li', ls => ls.map(l => l.textContent.split(' = ')[1]));
+        for (const p of parses) check(p, 'parse');
+      } else {
+        check(st.label, 'typed');
+        await pg.evaluate(() => document.querySelector('#chk').click());
+      }
+      await pg.waitForSelector('#ans [data-r]', { timeout: 3000 }).catch(async e => { console.log('STUCK', st, await pg.$eval('#view', v => v.innerHTML.slice(0, 3000))); throw e; }); await pg.evaluate(() => document.querySelector('#ans .primary[data-r], #ans [data-r]').click());
+      await new Promise(r => setTimeout(r, 30));
+      if (await pg.$('#dgo')) break;
+    }
+    console.log(`[${mode}] ${sc.name}: ${n} questions, ${issues.size} issue(s)`); for (const x of [...issues].slice(0, 12)) console.log('   - ' + x);
+    bad += issues.size; await pg.close();
+  }
+  // settings UI: switch to verbs, 3rd person, plural, perfect, passive by tapping chips; Identify rows lock to those values
+  {
+    const pg = await br.newPage(); await pg.goto(URL + 'manifest.webmanifest'); await pg.evaluate(() => localStorage.clear());
+    await pg.goto(URL + '#drills'); await pg.waitForSelector('#tset');
+    const clk = s => pg.evaluate(s => document.querySelector(s).click(), s);
+    await clk('#tset'); await pg.waitForSelector('#dset');
+    const rowsShown = await pg.$$eval('#dset .chips', cs => cs.map(c => c.dataset.g).join());
+    if (!/tenses,persons,vnums,conj/.test(rowsShown)) { bad++; console.log('   - Person / Number chip rows missing from settings: ' + rowsShown); }
+    for (const [g, v] of [['types', 'noun'], ['types', 'adj'], ['tenses', 'pres'], ['tenses', 'impf'], ['tenses', 'fut'], ['tenses', 'plup'], ['tenses', 'fperf'], ['voices', 'act'], ['voices', 'dep'], ['voices', 'pas'], ['persons', '1'], ['persons', '2'], ['vnums', 'sg']])
+      await clk(`.chips[data-g="${g}"] button[data-v="${v}"]`);
+    const sum = await pg.$eval('#view', v => v.textContent); if (!/3rd plural/.test(sum)) { bad++; console.log('   - summary lacks person/number'); }
+    await clk('#dmode button[data-m="id"]'); await clk('#dgo');
+    let ui = 0;
+    for (let i = 0; i < 10; i++) {
+      await pg.waitForSelector('#idrows .idrow');
+      const r = await pg.evaluate(() => [...document.querySelectorAll('#idrows .idrow')].map(r => ({ a: r.dataset.a, locked: r.classList.contains('locked'), v: [...r.querySelectorAll('button')].map(b => b.dataset.v + (b.classList.contains('on') ? '*' : '')).join('/') })));
+      const want = { mood: 'ind*', tense: 'perf*', voice: 'pas*', person: '3*', num: 'pl*' };
+      if (r.some(x => !x.locked || x.v !== want[x.a]) || r.length !== 5) { ui++; console.log('   - UI rows', JSON.stringify(r)); }
+      await clk('#chk'); await pg.waitForSelector('#ans [data-r]'); await clk('#ans [data-r]');
+    }
+    console.log(`[ui] chips → 3rd pl perfect passive indicative: ${ui} issue(s)`); bad += ui; await pg.close();
+  }
+  // weak spots: stats outside settings must not appear
+  {
+    const pg = await br.newPage(); await pg.goto(URL + 'manifest.webmanifest');
+    const df = Object.assign({}, ALL, { types: ['noun'], cases: ['dat'], nums: ['sg'] });
+    const dst = { 'n1|abl.pl': { r: 0, n: 3, a: 3, ok: 0, t: Date.now(), q: 1 }, 'n2|dat.sg': { r: 0.2, n: 3, a: 3, ok: 1, t: Date.now(), q: 2 }, 'v1|ind.act.pres.3s': { r: 0, n: 3, a: 3, ok: 0, t: Date.now(), q: 3 } };
+    await pg.evaluate((df, dst) => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, dq: 3, dst, set: { dmode: 'type', dlen: 10, df } })); }, df, dst);
+    await pg.goto(URL + '#drills'); await pg.waitForSelector('#gweak'); await pg.evaluate(() => document.querySelector('#gweak').click()); await pg.waitForSelector('.weak, #wrst');
+    const t = await pg.$$eval('.weak td:first-child', x => x.map(e => e.textContent)); console.log('weak spots listed:', t);
+    if (t.some(x => !/dative singular/.test(x))) { bad++; console.log('   - weak spot outside settings'); }
+    // verbs, 3rd person plural only: 1st sg / 3rd sg stats stay hidden
+    const df2 = Object.assign({}, ALL, { types: ['verb'], moods: ['ind'], persons: ['3'], vnums: ['pl'] });
+    const dst2 = { 'v1|ind.act.pres.1s': { r: 0, n: 3, a: 3, ok: 0, t: Date.now(), q: 1 }, 'v1|ind.act.pres.3s': { r: 0, n: 3, a: 3, ok: 0, t: Date.now(), q: 2 }, 'v1|ind.act.pres.3p': { r: 0.2, n: 3, a: 3, ok: 1, t: Date.now(), q: 3 } };
+    await pg.goto(URL + 'manifest.webmanifest');
+    await pg.evaluate((df, dst) => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, dq: 3, dst, set: { dmode: 'type', dlen: 10, df } })); }, df2, dst2);
+    await pg.goto(URL + '#drills'); await pg.waitForSelector('#gweak'); await pg.evaluate(() => document.querySelector('#gweak').click()); await pg.waitForSelector('.weak, #wrst');
+    const t2 = await pg.$$eval('.weak td:first-child', x => x.map(e => e.textContent)); console.log('weak spots listed (3rd pl):', t2);
+    if (!t2.length || t2.some(x => !/3rd pl/.test(x))) { bad++; console.log('   - verb weak spot outside person / number settings'); }
+    await pg.close();
+  }
+  console.log(bad ? 'ISSUES: ' + bad : 'ALL OK'); await br.close(); srv.close(); process.exit(bad ? 1 : 0);
+})();

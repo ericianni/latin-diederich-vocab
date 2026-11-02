@@ -12,7 +12,7 @@
   // ---------- state ----------
   // Cards: { box: 0-7, due: local day number }. Leitner boxes: right moves a card up one box, wrong sends it to box 0.
   const INT = [0, 1, 3, 7, 14, 30, 60, 120];   // days until the next review after reaching box n
-  const DF = { types: ['verb', 'noun', 'adj'], moods: ['ind'], voices: ['act', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'], conj: ['1', '2', '3', '3io', '4', 'irr'],
+  const DF = { types: ['verb', 'noun', 'adj'], moods: ['ind'], voices: ['act', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'], persons: ['1', '2', '3'], vnums: ['sg', 'pl'], conj: ['1', '2', '3', '3io', '4', 'irr'],
     cases: ['nom', 'gen', 'dat', 'acc', 'abl'], nums: ['sg', 'pl'], decl: ['1', '2', '3', '4', '5', 'irr'] };
   let S = load();
   function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.cards) return fix(s); } catch (e) { /* fresh */ } return fix({}); }
@@ -74,8 +74,8 @@
     if (a.kind === 'verb') {
       const [mood, voice, tense] = k;
       if (key === 'ind.act.pres.1s' || key === 'ind.dep.pres.1s') return false;      // that's the headword
-      if (mood === 'ger' || mood === 'gdv' || mood === 'sup') return df.moods.includes(mood);   // no voice / tense choice
-      return df.moods.includes(mood) && df.voices.includes(voice) && df.tenses.includes(tense);
+      if (mood === 'ger' || mood === 'gdv' || mood === 'sup') return df.moods.includes(mood) && Identify.vCaseOk(key, df);   // no voice / tense choice; gerund & supine cases follow the Case chips
+      return df.moods.includes(mood) && df.voices.includes(voice) && df.tenses.includes(tense) && Identify.finiteOk(key, df);   // person & number: finite forms only
     }
     if (a.kind === 'noun') return key !== 'nom.sg' && df.cases.includes(k[0]) && df.nums.includes(k[1]);
     return key !== 'm.nom.sg' && df.cases.includes(k[1]) && df.nums.includes(k[2]);
@@ -279,6 +279,8 @@
     moods: [['ind', 'Indicative'], ['sub', 'Subjunctive'], ['imp', 'Imperative'], ['inf', 'Infinitive'], ['ptc', 'Participle'], ['ger', 'Gerund'], ['gdv', 'Gerundive'], ['sup', 'Supine']],
     voices: [['act', 'Active'], ['pas', 'Passive'], ['dep', 'Deponent']],
     tenses: [['pres', 'Present'], ['impf', 'Imperfect'], ['fut', 'Future'], ['perf', 'Perfect'], ['plup', 'Pluperfect'], ['fperf', 'Fut. perfect']],
+    persons: [['1', '1st'], ['2', '2nd'], ['3', '3rd']],
+    vnums: [['sg', 'Singular'], ['pl', 'Plural']],
     conj: [['1', '1st'], ['2', '2nd'], ['3', '3rd'], ['3io', '3rd -iō'], ['4', '4th'], ['irr', 'Irregular']],
     cases: [['nom', 'Nom.'], ['gen', 'Gen.'], ['dat', 'Dat.'], ['acc', 'Acc.'], ['abl', 'Abl.'], ['voc', 'Voc.'], ['loc', 'Loc.']],
     nums: [['sg', 'Singular'], ['pl', 'Plural']],
@@ -291,7 +293,7 @@
     const d = day(), fin = drillEnd; drillEnd = null;
     const tried = [...UNITS.keys()].filter(c => S.dst[c]).length, weak = DrillPick.weakest(S.dst, WEAK_N, new Set(UNITS.keys()), WEAK_MAX);
     const head = UNITS.size === 0
-      ? `<div class="card"><div class="prompt-kind">Form drills</div><p class="no">Nothing matches your choices.</p><p class="small muted">Turn on at least one mood, voice, tense, case, or number below.</p></div>`
+      ? `<div class="card"><div class="prompt-kind">Form drills</div><p class="no">Nothing matches your choices.</p><p class="small muted">Turn on at least one mood, voice, tense, person, case, or number below (imperatives need 2nd or 3rd person and present or future).</p></div>`
       : `<div class="card">${fin ? `<div class="prompt-kind">Set done</div><h2 style="margin:4px 0 0">${fin.ok} of ${fin.n} right</h2>` : '<div class="prompt-kind">Form drills · free practice</div>'}
           <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${tried}</b><span>of ${UNITS.size} forms tried</span></div><div class="stat"><b>${d.dn || 0}</b><span>answered today</span></div></div>
           <button class="primary big" id="dgo">${fin ? 'Keep going' : `Start a set of ${S.set.dlen}`}</button>
@@ -304,10 +306,10 @@
       <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.size}</b> forms, <b>${new Set([].concat(...UNITS.values())).size}</b> words match</div>
       <div class="small muted" style="margin-top:2px">Seen in drills so far: ${plur(Object.keys(S.ds.w).length, 'word')} · ${plur(Object.keys(S.dst).length, 'form')}</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
-        <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('conj', 'Conjugation')}
+        <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('persons', 'Person')}${chipRow('vnums', 'Number')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
         <div class="small muted chiph">Questions per set</div><div class="seg" id="sdr">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.dlen === n ? 'on' : ''}">${n}</button>`).join('')}</div>
-        <p class="small muted">Imperatives come in present and future (use the Tense chips). Gerund, gerundive and supine ignore the voice and tense chips. Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Locative exists only for domus, rūs, humus, bellum and mīlitia.</p>
+        <p class="small muted">Imperatives come in present and future (use the Tense chips) and have only 2nd and 3rd persons. Verb Person and Number apply to indicative, subjunctive and imperative forms; infinitives, participles, gerunds, gerundives and supines ignore them (participles and gerundives use the noun Case and Number chips). Gerund, gerundive and supine ignore the voice and tense chips. The Case and Number chips also apply to participles, gerunds, gerundives and supines (if none of a form’s cases is on, it is drilled in all of them). Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Locative exists only for domus, rūs, humus, bellum and mīlitia.</p>
         <button class="primary big" id="tdone">Done</button>
         <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}
       </div>
@@ -352,7 +354,7 @@
     const df = S.set.df, names = (g) => CHIPS[g].filter(([v]) => df[g].includes(v)).map(x => x[1].toLowerCase());
     const all = g => df[g].length === CHIPS[g].length;
     const parts = [];
-    if (df.types.includes('verb')) parts.push(`verbs: ${names('moods').join(', ') || 'no mood'}; ${names('voices').join('/') || 'no voice'}; ${all('tenses') ? 'all tenses' : names('tenses').join(', ') || 'no tense'}`);
+    if (df.types.includes('verb')) parts.push(`verbs: ${names('moods').join(', ') || 'no mood'}; ${names('voices').join('/') || 'no voice'}; ${all('tenses') ? 'all tenses' : names('tenses').join(', ') || 'no tense'}${all('persons') && all('vnums') ? '' : '; ' + (all('persons') ? 'all persons' : names('persons').join(', ') || 'no person') + ' ' + (all('vnums') ? '' : names('vnums').join('/') || 'no number')}`);
     if (df.types.includes('noun') || df.types.includes('adj')) parts.push(`${df.types.includes('noun') ? 'nouns' : ''}${df.types.includes('noun') && df.types.includes('adj') ? ' & ' : ''}${df.types.includes('adj') ? 'adjectives' : ''}: ${all('cases') ? 'all cases' : names('cases').join(' ')}${all('nums') ? '' : ', ' + names('nums').join(' ')}`);
     return parts.join(' · ') || 'nothing selected';
   }
@@ -370,12 +372,13 @@
   function renderDrill(it) {
     if (S.set.dmode === 'id' || S.set.dmode === 'mix' && Math.random() < 0.5) { if (renderIdentify(it)) return; }
     const w = BY[it.id], a = an(w), key = it.key;
-    const answers = a.tbl[key];
+    const sub = Identify.typedSub(a, key, S.set.df);   // participle / gerundive in an allowed case and number when nom. sg. is off
+    const answers = sub ? sub.forms : a.tbl[key];
     const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective';
     const ctx = csTarget(a, key);
     V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w)}
       <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
-      <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
+      <div class="english" style="margin-top:14px"><b>${esc(sub ? Identify.parseLabel(a, sub) : Morph.label(a.kind, key))}</b>?</div>
       <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
       <div class="small muted" style="margin-top:6px">${macHint()}${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(answers[0]) ? ' Two words, e.g. “amātus est”.' : ''}</div>
       <button class="primary big" id="chk" style="margin-top:10px">Check</button></div>${newTip(it, a, ctx)}</div>`;
@@ -697,7 +700,7 @@
   function practiceLesson(l) {
     const df = S.set.df;
     Object.assign(df, JSON.parse(JSON.stringify(l.drill)));
-    for (const g of ['cases', 'nums', 'tenses', 'voices']) if (!df[g].length) df[g] = DF[g].slice();
+    for (const g of ['cases', 'nums', 'tenses', 'voices', 'persons', 'vnums']) if (!df[g].length) df[g] = DF[g].slice();
     save(); UNITS = buildUnits();
     drillMsg = `Drills now show ${l.drill.conj && l.drill.conj[0] === 'irr' ? 'all irregular verbs' : l.title.replace(/ i-stems$/, '') + (l.drill.types[0] === 'verb' ? ' verbs (indicative)' : l.drill.types[0] === 'noun' ? ' nouns' : '')}. Change this any time under “What to drill.”`;
     setTab('drills');
@@ -774,7 +777,7 @@
         const { w, a, key } = it, answers = a.tbl[key];
         V().innerHTML = `${head()}<div class="card"><div class="prompt-kind">${a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective'}</div>
           <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
-          <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
+          <div class="english" style="margin-top:14px"><b>${esc(sub ? Identify.parseLabel(a, sub) : Morph.label(a.kind, key))}</b>?</div>
           <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
           <div class="small muted" style="margin-top:6px">${macHint()}</div><button class="primary big" id="chk" style="margin-top:10px">Check</button></div></div>`;
         const go = () => {

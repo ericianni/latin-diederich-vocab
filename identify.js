@@ -71,6 +71,28 @@
   }
   const pCases = df => { const c = C5.filter(x => df.cases.includes(x)); return c.length ? c : C5; };
   const pNums = df => df.nums.length ? ['sg', 'pl'].filter(x => df.nums.includes(x)) : ['sg', 'pl'];
+  // finite verbs (indicative, subjunctive, imperative): limited by the verb Person and Number chips (older saved settings: all)
+  const vPers = df => df.persons || ['1', '2', '3'], vNums = df => df.vnums || ['sg', 'pl'];
+  const PERS_M = { ind: ['1', '2', '3'], sub: ['1', '2', '3'], imp: ['2', '3'] };
+  function finiteOk(key, df) {
+    const p = key.split('.'); if (!PERS_M[p[0]] || !p[3]) return true;
+    return vPers(df).includes(p[3][0]) && vNums(df).includes(p[3][1] === 's' ? 'sg' : 'pl');
+  }
+  // can this mood produce any form under the settings? (imperative + only 1st person, or + only perfect: no)
+  function moodPossible(m, df) {
+    if (MOOD_T[m] && !MOOD_T[m].some(t => df.tenses.includes(t))) return false;
+    if (PERS_M[m] && (!PERS_M[m].some(x => vPers(df).includes(x)) || !vNums(df).length)) return false;
+    return true;
+  }
+  // gerund and supine: limited by the Case chips too (if none of their cases is on, all of them are drilled)
+  const GER_C = ['gen', 'dat', 'acc', 'abl'], SUP_C = ['acc', 'abl'];
+  const vCases = (df, cs) => { const c = cs.filter(x => df.cases.includes(x)); return c.length ? c : cs; };
+  function vCaseOk(key, df) {
+    const [mood, c] = key.split('.');
+    if (mood === 'ger') return vCases(df, GER_C).includes(c);
+    if (mood === 'sup') return vCases(df, SUP_C).includes(c === 'um' ? 'acc' : 'abl');
+    return true;
+  }
   // is this key inside the current drill settings? (like the typed drills' filter, but the headword itself counts too)
   function allowed(a, key, df) {
     const at = attrs(a, null, key);
@@ -78,7 +100,9 @@
     if (!df.moods.includes(at.mood)) return false;
     if (at.voice && !df.voices.includes(isDep(key) ? 'dep' : at.voice)) return false;   // the settings still say active / passive / deponent
     if (at.tense && !df.tenses.includes(at.tense)) return false;
+    if (at.person && !finiteOk(key, df)) return false;
     if ((at.mood === 'ptc' || at.mood === 'gdv') && at.gender) return pCases(df).includes(at.case) && pNums(df).includes(at.num);
+    if (at.mood === 'ger' || at.mood === 'sup') return vCaseOk(key, df);
     return true;
   }
   function index(a) {      // normalized form -> every key that produces it
@@ -102,24 +126,37 @@
     }
     return { key: k, form: x[k][0] };
   }
+  // typed drills: a participle or gerundive is asked in its nom. sg. (amātus, amanda) when the settings allow that;
+  // otherwise in an allowed case and number of the same gender (amātō, amandārum). null = ask the table form as is.
+  function typedSub(a, key, df, rnd) {
+    if (a.kind !== 'verb' || !(key.startsWith('ptc.') || key.startsWith('gdv.'))) return null;
+    if (pCases(df).includes('nom') && pNums(df).includes('sg')) return null;
+    rnd = rnd || Math.random;
+    const gdv = key.startsWith('gdv.'), pre = (gdv ? 'gdv' : key) + ':' + (gdv ? key.split('.')[1] : 'm') + '.', x = expand(a);
+    const subs = Object.keys(x).filter(s => s.startsWith(pre) && allowed(a, s, df));
+    if (!subs.length) return null;
+    const k = subs[Math.floor(rnd() * subs.length)];
+    return { key: k, forms: x[k] };
+  }
   const opts = (attr, vals) => vals.map(v => [v, L[attr][v]]);
+  const or = (f, all) => f.length ? f : all;   // never an empty row (a mood picked by mistake still gets answerable rows)
   // the chip rows to show; for verbs they depend on the mood picked (or locked)
   function rows(a, df, mood) {
     if (a.kind === 'noun') return [['case', opts('case', CX.filter(c => df.cases.includes(c)))], ['num', opts('num', ['sg', 'pl'].filter(n => df.nums.includes(n)))],
       ['gender', opts('gender', ['m', 'f', 'n'])], ['decl', opts('decl', ['1', '2', '3', '4', '5', 'irr'].filter(d => df.decl.includes(d)))]];
     if (a.kind === 'adj') return [['case', opts('case', CX.filter(c => df.cases.includes(c)))], ['num', opts('num', ['sg', 'pl'].filter(n => df.nums.includes(n)))],
       ['gender', opts('gender', ['m', 'f', 'n'])], ['decl', opts('decl', [df.decl.includes('1') || df.decl.includes('2') ? '1/2' : null, df.decl.includes('3') ? '3' : null].filter(Boolean))]];
-    const moods = ORDER.mood.filter(m => df.moods.includes(m)), r = [['mood', opts('mood', moods)]];
+    const on = ORDER.mood.filter(m => df.moods.includes(m)), moods = or(on.filter(m => moodPossible(m, df)), on), r = [['mood', opts('mood', moods)]];
     const m = mood || (moods.length === 1 ? moods[0] : null);
     if (!m) return r;
-    const tenses = MOOD_T[m] && opts('tense', MOOD_T[m].filter(t => df.tenses.includes(t))), dep = df.voices.includes('dep'),
+    const tenses = MOOD_T[m] && opts('tense', or(MOOD_T[m].filter(t => df.tenses.includes(t)), MOOD_T[m])), dep = df.voices.includes('dep'),
       voices = opts('voice', ['act', 'pas'].filter(v => df.voices.includes(v) || dep && (v === 'pas' || m === 'ptc' || m === 'inf')));
-    if (m === 'ind' || m === 'sub' || m === 'imp') r.push(['tense', tenses], ['voice', voices], ['person', opts('person', m === 'imp' ? ['2', '3'] : ['1', '2', '3'])], ['num', opts('num', ['sg', 'pl'])]);
+    if (PERS_M[m]) r.push(['tense', tenses], ['voice', voices], ['person', opts('person', or(PERS_M[m].filter(x => vPers(df).includes(x)), PERS_M[m]))], ['num', opts('num', or(['sg', 'pl'].filter(x => vNums(df).includes(x)), ['sg', 'pl']))]);
     else if (m === 'inf') r.push(['tense', tenses], ['voice', voices]);
     else if (m === 'ptc') r.push(['tense', tenses], ['voice', voices], ['case', opts('case', pCases(df))], ['num', opts('num', pNums(df))], ['gender', opts('gender', ['m', 'f', 'n'])]);
-    else if (m === 'ger') r.push(['case', opts('case', ['gen', 'dat', 'acc', 'abl'])]);
+    else if (m === 'ger') r.push(['case', opts('case', vCases(df, GER_C))]);
     else if (m === 'gdv') r.push(['case', opts('case', pCases(df))], ['num', opts('num', pNums(df))], ['gender', opts('gender', ['m', 'f', 'n'])]);
-    else if (m === 'sup') r.push(['case', opts('case', ['acc', 'abl'])]);
+    else if (m === 'sup') r.push(['case', opts('case', vCases(df, SUP_C))]);
     return r;
   }
   const hit = (v, s) => Array.isArray(v) ? v.includes(s) : v === s;
@@ -136,7 +173,7 @@
     if (sub) return (base === 'gdv' ? 'gerundive' : M.label('verb', base).replace(/\s*\(nom\. masc\. sg\.\)/, '')) + ' · ' + M.label('adj', sub);
     return M.label('verb', p.key);
   }
-  const api = { expand, attrs, allowed, parses, pick, rows, grade, parseLabel, genders, L, TITLE, hit };
+  const api = { expand, attrs, allowed, vCaseOk, finiteOk, moodPossible, typedSub, parses, pick, rows, grade, parseLabel, genders, L, TITLE, hit };
   root.Identify = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -79,11 +79,62 @@ eq('mare', 'marī', Object.assign({}, DEF, { cases: ['dat'] }), ['dat.sg']);    
   const one = Object.fromEntries(I.rows(a, Object.assign({}, DEF, { tenses: ['impf'] }))); ok(one.tense.length === 1, 'single tense'); }
 { const [, a] = find('bonus'); const r = Object.fromEntries(I.rows(a, Object.assign({}, DEF, { decl: ['3'] }))); ok(r.decl.map(x => x[0]).join() === '3', 'adj decl'); }
 
+// drill settings limit every verbal noun too: gerund and supine cases follow the Case chips (all of them if none applies);
+// a single allowed option leaves a one-chip row (pre-selected and locked in the app)
+{ const [w, a] = find('amō'); const DAT = Object.assign({}, ALL, { moods: ['ger', 'sup', 'gdv', 'ptc'], cases: ['dat'] }), ABL = Object.assign({}, DAT, { cases: ['abl'] });
+  const caseRow = (df, m) => Object.fromEntries(I.rows(a, df, m)).case.map(x => x[0]).join();
+  ok(caseRow(DAT, 'ger') === 'dat', 'gerund case row: dative only', caseRow(DAT, 'ger'));
+  ok(caseRow(ABL, 'sup') === 'abl', 'supine case row: ablative only', caseRow(ABL, 'sup'));
+  ok(caseRow(DAT, 'sup') === 'acc,abl', 'supine case row: falls back to both when neither is on', caseRow(DAT, 'sup'));
+  ok(caseRow(Object.assign({}, DAT, { cases: ['nom'] }), 'ger') === 'gen,dat,acc,abl', 'gerund case row: falls back when none of its cases is on');
+  ok(caseRow(ALL, 'ger') === 'gen,dat,acc,abl' && caseRow(ALL, 'sup') === 'acc,abl', 'all cases on: full rows');
+  ok(!I.allowed(a, 'ger.gen', DAT) && I.allowed(a, 'ger.dat', DAT) && !I.allowed(a, 'sup.um', ABL) && I.allowed(a, 'sup.u', ABL), 'gerund / supine keys follow the Case chips');
+  ok(I.vCaseOk('ger.abl', ABL) && !I.vCaseOk('ger.acc', ABL) && I.vCaseOk('sup.um', DAT) && I.vCaseOk('gdv.m', DAT), 'vCaseOk');
+  eq('amō', 'amandō', DAT, ['ger.dat', 'gdv:m.dat.sg', 'gdv:n.dat.sg']);                  // not ger.abl / gdv abl. with only dative on
+  eq('amō', 'amātum', ABL, []);                                                            // supine in -um is accusative
+  eq('amō', 'amātū', ABL, ['sup.u']);
+  // typed drills: participles and gerundives are asked in an allowed case and number when nom. sg. is off
+  ok(I.typedSub(a, 'ptc.pas.perf', ALL) === null && I.typedSub(a, 'gdv.f', DEF) === null, 'typed: nom. sg. asked as usual when allowed');
+  const ABLSG = Object.assign({}, ALL, { cases: ['abl'], nums: ['sg'] });
+  const t = I.typedSub(a, 'ptc.pas.perf', ABLSG); ok(t && t.key === 'ptc.pas.perf:m.abl.sg' && t.forms.join() === 'amātō', 'typed ptc abl. sg.', t);
+  const g = I.typedSub(a, 'gdv.f', Object.assign({}, ALL, { cases: ['gen'], nums: ['pl'] })); ok(g && g.key === 'gdv:f.gen.pl' && g.forms.join() === 'amandārum', 'typed gerundive fem. gen. pl.', g);
+  ok(I.parseLabel(a, g) === 'gerundive · feminine genitive plural', 'typed label', I.parseLabel(a, g));
+  const pr = I.typedSub(a, 'ptc.act.pres', ABLSG); ok(pr && pr.forms.join() === 'amante,amantī', 'present participle abl. sg. -e (or -ī)', pr);
+  for (let i = 0; i < 50; i++) { const r = I.typedSub(a, 'ptc.act.fut', Object.assign({}, ALL, { cases: ['dat', 'abl'], nums: ['pl'] })); if (!/^ptc\.act\.fut:m\.(dat|abl)\.pl$/.test(r.key)) { ok(false, 'typed sub outside settings', r.key); break; } }
+  const [hw, ha] = find('hortor'); const d = I.typedSub(ha, 'ptc.dep.perf', ABLSG); ok(d && d.forms.join() === 'hortātō', 'deponent participle abl. sg.', d); }
+// rows never offer a mood, tense, or case that is switched off (single-option rows included)
+{ const [, a] = find('regō'); const PERF = Object.assign({}, ALL, { moods: ['ind', 'sub', 'inf', 'ptc'], tenses: ['perf'], voices: ['pas'] });
+  for (const m of PERF.moods) { const r = Object.fromEntries(I.rows(a, PERF, m)); ok(r.tense.map(x => x[0]).join() === 'perf' && r.voice.map(x => x[0]).join() === 'pas', 'perfect passive only rows', m); }
+  const SUB = Object.assign({}, ALL, { moods: ['sub'] }); const r = I.rows(a, SUB); ok(r[0][1].length === 1 && r[0][1][0][0] === 'sub' && r.length > 1, 'single mood: locked, and its rows shown right away'); }
+
+// verb Person and Number chips: finite forms only; imperative has just 2nd / 3rd person
+{ const [w, a] = find('amō'); const P3 = Object.assign({}, ALL, { persons: ['3'], vnums: ['pl'] });
+  const ro = (df, m) => Object.fromEntries(I.rows(a, df, m).map(([k, v]) => [k, v.map(x => x[0]).join()]));
+  for (const m of ['ind', 'sub', 'imp']) { const r = ro(P3, m); ok(r.person === '3' && r.num === 'pl', 'person/number rows', m, JSON.stringify(r)); }
+  ok(ro(P3, 'ptc').num === 'sg,pl' && !('person' in ro(P3, 'ptc')) && !('person' in ro(P3, 'inf')), 'non-finite forms ignore verb person / number');
+  ok(I.allowed(a, 'ind.act.pres.3p', P3) && !I.allowed(a, 'ind.act.pres.3s', P3) && !I.allowed(a, 'sub.act.impf.1p', P3) && I.allowed(a, 'imp.act.fut.3p', P3), 'finite keys follow person / number');
+  ok(I.allowed(a, 'inf.act.pres', P3) && I.allowed(a, 'ptc.pas.perf:m.abl.sg', P3) && I.allowed(a, 'ger.gen', P3) && I.allowed(a, 'sup.um', P3), 'non-finite keys unaffected');
+  ok(I.finiteOk('ind.act.pres.3p', P3) && !I.finiteOk('ind.act.pres.2p', P3) && I.finiteOk('inf.act.pres', P3), 'finiteOk');
+  eq('amō', 'amant', P3, ['ind.act.pres.3p']); eq('amō', 'amat', P3, []);
+  eq('amō', 'amāte', Object.assign({}, ALL, { persons: ['2'], vnums: ['pl'] }), ['imp.act.pres.2p']);
+  eq('amō', 'amāre', Object.assign({}, ALL, { persons: ['1', '3'] }), ['inf.act.pres']);   // not the 2nd sg passive / imperative
+  // only 1st person: imperative can't occur, so it's left out of the mood row (and its rows never come up empty)
+  const P1 = Object.assign({}, ALL, { moods: ['ind', 'imp'], persons: ['1'] });
+  ok(ro(P1).mood === 'ind', 'imperative dropped from the mood row with only 1st person', ro(P1).mood);
+  ok(!I.moodPossible('imp', P1) && I.moodPossible('ind', P1) && !I.moodPossible('imp', Object.assign({}, ALL, { tenses: ['perf'] })), 'moodPossible');
+  ok(ro(P1, 'imp').person === '2,3', 'imperative picked anyway: full person row, never empty');
+  ok(ro(Object.assign({}, ALL, { moods: ['ind', 'imp'], tenses: ['perf'] })).mood === 'ind', 'imperative dropped with only perfect tense');
+  const S1 = Object.assign({}, ALL, { moods: ['sub'], persons: ['2'], vnums: ['sg'], tenses: ['plup'], voices: ['pas'] }), r = I.rows(a, S1);
+  ok(r.length === 5 && r.every(([, v]) => v.length === 1), 'every finite row single-option (pre-selected and locked in the app)', JSON.stringify(r));
+  ok(ro({ types: ALL.types, moods: ['ind'], voices: ['act'], tenses: ALL.tenses, conj: ALL.conj, cases: ALL.cases, nums: ['sg'], decl: ALL.decl }, 'ind').num === 'sg,pl', 'noun Number chips do not limit finite verbs; old settings without verb person / number: all'); }
+
 // sweep: for every drillable word and every key in the expanded table, the form's own key is among its parses,
 // and every parse's attributes appear in the chip rows for its mood (so a right answer is always possible)
 let n = 0;
 const DEP = Object.assign({}, ALL, { voices: ['dep'] }), PAS = Object.assign({}, ALL, { voices: ['pas'] });
-for (const df of [DEF, ALL, DEP, PAS]) for (const w of W) {
+const NARROW = Object.assign({}, ALL, { tenses: ['perf'], cases: ['dat'], nums: ['pl'], persons: ['2'], vnums: ['sg'] }), SETG = { mood: 'moods', tense: 'tenses', case: 'cases', person: 'persons' };
+const PERS = Object.assign({}, ALL, { persons: ['1', '3'], vnums: ['pl'] }), IMPF = Object.assign({}, ALL, { moods: ['imp', 'inf'], persons: ['3'] });
+for (const df of [DEF, ALL, DEP, PAS, NARROW, PERS, IMPF]) for (const w of W) {
   const a = M.analyze(w); if (a.skip || !a.tbl || !['noun', 'adj', 'verb'].includes(a.kind)) continue;
   const x = I.expand(a);
   for (const k in x) {
@@ -92,7 +143,10 @@ for (const df of [DEF, ALL, DEP, PAS]) for (const w of W) {
     if (!ps.some(p => p.key === k)) { fail++; console.log('FAIL own key missing', w.la, k, x[k][0]); continue; }
     for (const p of ps) { const rows = Object.fromEntries(I.rows(a, df, p.at.mood));
       const miss = Object.keys(p.at).filter(t => !rows[t] || !rows[t].some(([v]) => I.hit(p.at[t], v)));
-      if (miss.length) { fail++; console.log('FAIL not answerable', w.la, p.key, miss); } else pass++; }
+      if (miss.length) { fail++; console.log('FAIL not answerable', w.la, p.key, miss); } else pass++;
+      if (df === NARROW && rows.person && rows.num.some(([v]) => !df.vnums.includes(v))) { fail++; console.log('FAIL verb number chip outside settings', w.la, p.key); }
+      if (df === NARROW) for (const t in SETG) if (rows[t]) {          // no chip for a switched-off value (gerund / supine fall back only when none applies)
+        const offv = rows[t].filter(([v]) => !df[SETG[t]].includes(v)); if (offv.length && !(t === 'case' && ['ger', 'sup'].includes(p.at.mood))) { fail++; console.log('FAIL chip outside settings', w.la, p.key, t, offv); } } }
   }
 }
 console.log(`${pass} passed, ${fail} failed (${n} forms swept)`);
