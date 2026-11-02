@@ -23,7 +23,7 @@
   }
   // expand an abbreviated principal part ("-āvī", "-crēvī") against the first form
   // principal parts the source abbreviates ambiguously or without a hyphen
-  const PERF_FIX = { 'resistō': 'restitī', 'convertō': 'convertī', 'dēsinō': 'dēsiī', 'cōnsistō': 'cōnstitī', 'exsistō': 'exstitī', 'īnsistō': 'īnstitī', 'persistō': 'perstitī', 'subsistō': 'substitī', 'respiciō': 'respexī' };
+  const PERF_FIX = { 'quiēscō': 'quiēvī', 'resistō': 'restitī', 'convertō': 'convertī', 'dēsinō': 'dēsiī', 'cōnsistō': 'cōnstitī', 'exsistō': 'exstitī', 'īnsistō': 'īnstitī', 'persistō': 'perstitī', 'subsistō': 'substitī', 'respiciō': 'respexī' };
   const PURE = /^(āvī|ātum|ātus|āre|ēre|ere|īre|ārī|āri|ērī|ēri|ī|īrī|īri|ēvī|ētum|uī|itum|ītum|īvī|iī|ūtum|ūtus|itūrus|ātūrus|ūrus|ātus|itus|ae|ī|is|ūs|ārum|ōrum|a|um|e|ius|era|erum|eris|ere)$/;
   function expandPart(base, stem, suf) {
     if (!suf || suf === '--' || suf === '-') return null;
@@ -173,7 +173,7 @@
   const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pūgnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ardeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō exeō ' +
     'occidō cadō dēsistō resistō cōnsistō īnsistō persistō assurgō cōnsurgō ēnītor nūbō pareō').split(' '));
   const FUT_FIX = { 'orior': 'oritūrus', 'exorior': 'exoritūrus', 'morior': 'moritūrus', 'nāscor': 'nāscitūrus', 'iuvō': 'iuvātūrus', 'pariō': 'paritūrus', 'ruō': 'ruitūrus', 'secō': 'secātūrus', 'sonō': 'sonātūrus', 'fruor': 'fruitūrus', 'adiuvō': 'adiūtūrus' };
-  const SUP_FIX = { 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
+  const SUP_FIX = { 'quiēscō': 'quiētum', 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
   const CONJ_FIX = { 'pāscō': ['source has -āre; treated as 3rd conj.', 'pāscere'] };
   // intransitive deponents: gerund yes, but no personal gerundive
   const DEP_INTRANS = new Set('īrāscor lābor morior orior exorior ēgredior revertor nāscor'.split(' '));
@@ -402,7 +402,8 @@
     }
     let sg, pl;
     if (decl === 1) { sg = [nomFix || nom, stem + 'ae', stem + 'ae', stem + 'am', stem + 'ā']; pl = [stem + 'ae', stem + 'ārum', stem + 'īs', stem + 'ās', stem + 'īs'];
-      if (/ābus/.test(notes)) { pl[2] = [stem + 'īs', stem + 'ābus']; pl[4] = [stem + 'īs', stem + 'ābus']; } }
+      if (/ābus/.test(notes)) { pl[2] = [stem + 'īs', stem + 'ābus']; pl[4] = [stem + 'īs', stem + 'ābus']; }
+      if (plOnly) sg = null; }                                      // tenebrae, -ārum: no singular
     if (decl === 2) {
       if (neut) { sg = [nom, stem + 'ī', stem + 'ō', nom, stem + 'ō']; pl = [stem + 'a', stem + 'ōrum', stem + 'īs', stem + 'a', stem + 'īs']; }
       else { sg = [nom, stem + 'ī', stem + 'ō', stem + 'um', stem + 'ō']; pl = [stem + 'ī', stem + 'ōrum', stem + 'īs', stem + 'ōs', stem + 'īs']; }
@@ -477,7 +478,7 @@
     // 3rd declension
     let mNom, fNom, nNom, st, cons = CONS_ADJ.includes(nom), comp = false;
     if (p3 && /e$/.test(p3) && /is$/.test(p2)) {          // ācer, ācris, ācre / celer, -eris, -ere
-      st = cut(expandPart(nom, nom, p2), 2); mNom = nom; fNom = st + 'is'; nNom = st + 'e';
+      st = p2 === '-eris' && /er$/.test(nom) ? nom : cut(expandPart(nom, nom, p2), 2); mNom = nom; fNom = st + 'is'; nNom = st + 'e';   // celer, -eris: stem celer- (not celerer-)
     } else if (p2 === '-e') { st = nom.replace(/is$/, ''); mNom = fNom = nom; nNom = st + 'e'; }
     else if ((p2 === '-ius' && /ior$/.test(nom)) || (/or$/.test(nom) && /us$/.test(p2) && !p3)) { comp = true; mNom = fNom = nom; nNom = p2[0] === '-' ? cut(nom, 3) + p2.slice(1) : p2; st = nom.replace(/or$/, 'ōr'); }
     else if (!p3 || /^\(?gen/.test(p3)) {                  // one termination with genitive
@@ -488,7 +489,7 @@
     if (/gen\. pl\. -um/.test(notes)) cons = true;
     const memor = nom === 'memor';
     const abl = comp || (cons && !memor) ? st + 'e' : st + 'ī';
-    const gpl = comp || cons ? st + 'um' : st + 'ium';
+    const gpl = comp || cons || nom === 'celer' ? st + 'um' : st + 'ium';   // celer: gen. pl. celerum (A&G 115a)
     const npl = comp || cons ? st + 'a' : st + 'ia';
     const mf = nn => [[nn, st + 'is', st + 'ī', st + 'em', abl], [st + 'ēs', gpl, st + 'ibus', comp || cons ? st + 'ēs' : [st + 'ēs', st + 'īs'], st + 'ibus']];
     const n = [[nNom, st + 'is', st + 'ī', nNom, abl], [npl, gpl, st + 'ibus', npl, st + 'ibus']];

@@ -19,7 +19,7 @@
   function boxFromIvl(c) { const i = c.ivl || 0; if (i <= 0) return c.reps > 0 ? 1 : 0; return i <= 2 ? 1 : i <= 6 ? 2 : i <= 13 ? 3 : i <= 29 ? 4 : i <= 59 ? 5 : i <= 119 ? 6 : 7; }
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
-    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10 }, s.set || {});
+    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true }, s.set || {});
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
         const c = s.cards[k];
@@ -309,7 +309,7 @@
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('persons', 'Person')}${chipRow('vnums', 'Number')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
         <div class="small muted chiph">Questions per set</div><div class="seg" id="sdr">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.dlen === n ? 'on' : ''}">${n}</button>`).join('')}</div>
-        <p class="small muted">Imperatives come in present and future (use the Tense chips) and have only 2nd and 3rd persons. Imperatives ignore the Person chips. Verb Person applies to indicative and subjunctive forms, verb Number to indicative, subjunctive and imperative forms; infinitives, participles, gerunds, gerundives and supines ignore them (participles and gerundives use the noun Case and Number chips). Gerund, gerundive and supine ignore the voice and tense chips. The Case and Number chips also apply to participles, gerunds, gerundives and supines (if none of a form’s cases is on, it is drilled in all of them). Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Locative exists only for domus, rūs, humus, bellum and mīlitia.</p>
+        <p class="small muted">Imperatives come in present and future (use the Tense chips) and have only 2nd and 3rd persons. Imperatives ignore the Person chips. Verb Person applies to indicative and subjunctive forms, verb Number to indicative, subjunctive and imperative forms; infinitives, participles, gerunds, gerundives and supines ignore them (participles and gerundives use the noun Case and Number chips). Gerund, gerundive and supine ignore the voice and tense chips. The Case and Number chips also apply to participles, gerunds, gerundives and supines (if none of a form’s cases is on, it is drilled in all of them). Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Locative exists only for domus, rūs, humus, bellum and mīlitia. In Identify, a form with several readings (puellae, amāre) accepts any one of them; the optional <b>And…?</b> follow-up (on by default, see Settings) asks for the others, counting only readings these settings allow, of the word shown.</p>
         <button class="primary big" id="tdone">Done</button>
         <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}
       </div>
@@ -413,12 +413,14 @@
 
   // ---------- identify the form ----------
   // Show a generated form; the user taps one chip per attribute. Any valid parse is accepted (rēgēs: nom. or acc. pl.).
+  // After a right answer on an ambiguous form, the optional "And…?" step asks for the other readings (Settings toggle).
+  // It is never graded: the card / drill score uses the first answer only; naming every reading just earns a note.
   function renderIdentify(it) {
     const w = BY[it.id], a = an(w), df = S.set.df;
     const q = Identify.pick(a, [it.key], df); if (!q) return false;
     const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
-    const sel = {}; let done = false;
+    const sel = {}; let done = false, phase = 'ask', first = null, missTry = null; const found = [];
     const entry = w.la.replace(/\s\([^)]*\)$/, '');   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
     V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w)}
       <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
@@ -436,19 +438,49 @@
       $('#chk').disabled = !full; $('#idhint').style.visibility = full ? 'hidden' : '';
       if (matchMedia('(hover:hover)').matches) { const nx = full ? $('#chk') : document.querySelector('#idrows .idrow:not(.locked) .chips:not(:has(.on)) button'); if (nx) nx.focus({ preventScroll: true }); }
     };
+    const lbl = p => `<b>${esc(q.form)}</b> = ${esc(Identify.parseLabel(a, p))}`;
+    // the "And…?" step: chips stay live (pre-set to the first answer); Check names one more reading, Skip / Done ends it
+    const andStep = msg => {
+      const left = ps.length - found.length;
+      $('#ans').innerHTML = `<div class="answer"><div class="ok">✓ Right</div><ul class="parses">${found.map(p => `<li class="got">✓ ${lbl(p)}</li>`).join('')}</ul>
+        <div class="andq"><b>And…?</b> This form has ${plur(left, 'more reading')} in your drill settings. Change the chips to name ${left === 1 ? 'it' : 'one'}, or skip (no penalty).</div>
+        ${msg ? `<div class="small andmsg">${msg}</div>` : ''}
+        <div class="row" style="margin-top:10px"><button class="grow" id="andskip">Skip</button><button class="primary grow" id="chk">Check</button></div>
+        <div class="small muted center" id="idhint" style="margin-top:6px;visibility:hidden">Pick one in each row.</div></div>`;
+      $('#chk').onclick = go; $('#andskip').onclick = () => finish();
+      document.querySelectorAll('#idrows button').forEach(b => { b.classList.remove('right', 'wrong', 'want'); });
+      done = false; draw();
+    };
     const go = () => {
-      if (done || $('#chk').disabled) return; done = true;
-      const g = Identify.grade(sel, ps), off = new Set(g.off); if ($('#pretip')) $('#pretip').remove();
+      if (done || $('#chk').disabled) return;
+      if (phase === 'and') {
+        const r = Identify.andGrade(sel, ps, found);
+        if (r.kind === 'dup') return andStep('You already named that one.');
+        if (r.kind === 'new') { found.push(r.p); return found.length === ps.length ? finish() : andStep('✓ Yes, that’s another one.'); }
+        missTry = Object.assign({}, sel); return finish();     // not a reading: the step ends and shows the rest
+      }
+      done = true;
+      const g = Identify.grade(sel, ps); if ($('#pretip')) $('#pretip').remove();
+      first = g;
+      if (g.ok && ps.length > 1 && S.set.andMore) { phase = 'and'; found.push(g.best); return andStep(''); }
+      finish();
+    };
+    const finish = () => {
+      done = true; const g = first, off = new Set(g.off), andDone = phase === 'and'; phase = 'end';
+      if (andDone) document.querySelectorAll('#idrows button').forEach(b => b.classList.remove('right', 'wrong', 'want'));
       document.querySelectorAll('#idrows .idrow').forEach(r => { const attr = r.dataset.a, want = g.best.at[attr];
-        r.querySelectorAll('button').forEach(b => { b.disabled = true; const v = b.dataset.v;
+        r.querySelectorAll('button').forEach(b => { b.disabled = true; if (andDone) return; const v = b.dataset.v;
           if (v === sel[attr]) b.classList.add(off.has(attr) ? 'wrong' : 'right'); else if (off.has(attr) && want != null && Identify.hit(want, v)) b.classList.add('want'); }); });
       const many = ps.length > 1, lex = a.kind === 'noun' ? `<div class="small muted"><b>${esc(entry)}</b>: ${Identify.genders(w, a).map(x => ({ m: 'masculine', f: 'feminine', n: 'neuter' })[x]).join(' or ')}, ${a.decl === 'irr' ? 'irregular' : ORD[a.decl] + ' declension'}</div>`
         : a.kind === 'adj' ? `<div class="small muted"><b>${esc(entry)}</b>: ${a.decl === 3 ? '3rd' : '1st/2nd'}-declension adjective</div>`
         : ps.some(p => p.dep) ? `<div class="small muted"><b>${esc(entry)}</b> is deponent: passive forms, active meaning. Voice is judged by the form${ps.some(p => p.dep && p.at.voice === 'act') ? ' (its present and future participles and future infinitive look active)' : ''}.</div>` : '';
       const offTxt = g.off.map(x => Identify.TITLE[x].toLowerCase().replace('mood / form', 'mood')).join(', ');
       $('#ans').innerHTML = `<div class="answer">${g.ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong${offTxt ? ' — check the ' + esc(offTxt) : ''}</div>`}
+        ${andDone ? (found.length === ps.length ? `<div class="small andall">★ All ${ps.length} readings. Nice!</div>`
+          : `<div class="small muted">${missTry ? 'That isn’t a reading of this form. ' : ''}You named ${found.length} of ${ps.length} readings. The others are below.</div>`) : ''}
         <div class="small muted chiph">${many ? `${ps.length} valid answers (any one counts)` : 'The answer'}</div>
-        <ul class="parses">${ps.map(p => `<li${!g.ok && p === g.best ? ' class="near"' : ''}><b>${esc(q.form)}</b> = ${esc(Identify.parseLabel(a, p))}</li>`).join('')}</ul>${lex}
+        <ul class="parses">${ps.map(p => andDone ? `<li class="${found.includes(p) ? 'got' : 'missed'}">${found.includes(p) ? '✓' : '○'} ${lbl(p)}${found.includes(p) ? '' : ' <span class="muted">(missed)</span>'}</li>`
+          : `<li${!g.ok && p === g.best ? ' class="near"' : ''}>${lbl(p)}</li>`).join('')}</ul>${lex}
         ${a.tbl[tkey] ? `<div class="forms">${miniTable(a, tkey)}</div>` : ''}
         ${it.nf ? '' : `<div class="row" style="margin-top:10px"><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>`}
         ${newTip(it, a, ctx)}<div class="row" style="margin-top:10px"><button class="primary big" data-r="${g.ok ? 1 : 0}">Next</button></div></div>`;
@@ -894,6 +926,8 @@
       <div class="small muted">New flashcard words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
       <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p>
+      <div class="small muted" style="margin-top:14px">Identify drills: forms with more than one reading</div><div class="seg" id="sand"><button data-m="1" class="${S.set.andMore ? 'on' : ''}" aria-pressed="${!!S.set.andMore}">Ask “And…?”</button><button data-m="0" class="${S.set.andMore ? '' : 'on'}" aria-pressed="${!S.set.andMore}">Just show them</button></div>
+      <p class="small muted">Some forms have several valid parses (puellae: genitive or dative singular, or nominative plural). Any one counts as right. With <b>Ask “And…?”</b> on, a right answer is followed by an optional prompt to name the other readings; skipping costs nothing, and the score uses only your first answer.</p>
       <p class="small muted">Drill settings (which forms, questions per set) are on the Drills tab.</p>
       <div class="row wrap" style="margin-top:14px"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
       <input type="file" id="impf" accept="application/json" hidden></div>
@@ -910,6 +944,7 @@
       <p class="small muted">Made by Eric Ianni. Source code: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>.</p></div>`;
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
+    document.querySelectorAll('#sand button').forEach(b => b.onclick = () => { S.set.andMore = b.dataset.m === '1'; save(); renderAbout(); });
     $('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'latin1400-progress.json'; a.click(); };
     $('#imp').onclick = () => $('#impf').click();
     $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; S = fix(s); save(); UNITS = buildUnits(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };

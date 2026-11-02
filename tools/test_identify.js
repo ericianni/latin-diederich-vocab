@@ -161,5 +161,61 @@ for (const df of [DEF, ALL, DEP, PAS, NARROW, PERS, IMPF, IMP1, IMPP]) for (cons
         const offv = rows[t].filter(([v]) => !df[SETG[t]].includes(v)); if (offv.length && !(t === 'case' && ['ger', 'sup'].includes(p.at.mood))) { fail++; console.log('FAIL chip outside settings', w.la, p.key, t, offv); } } }
   }
 }
+
+// "And…?" follow-up: the other readings of an ambiguous form, named one at a time with the same chips
+const selOf = p => Object.fromEntries(Object.entries(p.at).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]));
+const psOf = (h, form, df) => { const [w, a] = find(h); return I.parses(a, w, form, df); };
+{
+  const ps = psOf('puella', 'puellae', DEF), at = k => selOf(ps.find(p => p.key === k));
+  const g = I.grade(at('gen.sg'), ps); ok(g.ok && g.best.key === 'gen.sg', 'puellae first answer');
+  const found = [g.best];
+  ok(I.andGrade(at('gen.sg'), ps, found).kind === 'dup', 'puellae: same reading again is dup');
+  ok(I.andGrade(Object.assign(at('gen.sg'), { case: 'acc' }), ps, found).kind === 'no', 'puellae: acc. sg. is not a reading');
+  let r = I.andGrade(at('nom.pl'), ps, found); ok(r.kind === 'new' && r.p.key === 'nom.pl', 'puellae: nom. pl. is new'); found.push(r.p);
+  ok(I.others(ps, found).map(p => p.key).join() === 'dat.sg', 'puellae: dat. sg. left');
+  r = I.andGrade(at('dat.sg'), ps, found); ok(r.kind === 'new', 'puellae: dat. sg. is new'); found.push(r.p);
+  ok(I.others(ps, found).length === 0, 'puellae: all named');
+}
+{ // amāre: infinitive or imperative (or the alternative 2nd sg. passive), depending on the settings
+  const ps = psOf('amō', 'amāre', ALL), inf = ps.find(p => p.key === 'inf.act.pres'), imp = ps.find(p => p.key === 'imp.pas.pres.2s');
+  ok(I.grade(selOf(imp), ps).ok, 'amāre: imperative accepted');
+  const r = I.andGrade(selOf(inf), ps, [imp]); ok(r.kind === 'new' && r.p === inf, 'amāre: infinitive is the And…? answer');
+  ok(I.andGrade(Object.assign(selOf(inf), { tense: 'perf' }), ps, [imp]).kind === 'no', 'amāre: perfect infinitive is not a reading');
+}
+// imperatives ignore the Person chips: with only 1st person on, amāre is still an imperative, but not the 2nd sg. indicative
+eq('amō', 'amāre', Object.assign({}, ALL, { persons: ['1'] }), ['inf.act.pres', 'imp.pas.pres.2s']);
+eq('amō', 'amāre', Object.assign({}, ALL, { moods: ['inf', 'ind'] }), ['inf.act.pres', 'ind.pas.pres.2s']);
+eq('amō', 'amāre', Object.assign({}, ALL, { vnums: ['pl'] }), ['inf.act.pres']);
+// vowel length: rēgī (rēx, dat. sg.) and regī (regō, pres. pass. inf.) are different forms, not homographs
+eq('rēx', 'regī', ALL, []);
+eq('regō', 'regī', ALL, ['inf.pas.pres']);
+eq('regō', 'rēgī', ALL, []);
+eq('rēx', 'rēgī', ALL, ['dat.sg']);
+eq('veniō', 'venit', DEF, ['ind.act.pres.3s']);                       // venit vs. vēnit
+eq('veniō', 'vēnit', DEF, ['ind.act.perf.3s']);
+eq('ferō', 'ferre', ALL, ['inf.act.pres', 'imp.pas.pres.2s', 'ind.pas.pres.2s']);
+eq('sum', 'es', ALL, ['ind.act.pres.2s', 'imp.act.pres.2s']);
+eq('cornū', 'cornū', ALL, ['nom.sg', 'voc.sg', 'dat.sg', 'acc.sg', 'abl.sg']);
+eq('agō', 'ēgerit', ALL, ['ind.act.fperf.3s', 'sub.act.perf.3s']);
+// generator fixes that removed false readings
+eq('celer', 'celeris', DEF, ['m.gen.sg', 'f.nom.sg', 'f.gen.sg', 'n.gen.sg']);
+eq('celer', 'celerum', DEF, ['m.gen.pl', 'f.gen.pl', 'n.gen.pl']);
+eq('celer', 'celereris', ALL, []);
+eq('tenebrae', 'tenebrae', ALL, ['nom.pl', 'voc.pl']);                 // plural only: no gen. / dat. sg.
+eq('tenebrae', 'tenebrā', ALL, []);
+{ const [, a] = find('quiēscō'); ok(a.tbl['ind.act.perf.1s'][0] === 'quiēvī' && a.tbl['sup.um'][0] === 'quiētum', 'quiēscō: quiēvī, quiētum', a.tbl['ind.act.perf.1s']); }
+// sweep: in every ambiguous form, each reading can be named by chips, and no two readings share one answer
+let amb = 0;
+for (const df of [DEF, ALL, IMP1, PERS]) for (const w of W) {
+  const a = M.analyze(w); if (a.skip || !a.tbl || !['noun', 'adj', 'verb'].includes(a.kind)) continue;
+  const x = I.expand(a), seen = new Set();
+  for (const k in x) for (const f of x[k]) {
+    if (!I.allowed(a, k, df) || seen.has(M.normM(f))) continue; seen.add(M.normM(f));
+    const ps = I.parses(a, w, f, df); if (ps.length < 2) continue; amb++;
+    for (const p of ps) { const m = ps.filter(q => I.matches(selOf(p), q)); if (m.length !== 1) { fail++; console.log('FAIL readings share an answer', w.la, f, m.map(q => q.key)); continue; }
+      const r = I.andGrade(selOf(p), ps, ps.filter(q => q !== p)); r.kind === 'new' && r.p === p ? pass++ : (fail++, console.log('FAIL And…? cannot name', w.la, f, p.key)); }
+  }
+}
+console.log(`${amb} ambiguous form/setting combinations checked for And…?`);
 console.log(`${pass} passed, ${fail} failed (${n} forms swept)`);
 process.exit(fail ? 1 : 0);

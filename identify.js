@@ -1,7 +1,9 @@
 /* Latin 1400 — "Identify the form" drills: parse a generated form into its attributes.
    Pure logic (no DOM), shared by app.js and tools/test_identify.js.
    A form can have several valid parses (syncretism); parses() finds every key in the word's own
-   paradigm, limited to the current drill settings, whose form matches, and any one of them is accepted. */
+   paradigm, limited to the current drill settings, whose form matches, and any one of them is accepted.
+   Homographs from other words (amor: noun, or 1st sg. pres. pass. of amō) are not counted: the question names the
+   dictionary word, and macrons are always shown, so rēgī (rēx, dat. sg.) and regī (regō, pres. pass. inf.) stay distinct. */
 (function (root) {
   'use strict';
   const M = root.Morph || (typeof require !== 'undefined' ? require('./morph.js') : null);
@@ -170,6 +172,15 @@
     for (const p of ps) { const d = Object.keys(p.at).filter(k => !hit(p.at[k], sel[k])); if (!off || d.length < off.length) { best = p; off = d; } }
     return { ok: !!off && off.length === 0, best, off: off || [] };
   }
+  // "And…?" follow-up for ambiguous forms: after a right first answer, the other readings of the same form
+  // (same word, same drill settings) can be named one at a time. Never graded: it only adds a note.
+  const matches = (sel, p) => Object.keys(p.at).every(k => hit(p.at[k], sel[k]));
+  const others = (ps, found) => ps.filter(p => !found.includes(p));
+  // judge one follow-up answer: 'new' = a reading not named yet, 'dup' = one already named, 'no' = not a reading
+  function andGrade(sel, ps, found) {
+    const p = others(ps, found).find(q => matches(sel, q)); if (p) return { kind: 'new', p };
+    const d = found.find(q => matches(sel, q)); return d ? { kind: 'dup', p: d } : { kind: 'no', p: null };
+  }
   function parseLabel(a, p) {
     const [base, sub] = p.key.split(':');
     if (a.kind === 'noun') return M.label('noun', p.key);
@@ -177,7 +188,7 @@
     if (sub) return (base === 'gdv' ? 'gerundive' : M.label('verb', base).replace(/\s*\(nom\. masc\. sg\.\)/, '')) + ' · ' + M.label('adj', sub);
     return M.label('verb', p.key);
   }
-  const api = { expand, attrs, allowed, vCaseOk, finiteOk, moodPossible, typedSub, parses, pick, rows, grade, parseLabel, genders, L, TITLE, hit };
+  const api = { expand, attrs, allowed, vCaseOk, finiteOk, moodPossible, typedSub, parses, pick, rows, grade, parseLabel, genders, L, TITLE, hit, matches, others, andGrade };
   root.Identify = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

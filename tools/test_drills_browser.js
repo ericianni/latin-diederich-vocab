@@ -88,7 +88,8 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
           if (done) break;
         }
         await pg.evaluate(() => document.querySelector('#chk').click());
-        const parses = await pg.$$eval('.parses li', ls => ls.map(l => l.textContent.split(' = ')[1]));
+        if (await pg.$('#andskip')) await pg.evaluate(() => document.querySelector('#andskip').click());   // And…? step: skip (no penalty)
+        const parses = await pg.$$eval('.parses li', ls => ls.map(l => l.textContent.split(' = ')[1].replace(/ \(missed\)$/, '')));
         for (const p of parses) check(p, 'parse');
       } else {
         check(st.label, 'typed');
@@ -123,6 +124,73 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
       await clk('#chk'); await pg.waitForSelector('#ans [data-r]'); await clk('#ans [data-r]');
     }
     console.log(`[ui] chips → 3rd pl perfect passive indicative: ${ui} issue(s)`); bad += ui; await pg.close();
+  }
+  // "And…?" follow-up on ambiguous forms: name every other reading with the chips; the SRS sees only the first answer
+  {
+    const M = require('../morph.js'); globalThis.Morph = M; const I = require('../identify.js'), WD = require('../data/words.json');
+    const selOf = p => Object.fromEntries(Object.entries(p.at).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]));
+    const parsesFor = (df, form, head) => {     // the word on screen: nouns / adjectives show the headword, verbs the entry
+      for (const w of WD) { if (!(w.la.replace(/\s\([^)]*\)$/, '') === head || w.la.split(/[ ,]/)[0] === head)) continue;
+        const a = M.analyze(w); if (a.skip || !a.tbl) continue; const ps = I.parses(a, w, form, df); if (ps.length) return ps; }
+      return [];
+    };
+    const choose = (pg, sel) => pg.evaluate(sel => {   // mood first (it changes the rows), then the rest
+      for (const k of ['mood', ...Object.keys(sel).filter(k => k !== 'mood')]) { if (sel[k] == null) continue;
+        const b = document.querySelector(`#idrows .idrow[data-a="${k}"]:not(.locked) button[data-v="${sel[k]}"]`); if (b) b.click(); }
+    }, sel);
+    const SC2 = [
+      { name: '1st-decl. nouns, nom/gen/dat (puellae)', df: Object.assign({}, ALL, { types: ['noun'], decl: ['1'], cases: ['nom', 'gen', 'dat'] }) },
+      { name: 'pres. infinitive + imperative, 1st person only (amāre: imperatives ignore Person)', df: Object.assign({}, ALL, { types: ['verb'], moods: ['inf', 'imp'], tenses: ['pres'], voices: ['act', 'pas'], persons: ['1'], conj: ['1', '3'] }) },
+    ];
+    for (const sc of SC2) for (const style of ['all', 'dup+wrong', 'off']) {
+      const pg = await br.newPage(); await pg.goto(URL + 'manifest.webmanifest');
+      await pg.evaluate((df, on) => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, set: { dmode: 'id', dlen: 20, df, andMore: on } })); }, sc.df, style !== 'off');
+      await pg.goto(URL + '#drills'); await pg.waitForSelector('#dgo'); await pg.evaluate(() => document.querySelector('#dgo').click());
+      const issues = []; let amb = 0, n = 0;
+      for (let i = 0; i < 20; i++) {
+        if (await pg.$('#dgo')) break;
+        await pg.waitForSelector('#idrows .idrow'); n++;
+        const { form, head } = await pg.evaluate(() => ({ form: document.querySelector('.latin').textContent, head: document.querySelector('.latin + .small b').textContent }));
+        const ps = parsesFor(sc.df, form, head); if (!ps.length) { issues.push('no parse found for ' + form + ' / ' + head); break; }
+        await choose(pg, selOf(ps[0])); await pg.evaluate(() => document.querySelector('#chk').click());
+        const shown = await pg.$('#andskip');
+        if (ps.length > 1) amb++;
+        if (style === 'off' || ps.length === 1) { if (shown) issues.push('And…? shown for ' + form + (style === 'off' ? ' with the setting off' : ' (one reading)')); }
+        else if (!shown) issues.push('no And…? for ' + form);
+        else if (style === 'all') {
+          for (const p of ps.slice(1)) { await choose(pg, selOf(p)); await pg.evaluate(() => document.querySelector('#chk').click()); }
+          if (!await pg.$('.andall')) issues.push('naming all ' + ps.length + ' readings of ' + form + ' gave no “All readings” note');
+          if (await pg.$$eval('.parses li.missed', x => x.length)) issues.push('readings marked missed after naming all: ' + form);
+        } else {
+          await choose(pg, selOf(ps[0])); await pg.evaluate(() => document.querySelector('#chk').click());
+          const dup = await pg.$eval('#ans', x => x.textContent); if (!/already named/.test(dup) || !await pg.$('#andskip')) issues.push('dup answer not caught: ' + form);
+          // a non-reading: change the case / mood to a value no reading has
+          const bad = await pg.evaluate(ps => { for (const r of document.querySelectorAll('#idrows .idrow:not(.locked)')) for (const b of r.querySelectorAll('button')) { const a = r.dataset.a, v = b.dataset.v;
+            if (ps.every(p => p.at[a] != null && p.at[a] !== v && !(Array.isArray(p.at[a]) && p.at[a].includes(v)))) return { a, v }; } return null; }, ps);
+          if (bad) { await pg.evaluate(b => document.querySelector(`#idrows .idrow[data-a="${b.a}"] button[data-v="${b.v}"]`).click(), bad); await pg.evaluate(() => document.querySelector('#chk').click()); }
+          else await pg.evaluate(() => document.querySelector('#andskip').click());     // every chip fits some reading: skip instead
+          const miss = await pg.$$eval('.parses li.missed', x => x.length); if (miss !== ps.length - 1) issues.push(`${bad ? 'wrong And…? guess' : 'skip'}: ${miss} missed shown, expected ${ps.length - 1} (${form})`);
+        }
+        const got = await pg.$$eval('.parses li', ls => ls.length); if (got !== ps.length) issues.push(`${form}: ${got} readings listed, expected ${ps.length}`);
+        const r = await pg.$eval('#ans [data-r]', b => b.dataset.r); if (r !== '1') issues.push('first answer right but graded ' + r + ': ' + form);
+        await pg.evaluate(() => document.querySelector('#ans [data-r]').click()); await new Promise(r => setTimeout(r, 30));
+      }
+      const st = await pg.evaluate(() => JSON.parse(localStorage.getItem('latin1400.v1')).dst || {});
+      if (Object.values(st).some(x => x.ok !== x.a)) issues.push('a drill stat recorded a miss although every first answer was right');
+      if (!amb) issues.push('no ambiguous form came up');
+      console.log(`[and…?/${style}] ${sc.name}: ${n} questions, ${amb} ambiguous, ${issues.length} issue(s)`); for (const x of issues.slice(0, 12)) console.log('   - ' + x);
+      bad += issues.length; await pg.close();
+    }
+  }
+  // Settings toggle for And…?: on by default, saved when switched
+  {
+    const pg = await br.newPage(); await pg.goto(URL + 'manifest.webmanifest'); await pg.evaluate(() => localStorage.clear());
+    await pg.goto(URL + '#about'); await pg.waitForSelector('#sand');
+    const on0 = await pg.$eval('#sand .on', b => b.dataset.m);
+    await pg.evaluate(() => document.querySelector('#sand button[data-m="0"]').click());
+    const saved = await pg.evaluate(() => JSON.parse(localStorage.getItem('latin1400.v1')).set.andMore);
+    const ok = on0 === '1' && saved === false; if (!ok) bad++;
+    console.log(`[settings] And…? toggle: default ${on0 === '1' ? 'on' : 'off'}, saved off = ${saved === false} ${ok ? 'OK' : 'ISSUE'}`); await pg.close();
   }
   // weak spots: stats outside settings must not appear
   {
