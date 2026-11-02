@@ -21,7 +21,7 @@
   }
   // expand an abbreviated principal part ("-āvī", "-crēvī") against the first form
   // principal parts the source abbreviates ambiguously or without a hyphen
-  const PERF_FIX = { 'resistō': 'restitī', 'convertō': 'convertī', 'dēsinō': 'dēsiī', 'cōnsistō': 'cōnstitī', 'exsistō': 'exstitī', 'īnsistō': 'īnstitī', 'persistō': 'perstitī', 'subsistō': 'substitī' };
+  const PERF_FIX = { 'resistō': 'restitī', 'convertō': 'convertī', 'dēsinō': 'dēsiī', 'cōnsistō': 'cōnstitī', 'exsistō': 'exstitī', 'īnsistō': 'īnstitī', 'persistō': 'perstitī', 'subsistō': 'substitī', 'respiciō': 'respexī' };
   const PURE = /^(āvī|ātum|ātus|āre|ēre|ere|īre|ārī|āri|ērī|ēri|ī|īrī|īri|ēvī|ētum|uī|itum|ītum|īvī|iī|ūtum|ūtus|itūrus|ātūrus|ūrus|ātus|itus|ae|ī|is|ūs|ārum|ōrum|a|um|e|ius|era|erum|eris|ere)$/;
   function expandPart(base, stem, suf) {
     if (!suf || suf === '--' || suf === '-') return null;
@@ -41,9 +41,13 @@
   }
 
   // ---------- verbs ----------
+  // Table keys: finite  mood.voice.tense.person  (ind|sub, act|pas|dep, pres..fperf, 1s..3p)
+  //             imperative imp.voice.pres.2s|2p, infinitive inf.voice.tense, participle ptc.voice.tense
   const P = ['1s', '2s', '3s', '1p', '2p', '3p'];
   const PERS = { '1s': '1st sg', '2s': '2nd sg', '3s': '3rd sg', '1p': '1st pl', '2p': '2nd pl', '3p': '3rd pl' };
   const TENSES = { pres: 'present', impf: 'imperfect', fut: 'future', perf: 'perfect', plup: 'pluperfect', fperf: 'future perfect' };
+  const MOODS = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'infinitive', ptc: 'participle' };
+  const VOICES = { act: 'active', pas: 'passive', dep: 'deponent' };
   const ACT = {
     1: { pres: ['ō', 'ās', 'at', 'āmus', 'ātis', 'ant'], impf: 'ābam', fut: ['ābō', 'ābis', 'ābit', 'ābimus', 'ābitis', 'ābunt'] },
     2: { pres: ['eō', 'ēs', 'et', 'ēmus', 'ētis', 'ent'], impf: 'ēbam', fut: ['ēbō', 'ēbis', 'ēbit', 'ēbimus', 'ēbitis', 'ēbunt'] },
@@ -58,97 +62,210 @@
     '3io': { pres: ['ior', 'eris', 'itur', 'imur', 'iminī', 'iuntur'], impf: 'iēbar', fut: ['iar', 'iēris', 'iētur', 'iēmur', 'iēminī', 'ientur'] },
     4: { pres: ['ior', 'īris', 'ītur', 'īmur', 'īminī', 'iuntur'], impf: 'iēbar', fut: ['iar', 'iēris', 'iētur', 'iēmur', 'iēminī', 'ientur'] },
   };
+  const SUB_A = { 1: ['em', 'ēs', 'et', 'ēmus', 'ētis', 'ent'], 2: ['eam', 'eās', 'eat', 'eāmus', 'eātis', 'eant'], 3: ['am', 'ās', 'at', 'āmus', 'ātis', 'ant'], '3io': ['iam', 'iās', 'iat', 'iāmus', 'iātis', 'iant'], 4: ['iam', 'iās', 'iat', 'iāmus', 'iātis', 'iant'] };
+  const SUB_P = { 1: ['er', 'ēris', 'ētur', 'ēmur', 'ēminī', 'entur'], 2: ['ear', 'eāris', 'eātur', 'eāmur', 'eāminī', 'eantur'], 3: ['ar', 'āris', 'ātur', 'āmur', 'āminī', 'antur'], '3io': ['iar', 'iāris', 'iātur', 'iāmur', 'iāminī', 'iantur'], 4: ['iar', 'iāris', 'iātur', 'iāmur', 'iāminī', 'iantur'] };
+  const IMPF_SUB_A = ['em', 'ēs', 'et', 'ēmus', 'ētis', 'ent'];   // added to the infinitive minus -e: amār-em
+  const IMPF_SUB_P = ['er', 'ēris', 'ētur', 'ēmur', 'ēminī', 'entur'];
+  const INF_A = { 1: 'āre', 2: 'ēre', 3: 'ere', '3io': 'ere', 4: 'īre' };
+  const INF_P = { 1: 'ārī', 2: 'ērī', 3: 'ī', '3io': 'ī', 4: 'īrī' };
+  const IMP_A = { 1: ['ā', 'āte'], 2: ['ē', 'ēte'], 3: ['e', 'ite'], '3io': ['e', 'ite'], 4: ['ī', 'īte'] };
+  const PTC_PRES = { 1: 'āns', 2: 'ēns', 3: 'ēns', '3io': 'iēns', 4: 'iēns' };
   const impfAct = b => { const s = cut(b, 2); return [s + 'am', s + 'ās', s + 'at', s + 'āmus', s + 'ātis', s + 'ant']; };  // 'ābam' -> ābam ābās ...
   const impfPas = b => { const s = cut(b, 2); return [s + 'ar', s + 'āris', s + 'ātur', s + 'āmur', s + 'āminī', s + 'antur']; };
   const PERF = ['ī', 'istī', 'it', 'imus', 'istis', 'ērunt'];
   const PLUP = ['eram', 'erās', 'erat', 'erāmus', 'erātis', 'erant'];
   const FPERF = ['erō', 'eris', 'erit', 'erimus', 'eritis', 'erint'];
-  const SUM = { pres: ['sum', 'es', 'est', 'sumus', 'estis', 'sunt'], impf: ['eram', 'erās', 'erat', 'erāmus', 'erātis', 'erant'], fut: ['erō', 'eris', 'erit', 'erimus', 'eritis', 'erunt'] };
+  const PERF_SUB = ['erim', 'erīs', 'erit', 'erīmus', 'erītis', 'erint'];
+  const PLUP_SUB = ['issem', 'issēs', 'isset', 'issēmus', 'issētis', 'issent'];
+  const SUM = { pres: ['sum', 'es', 'est', 'sumus', 'estis', 'sunt'], impf: ['eram', 'erās', 'erat', 'erāmus', 'erātis', 'erant'], fut: ['erō', 'eris', 'erit', 'erimus', 'eritis', 'erunt'],
+    spres: ['sim', 'sīs', 'sit', 'sīmus', 'sītis', 'sint'], simpf: ['essem', 'essēs', 'esset', 'essēmus', 'essētis', 'essent'] };
   const map6 = (stem, arr) => arr.map(e => stem + e);
-  function table(cells) { const o = {}; for (const t in cells) cells[t].forEach((f, i) => { o[t + '.' + P[i]] = Array.isArray(f) ? f : [f]; }); return o; }
-  function perfSys(pstem, out) {
-    out.perf = map6(pstem, PERF).map((f, i) => i === 5 ? [f, pstem + 'ēre'] : f);
-    out.plup = map6(pstem, PLUP); out.fperf = map6(pstem, FPERF);
+  // periphrastic perfect-system forms: amātus sum ... amātī sunt
+  const peri = (ppl, aux) => { const pl = cut(ppl, 2) + 'ī'; return aux.map((s, i) => (i < 3 ? ppl : pl) + ' ' + s); };
+  const PERI = { ind: { perf: SUM.pres, plup: SUM.impf, fperf: FPERF }, sub: { perf: SUM.spres, plup: SUM.simpf } };
+
+  function Forms() {
+    const T = {};
+    return {
+      T,
+      six(mood, voice, tense, arr) { arr.forEach((f, i) => { if (f != null) T[`${mood}.${voice}.${tense}.${P[i]}`] = [].concat(f); }); },
+      one(key, f) { if (f) T[key] = [].concat(f); },
+      perfAct(pst, voice = 'act') {          // perfect system from the 3rd principal part
+        if (!pst) return;
+        this.six('ind', voice, 'perf', map6(pst, PERF).map((f, i) => i === 5 ? [f, pst + 'ēre'] : f));
+        this.six('ind', voice, 'plup', map6(pst, PLUP)); this.six('ind', voice, 'fperf', map6(pst, FPERF));
+        this.six('sub', voice, 'perf', map6(pst, PERF_SUB)); this.six('sub', voice, 'plup', map6(pst, PLUP_SUB));
+        this.one(`inf.${voice}.perf`, pst + 'isse');
+      },
+      perfPeri(ppl, voice) {
+        if (!ppl) return;
+        for (const m of ['ind', 'sub']) for (const t in PERI[m]) this.six(m, voice, t, peri(ppl, PERI[m][t]));
+        this.one(`inf.${voice}.perf`, ppl + ' esse'); this.one(`ptc.${voice}.perf`, ppl);
+      },
+    };
   }
-  function depPerf(ppl, out) {
-    const pl = cut(ppl, 2) + 'ī';
-    const mk = arr => arr.map((s, i) => (i < 3 ? ppl : pl) + ' ' + s);
-    out.perf = mk(SUM.pres); out.plup = mk(SUM.impf); out.fperf = mk(['erō', 'eris', 'erit', 'erimus', 'eritis', 'erint']);
+  function alt2s(T) {   // passive 2nd sg: -ris or -re
+    for (const k in T) if (/^(ind|sub)\.(pas|dep)\.(pres|impf|fut)\.2s$/.test(k)) T[k] = T[k].concat(T[k].filter(f => /ris$/.test(f)).map(f => f.replace(/ris$/, 're')));
+    return T;
   }
+  // regular verbs (all four conjugations, active / passive / deponent)
+  function regular(o) {
+    const F = Forms(); const { conj, stem } = o; const infA = o.infA || stem + INF_A[conj];
+    if (o.voice === 'act') {
+      F.six('ind', 'act', 'pres', ACT[conj].pres.map(f => stem + f));
+      F.six('ind', 'act', 'impf', impfAct(ACT[conj].impf).map(f => stem + f));
+      F.six('ind', 'act', 'fut', ACT[conj].fut.map(f => stem + f));
+      F.six('sub', 'act', 'pres', SUB_A[conj].map(f => stem + f));
+      F.six('sub', 'act', 'impf', IMPF_SUB_A.map(f => cut(infA, 1) + f));
+      let imp = stem + IMP_A[conj][0];
+      if (/(dīc|dūc)[ōo]$/.test(o.p1)) imp = cut(o.p1, 1);
+      if (o.p1 === 'faciō') imp = 'fac';
+      F.one('imp.act.pres.2s', imp); F.one('imp.act.pres.2p', stem + IMP_A[conj][1]);
+      F.one('inf.act.pres', infA); F.one('ptc.act.pres', stem + PTC_PRES[conj]);
+      if (o.pst) F.perfAct(o.pst);
+      else if (o.semi) {   // semi-deponent: audeō, ausus sum
+        for (const m of ['ind', 'sub']) for (const t in PERI[m]) F.six(m, 'act', t, peri(o.semi, PERI[m][t]));
+        F.one('inf.act.perf', o.semi + ' esse'); F.one('ptc.act.perf', o.semi);
+      }
+      if (o.futp) { F.one('inf.act.fut', o.futp + ' esse'); F.one('ptc.act.fut', o.futp); }
+    }
+    if (o.voice === 'dep' || o.passive) {
+      const v = o.voice === 'dep' ? 'dep' : 'pas';
+      F.six('ind', v, 'pres', PAS[conj].pres.map(f => stem + f));
+      F.six('ind', v, 'impf', impfPas(PAS[conj].impf).map(f => stem + f));
+      F.six('ind', v, 'fut', PAS[conj].fut.map(f => stem + f));
+      F.six('sub', v, 'pres', SUB_P[conj].map(f => stem + f));
+      F.six('sub', v, 'impf', IMPF_SUB_P.map(f => cut(infA, 1) + f));
+      F.one(`imp.${v}.pres.2s`, infA); F.one(`imp.${v}.pres.2p`, stem + PAS[conj].pres[4]);
+      F.one(`inf.${v}.pres`, o.infA ? cut(o.infA, 1) + 'ī' : stem + INF_P[conj]);
+      F.perfPeri(o.ppp, v);
+      if (v === 'dep') { F.one('ptc.dep.pres', stem + PTC_PRES[conj]); if (o.futp) { F.one('inf.dep.fut', o.futp + ' esse'); F.one('ptc.dep.fut', o.futp); } }
+    }
+    return alt2s(F.T);
+  }
+  // verbs that take no personal passive (intransitive), even though the source gives a supine
+  const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pūgnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ardeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō exeō ' +
+    'occidō cadō dēsistō resistō cōnsistō īnsistō persistō assurgō cōnsurgō ēnītor nūbō pareō').split(' '));
+  const FUT_FIX = { 'orior': 'oritūrus', 'exorior': 'exoritūrus', 'morior': 'moritūrus', 'nāscor': 'nāscitūrus', 'iuvō': 'iuvātūrus', 'pariō': 'paritūrus', 'ruō': 'ruitūrus', 'secō': 'secātūrus', 'sonō': 'sonātūrus', 'fruor': 'fruitūrus', 'adiuvō': 'adiūtūrus' };
+  const SUP_FIX = { 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
+  const CONJ_FIX = { 'pāscō': ['source has -āre; treated as 3rd conj.', 'pāscere'] };
   const DEFECTIVE = ['meminī', 'ōdī', 'coepī', 'inquam', 'aiō', 'salvē', 'quaesō', 'apage', 'ave', 'avē'];
+  const pppFrom = x => x && /um$/.test(x) ? cut(x, 2) + 'us' : null;
+  const futFrom = (p1, x) => FUT_FIX[p1] || (x && /ūrus$/.test(x) ? x : x && /ūrum$/.test(x) ? cut(x, 2) + 'us' : x && /(um|us)$/.test(x) ? cut(x, 2) + 'ūrus' : null);
   function verb(e) {
-    const { parts, notes } = clean(e.la);
+    const { parts } = clean(e.la);
     const p1 = parts[0];
     if (DEFECTIVE.includes(p1) || ends(p1, 'ī') && /isse/.test(parts[1] || '')) return { skip: 'defective verb' };
     if (/et$/.test(p1) && /uit|^-?ēre/.test(parts.slice(1).join(' '))) return { skip: 'impersonal verb' };
-    const out = {}; let kind = '', conj = null, voice = 'act';
-    let infRaw = parts[1] || '';
+    const infRaw = parts[1] || '';
     const stem0 = p1.replace(/(ior|eor|or|iō|eō|ō|io|eo|o|m)$/, '');
-    const inf = expandPart(p1, stem0, infRaw) || '';
+    let inf = expandPart(p1, stem0, infRaw) || '';
     let pp3 = PERF_FIX[p1] || (parts[2] ? expandPart(p1, stem0, parts[2]) : null);
     if (parts[2] === '-uī' && /u$/.test(stem0)) pp3 = stem0 + 'ī';                       // īnstituō -uī -> īnstituī
     if (parts[2] === '-iēcī' && /ici[oō]$/.test(p1)) pp3 = p1.replace(/ici[oō]$/, 'iēcī'); // adiciō -> adiēcī
     const pp3full = (parts[2] || '').includes(' sum') ? parts[2] : null;
+    let pp4 = SUP_FIX[p1] || (parts[3] ? expandPart(p1, stem0, parts[3]) : null);
+    // compound supine: reuse the prefix found for the perfect (peragō -ēgī -āctum -> per|ēgī -> perāctum)
+    if (!SUP_FIX[p1] && parts[3] && parts[3][0] === '-' && parts[2] && parts[2][0] === '-' && pp3 && ends(pp3, parts[2].slice(1))) pp4 = cut(pp3, parts[2].length - 1) + parts[3].slice(1);
+    const done = (o, T) => Object.assign({ kind: 'verb' }, o, { tbl: T });
     // --- irregulars ---
     if ((ends(inf, 'esse') || inf === 'posse') && ends(p1, 'sum')) {
+      const F = Forms();
+      const pst = pp3 ? cut(pp3, 1) : null;
       if (p1 === 'possum') {
-        Object.assign(out, { pres: ['possum', 'potes', 'potest', 'possumus', 'potestis', 'possunt'], impf: map6('pot', SUM.impf), fut: map6('pot', SUM.fut) });
+        F.six('ind', 'act', 'pres', ['possum', 'potes', 'potest', 'possumus', 'potestis', 'possunt']);
+        F.six('ind', 'act', 'impf', map6('pot', SUM.impf)); F.six('ind', 'act', 'fut', map6('pot', SUM.fut));
+        F.six('sub', 'act', 'pres', map6('pos', SUM.spres)); F.six('sub', 'act', 'impf', SUM.simpf.map(f => 'po' + f.slice(1)));
+        F.one('inf.act.pres', 'posse');
       } else {
         const pre = cut(p1, 3);
         const add = f => (pre === 'prō' && f[0] === 'e') ? 'prōd' + f : pre + f;
-        out.pres = SUM.pres.map(add); out.impf = SUM.impf.map(add); out.fut = SUM.fut.map(add);
+        F.six('ind', 'act', 'pres', SUM.pres.map(add)); F.six('ind', 'act', 'impf', SUM.impf.map(add)); F.six('ind', 'act', 'fut', SUM.fut.map(add));
+        F.six('sub', 'act', 'pres', SUM.spres.map(add)); F.six('sub', 'act', 'impf', SUM.simpf.map(add));
+        F.one('imp.act.pres.2s', add('es')); F.one('imp.act.pres.2p', add('este'));
+        F.one('inf.act.pres', add('esse'));
+        const fp = futFrom(p1, pp4);
+        if (fp) { F.one('inf.act.fut', p1 === 'sum' ? [fp + ' esse', 'fore'] : fp + ' esse'); F.one('ptc.act.fut', fp); }
       }
-      if (pp3) perfSys(cut(pp3, 1), out);
-      return { kind: 'verb', conj: 'irr', irr: 'sum', tbl: table(out) };
+      F.perfAct(pst);
+      return done({ conj: 'irr', irr: p1 === 'possum' ? 'possum' : 'sum', voice: 'act', noPassive: true }, F.T);
     }
     if (ends(p1, 'eō') && /īre$/.test(inf)) {          // eō and compounds
-      const pre = cut(p1, 2);
-      out.pres = ['eō', 'īs', 'it', 'īmus', 'ītis', 'eunt'].map(f => pre + f);
-      out.impf = impfAct('ībam').map(f => pre + f); out.fut = ['ībō', 'ībis', 'ībit', 'ībimus', 'ībitis', 'ībunt'].map(f => pre + f);
-      out.perf = [['iī'], ['īstī', 'iistī'], ['iit'], ['iimus'], ['īstis', 'iistis'], ['iērunt', 'iēre']].map(a => a.map(f => pre + f));
-      out.plup = map6(pre + 'i', PLUP); out.fperf = map6(pre + 'i', FPERF);
-      return { kind: 'verb', conj: 'irr', irr: 'eō', tbl: table(out) };
+      const pre = cut(p1, 2), F = Forms(), A = f => pre + f;
+      F.six('ind', 'act', 'pres', ['eō', 'īs', 'it', 'īmus', 'ītis', 'eunt'].map(A));
+      F.six('ind', 'act', 'impf', impfAct('ībam').map(A)); F.six('ind', 'act', 'fut', ['ībō', 'ībis', 'ībit', 'ībimus', 'ībitis', 'ībunt'].map(A));
+      F.six('ind', 'act', 'perf', [['iī'], ['īstī', 'iistī'], ['iit'], ['iimus'], ['īstis', 'iistis'], ['iērunt', 'iēre']].map(a => a.map(A)));
+      F.six('ind', 'act', 'plup', map6(pre + 'i', PLUP)); F.six('ind', 'act', 'fperf', map6(pre + 'i', FPERF));
+      F.six('sub', 'act', 'pres', ['eam', 'eās', 'eat', 'eāmus', 'eātis', 'eant'].map(A));
+      F.six('sub', 'act', 'impf', ['īrem', 'īrēs', 'īret', 'īrēmus', 'īrētis', 'īrent'].map(A));
+      F.six('sub', 'act', 'perf', map6(pre + 'i', PERF_SUB));
+      F.six('sub', 'act', 'plup', PLUP_SUB.map(f => [pre + 'ī' + f.slice(1), pre + 'i' + f]));
+      F.one('imp.act.pres.2s', A('ī')); F.one('imp.act.pres.2p', A('īte'));
+      F.one('inf.act.pres', A('īre')); F.one('inf.act.perf', [A('īsse'), A('iisse')]); F.one('inf.act.fut', A('itūrus esse'));
+      F.one('ptc.act.pres', A('iēns')); F.one('ptc.act.fut', A('itūrus'));
+      return done({ conj: 'irr', irr: 'eō', voice: 'act', noPassive: true }, F.T);
     }
     if (/ferre$/.test(inf) && ends(p1, 'ferō')) {
-      const pre = cut(p1, 4);
-      out.pres = ['ferō', 'fers', 'fert', 'ferimus', 'fertis', 'ferunt'].map(f => pre + f);
-      out.impf = impfAct('ēbam').map(f => pre + 'fer' + f); out.fut = ACT[3].fut.map(f => pre + 'fer' + f);
-      const p3f = parts[2] && parts[2][0] === '-' ? pre + parts[2].slice(1) : pp3;
-      if (p3f) perfSys(cut(p3f, 1), out);
-      return { kind: 'verb', conj: 'irr', irr: 'ferō', tbl: table(out) };
+      const pre = cut(p1, 4), F = Forms(), A = f => pre + f;
+      const full = (x, def) => !x ? null : x[0] === '-' ? pre + x.slice(1) : x;
+      const pst = full(parts[2]) ? cut(full(parts[2]), 1) : null;
+      const sup = full(parts[3]);
+      F.six('ind', 'act', 'pres', ['ferō', 'fers', 'fert', 'ferimus', 'fertis', 'ferunt'].map(A));
+      F.six('ind', 'act', 'impf', impfAct('ēbam').map(f => A('fer' + f))); F.six('ind', 'act', 'fut', ACT[3].fut.map(f => A('fer' + f)));
+      F.six('sub', 'act', 'pres', SUB_A[3].map(f => A('fer' + f))); F.six('sub', 'act', 'impf', IMPF_SUB_A.map(f => A('ferr' + f)));
+      F.one('imp.act.pres.2s', A('fer')); F.one('imp.act.pres.2p', A('ferte'));
+      F.one('inf.act.pres', A('ferre')); F.one('ptc.act.pres', A('ferēns'));
+      F.perfAct(pst);
+      const ppp = pppFrom(sup), fp = futFrom(p1, sup);
+      if (fp) { F.one('inf.act.fut', fp + ' esse'); F.one('ptc.act.fut', fp); }
+      if (ppp) {
+        F.six('ind', 'pas', 'pres', ['feror', 'ferris', 'fertur', 'ferimur', 'feriminī', 'feruntur'].map(A));
+        F.six('ind', 'pas', 'impf', impfPas('ēbar').map(f => A('fer' + f))); F.six('ind', 'pas', 'fut', PAS[3].fut.map(f => A('fer' + f)));
+        F.six('sub', 'pas', 'pres', SUB_P[3].map(f => A('fer' + f))); F.six('sub', 'pas', 'impf', IMPF_SUB_P.map(f => A('ferr' + f)));
+        F.one('imp.pas.pres.2s', A('ferre')); F.one('imp.pas.pres.2p', A('feriminī'));
+        F.one('inf.pas.pres', A('ferrī')); F.perfPeri(ppp, 'pas');
+      }
+      return done({ conj: 'irr', irr: 'ferō', voice: 'act' }, alt2s(F.T));
     }
     const VNM = {
-      'volō': [['volō', 'vīs', 'vult', 'volumus', 'vultis', 'volunt'], 'vol'],
-      'nōlō': [['nōlō', 'nōn vīs', 'nōn vult', 'nōlumus', 'nōn vultis', 'nōlunt'], 'nōl'],
-      'mālō': [['mālō', 'māvīs', 'māvult', 'mālumus', 'māvultis', 'mālunt'], 'māl'],
+      'volō': [['volō', 'vīs', 'vult', 'volumus', 'vultis', 'volunt'], 'vol', 'vel', 'vell', 'volēns'],
+      'nōlō': [['nōlō', 'nōn vīs', 'nōn vult', 'nōlumus', 'nōn vultis', 'nōlunt'], 'nōl', 'nōl', 'nōll', 'nōlēns'],
+      'mālō': [['mālō', 'māvīs', 'māvult', 'mālumus', 'māvultis', 'mālunt'], 'māl', 'māl', 'māll', null],
     };
     if (VNM[p1] && /lle$/.test(inf)) {
-      const [pr, st] = VNM[p1];
-      out.pres = pr; out.impf = impfAct('ēbam').map(f => st + f); out.fut = ACT[3].fut.map(f => st + f);
-      perfSys(st + 'u', out);
-      return { kind: 'verb', conj: 'irr', irr: p1, tbl: table(out) };
+      const [pr, st, ss, si, ptc] = VNM[p1], F = Forms();
+      F.six('ind', 'act', 'pres', pr); F.six('ind', 'act', 'impf', impfAct('ēbam').map(f => st + f)); F.six('ind', 'act', 'fut', ACT[3].fut.map(f => st + f));
+      F.six('sub', 'act', 'pres', ['im', 'īs', 'it', 'īmus', 'ītis', 'int'].map(f => ss + f)); F.six('sub', 'act', 'impf', IMPF_SUB_A.map(f => si + f));
+      if (p1 === 'nōlō') { F.one('imp.act.pres.2s', 'nōlī'); F.one('imp.act.pres.2p', 'nōlīte'); }
+      F.one('inf.act.pres', si + 'e'); F.one('ptc.act.pres', ptc);
+      F.perfAct(st + 'u');
+      return done({ conj: 'irr', irr: p1, voice: 'act', noPassive: true }, F.T);
     }
     if (p1 === 'fīō') {
-      out.pres = ['fīō', 'fīs', 'fit', 'fīmus', 'fītis', 'fīunt']; out.impf = impfAct('ēbam').map(f => 'fī' + f); out.fut = ACT[3].fut.map(f => 'fī' + f);
-      depPerf('factus', out);
-      return { kind: 'verb', conj: 'irr', irr: 'fīō', tbl: table(out) };
+      const F = Forms();
+      F.six('ind', 'act', 'pres', ['fīō', 'fīs', 'fit', 'fīmus', 'fītis', 'fīunt']); F.six('ind', 'act', 'impf', impfAct('ēbam').map(f => 'fī' + f)); F.six('ind', 'act', 'fut', ACT[3].fut.map(f => 'fī' + f));
+      F.six('sub', 'act', 'pres', SUB_A[3].map(f => 'fī' + f)); F.six('sub', 'act', 'impf', IMPF_SUB_A.map(f => 'fier' + f));
+      F.one('imp.act.pres.2s', 'fī'); F.one('imp.act.pres.2p', 'fīte'); F.one('inf.act.pres', 'fierī');
+      for (const m of ['ind', 'sub']) for (const t in PERI[m]) F.six(m, 'act', t, peri('factus', PERI[m][t]));
+      F.one('inf.act.perf', 'factus esse'); F.one('ptc.act.perf', 'factus');
+      return done({ conj: 'irr', irr: 'fīō', voice: 'act', noPassive: true, note: 'fīō serves as the passive of faciō' }, F.T);
     }
-    if (p1 === 'dō' || /^-?dare$/.test(infRaw) && ends(p1, 'dō') && !/dere/.test(inf)) {   // dō and circumdō: short a
+    if (p1 === 'dō' || /^-?dare$/.test(infRaw) && ends(p1, 'dō') && !/dere/.test(inf)) {   // dō and circumdō: short a except dās, dā, dāns
       const pre = cut(p1, 2);
-      out.pres = ['dō', 'dās', 'dat', 'damus', 'datis', 'dant'].map(f => pre + f);
-      out.impf = ['dabam', 'dabās', 'dabat', 'dabāmus', 'dabātis', 'dabant'].map(f => pre + f);
-      out.fut = ['dabō', 'dabis', 'dabit', 'dabimus', 'dabitis', 'dabunt'].map(f => pre + f);
-      if (pp3) perfSys(cut(pp3, 1), out);
-      return { kind: 'verb', conj: 1, irr: 'dō', tbl: table(out) };
+      const T = regular({ conj: 1, stem: pre + 'd', p1, voice: 'act', pst: pp3 ? cut(pp3, 1) : null, ppp: pppFrom(pp4), futp: futFrom(p1, pp4), passive: !!pppFrom(pp4) });
+      const keep = new Set([pre + 'dās', pre + 'dā', pre + 'dāns']);
+      for (const k in T) T[k] = T[k].map(f => keep.has(f) ? f : f.replace(new RegExp('^' + pre + 'dā'), pre + 'da'));
+      return done({ conj: 'irr', irr: 'dō', voice: 'act' }, T);
     }
     // --- regular ---
     const dep = /(or)$/.test(p1);
-    let flag = null;
+    let flag = null, conj = null, o_inf = null;
+    if (CONJ_FIX[p1]) inf = CONJ_FIX[p1][1];
     if (dep) {
-      voice = 'dep';
       if (/ār[iī]$/.test(inf)) conj = 1; else if (/ēr[iī]$/.test(inf)) conj = 2; else if (/īr[iī]$/.test(inf)) conj = 4;
       else if (/[iī]$/.test(inf)) conj = ends(p1, 'ior') ? '3io' : 3;
       if (p1 === 'orior') conj = '3io';
+      if (/rī$/.test(inf) && conj !== 3 && conj !== '3io' || p1 === 'orior') o_inf = cut(inf, 1) + 'e';   // orior: orīrī -> orīre-r
     } else {
       if (/āre$/.test(inf)) conj = 1;
       else if (/ēre$/.test(inf)) conj = ends(p1, 'eō') ? 2 : (flag = 'source has -ēre; treated as 3rd conj.', 3);
@@ -156,21 +273,24 @@
       else if (/īre$/.test(inf)) conj = 4;
       if (conj === 3 && ends(p1, 'iō')) conj = '3io';
     }
+    if (CONJ_FIX[p1]) flag = CONJ_FIX[p1][0];
     if (!conj) return { skip: 'could not determine conjugation' };
-    const C = dep ? PAS[conj] : ACT[conj];
     const stem = dep ? p1.replace(/(ior|eor|or)$/, '') : p1.replace(/(iō|eō|ō|io|eo|o)$/, '');
     if (!stem || stem === p1) return { skip: 'unrecognized first principal part' };
-    out.pres = C.pres.map(f => stem + f);
-    out.impf = dep ? impfPas(C.impf).map(f => stem + f) : impfAct(C.impf).map(f => stem + f);
-    out.fut = C.fut.map(f => stem + f);
-    let semi = false;
     if (dep) {
-      const ppl = (parts[2] || '').replace(/\s*sum$/, '').trim();
-      if (ppl && /us$/.test(ppl)) depPerf(expandPart(p1, stem, ppl), out);
-    } else if (pp3full) {          // semi-deponent (audeō, ausus sum)
-      semi = true; depPerf(expandPart(p1, stem, pp3full.replace(/\s*sum$/, '')), out);
-    } else if (pp3 && /ī$/.test(pp3)) perfSys(cut(pp3, 1), out);
-    return { kind: 'verb', conj, voice, semi, flag, tbl: table(out) };
+      const raw = (parts[2] || '').replace(/\s*sum$/, '').trim();
+      const ppl = raw && /us$/.test(raw) ? expandPart(p1, stem, raw) : null;
+      const futp = FUT_FIX[p1] || (ppl && !/uus$/.test(ppl) ? cut(ppl, 2) + 'ūrus' : null);
+      return done({ conj, voice: 'dep', flag }, regular({ conj, stem, p1, voice: 'dep', ppp: ppl, futp, infA: o_inf }));
+    }
+    if (pp3full) {          // semi-deponent (audeō, ausus sum)
+      const semi = expandPart(p1, stem, pp3full.replace(/\s*sum$/, ''));
+      return done({ conj, voice: 'act', semi: true, noPassive: true, flag }, regular({ conj, stem, p1, voice: 'act', semi, futp: futFrom(p1, pp4) || cut(semi, 2) + 'ūrus' }));
+    }
+    const ppp = pppFrom(pp4);
+    const passive = !!ppp && !INTRANS.has(p1);
+    const T = regular({ conj, stem, p1, voice: 'act', pst: pp3 && /ī$/.test(pp3) ? cut(pp3, 1) : null, ppp, futp: futFrom(p1, pp4), passive });
+    return done({ conj, voice: 'act', flag, noPassive: !passive, noPassiveWhy: !ppp ? 'no supine/perfect passive participle in the source' : !passive ? 'intransitive' : null }, T);
   }
   // ---------- nouns ----------
   const CASES = ['nom', 'gen', 'dat', 'acc', 'abl'];
@@ -191,7 +311,7 @@
   function noun(e) {
     const { parts, notes } = clean(e.la);
     const nom = parts[0];
-    if (NOUN_IRR[nom]) return { kind: 'noun', decl: 'irr', g: 'irr', tbl: NOUN_IRR[nom] };
+    if (NOUN_IRR[nom]) return { kind: 'noun', decl: 'irr', irr: nom, g: 'irr', tbl: NOUN_IRR[nom] };
     if (/indecl/.test(notes) || /indecl/.test(e.la)) return { skip: 'indeclinable' };
     if (parts.length === 2) { const mm = parts[1].match(/^(\S+)\s+(m|f|n|mf|c)\.$/); if (mm) parts.splice(1, 1, mm[1], mm[2] + '.'); }
     if (parts.length < 3) return { skip: 'defective / unusual entry' };
@@ -202,7 +322,7 @@
     const plOnly = /(^|; )pl\.($|;)/.test(notes) || /^(ārum|ōrum|um|ium|uum|ērum)$/.test(gRaw.replace(/^-/, '')) && /(ae|ī|a|ēs)$/.test(nom);
     if (/mostly|only/.test(notes) && !/gen\. pl/.test(notes)) return { skip: 'defective forms (' + notes + ')' };
     let g = gRaw.replace(/^-/, '');
-    let gen, decl, stem, nomFix = null;
+    let gen, decl, stem, nomFix = null, istemOut = false;
     const lastVowelStem = () => { // tempus,-oris -> temp
       const fv = g[0]; let i = nom.length - 1;
       while (i >= 0 && !isV(nom[i])) i--;
@@ -250,6 +370,7 @@
       if (/gen\. pl\. -um|gen\. pl\. \w+um\b/.test(notes) && !/-ium/.test(notes)) istem = false;
       if (/gen\. pl\. -ium/.test(notes)) istem = true;
       if (plOnly && /ium$/.test(g)) istem = true;
+      istemOut = istem;
       let gpl = istem ? stem + 'ium' : stem + 'um';
       if (GPL_BOTH.includes(nom)) gpl = [stem + 'um', stem + 'ium'];
       const acc = neut ? nom : stem + 'em';
@@ -268,7 +389,7 @@
       pl = n ? [stem + 'ua', stem + 'uum', dp, stem + 'ua', dp] : [stem + 'ūs', stem + 'uum', dp, stem + 'ūs', dp];
     }
     if (decl === 5) { sg = [nom, gen, gen, stem + 'em', stem + 'ē']; pl = [stem + 'ēs', stem + 'ērum', stem + 'ēbus', stem + 'ēs', stem + 'ēbus']; }
-    return { kind: 'noun', decl, g: gender, plOnly, flag: nomFix ? 'source has rēgīnā; corrected to rēgīna' : null, tbl: cells(sg, pl) };
+    return { kind: 'noun', decl, g: gender, istem: decl === 3 ? istemOut : false, plOnly, flag: nomFix ? 'source has rēgīnā; corrected to rēgīna' : null, tbl: cells(sg, pl) };
   }
   // ---------- adjectives ----------
   const GEN = ['m', 'f', 'n'];
@@ -327,11 +448,26 @@
   // human-readable label for a table key
   function label(kind, key) {
     const k = key.split('.');
-    if (kind === 'verb') return `${PERS[k[1]]} ${TENSES[k[0]]}`;
+    if (kind === 'verb') {
+      const [mood, voice, tense, p] = k;
+      const vw = voice === 'dep' ? '' : VOICES[voice] + ' ';
+      const dep = voice === 'dep' ? ' (deponent)' : '';
+      if (mood === 'ind' || mood === 'sub') return `${PERS[p]} · ${TENSES[tense]} ${vw}${MOODS[mood]}${dep}`;
+      if (mood === 'imp') return `${PERS[p]} · ${vw}imperative${dep}`;
+      if (mood === 'inf') return `${TENSES[tense]} ${vw}infinitive${dep}`;
+      return `${TENSES[tense]} ${vw}participle${dep} (nom. masc. sg.)`;
+    }
     if (kind === 'noun') return `${CASE_N[k[0]]} ${k[1] === 'sg' ? 'singular' : 'plural'}`;
     return `${GEN_N[k[0]]} ${CASE_N[k[1]]} ${k[2] === 'sg' ? 'singular' : 'plural'}`;
   }
-  function check(input, answers) { const n = norm(input); return answers.some(a => norm(a) === n); }
-  const api = { analyze, label, check, norm, plain, TENSES, CASES };
+  // also accept feminine / neuter participles in compound forms (amāta est, amātum esse)
+  function variants(a) {
+    const out = [a];
+    let m = a.match(/^(\S+)us( .+)$/); if (m) out.push(m[1] + 'a' + m[2], m[1] + 'um' + m[2]);
+    m = a.match(/^(\S+)ī( .+)$/); if (m) out.push(m[1] + 'ae' + m[2], m[1] + 'a' + m[2]);
+    return out;
+  }
+  function check(input, answers) { const n = norm(input); return answers.some(a => variants(a).some(v => norm(v) === n)); }
+  const api = { analyze, label, check, norm, plain, TENSES, CASES, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
   root.Morph = api; if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : this);
