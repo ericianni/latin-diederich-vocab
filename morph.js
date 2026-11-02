@@ -23,7 +23,7 @@
   }
   // expand an abbreviated principal part ("-āvī", "-crēvī") against the first form
   // principal parts the source abbreviates ambiguously or without a hyphen
-  const PERF_FIX = { 'quiēscō': 'quiēvī', 'resistō': 'restitī', 'convertō': 'convertī', 'dēsinō': 'dēsiī', 'cōnsistō': 'cōnstitī', 'exsistō': 'exstitī', 'īnsistō': 'īnstitī', 'persistō': 'perstitī', 'subsistō': 'substitī', 'respiciō': 'respexī' };
+  const PERF_FIX = { 'quiēscō': 'quiēvī', 'quaerō': 'quaesīvī', 'requīrō': 'requīsīvī', 'contemnō': 'contempsī', 'adsum': 'adfuī', 'resistō': 'restitī', 'convertō': 'convertī', 'dēsinō': 'dēsiī', 'cōnsistō': 'cōnstitī', 'exsistō': 'exstitī', 'īnsistō': 'īnstitī', 'persistō': 'perstitī', 'subsistō': 'substitī', 'respiciō': 'respexī' };
   const PURE = /^(āvī|ātum|ātus|āre|ēre|ere|īre|ārī|āri|ērī|ēri|ī|īrī|īri|ēvī|ētum|uī|itum|ītum|īvī|iī|ūtum|ūtus|itūrus|ātūrus|ūrus|ātus|itus|ae|ī|is|ūs|ārum|ōrum|a|um|e|ius|era|erum|eris|ere)$/;
   function expandPart(base, stem, suf) {
     if (!suf || suf === '--' || suf === '-') return null;
@@ -172,8 +172,8 @@
   // verbs that take no personal passive (intransitive), even though the source gives a supine
   const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pūgnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ardeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō exeō ' +
     'occidō cadō dēsistō resistō cōnsistō īnsistō persistō assurgō cōnsurgō ēnītor nūbō pareō').split(' '));
-  const FUT_FIX = { 'orior': 'oritūrus', 'exorior': 'exoritūrus', 'morior': 'moritūrus', 'nāscor': 'nāscitūrus', 'iuvō': 'iuvātūrus', 'pariō': 'paritūrus', 'ruō': 'ruitūrus', 'secō': 'secātūrus', 'sonō': 'sonātūrus', 'fruor': 'fruitūrus', 'adiuvō': 'adiūtūrus' };
-  const SUP_FIX = { 'quiēscō': 'quiētum', 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
+  const FUT_FIX = { 'adsum': 'adfutūrus', 'orior': 'oritūrus', 'exorior': 'exoritūrus', 'morior': 'moritūrus', 'nāscor': 'nāscitūrus', 'iuvō': 'iuvātūrus', 'pariō': 'paritūrus', 'ruō': 'ruitūrus', 'secō': 'secātūrus', 'sonō': 'sonātūrus', 'fruor': 'fruitūrus', 'adiuvō': 'adiūtūrus' };
+  const SUP_FIX = { 'quiēscō': 'quiētum', 'quaerō': 'quaesītum', 'requīrō': 'requīsītum', 'contemnō': 'contemptum', 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
   const CONJ_FIX = { 'pāscō': ['source has -āre; treated as 3rd conj.', 'pāscere'] };
   // intransitive deponents: gerund yes, but no personal gerundive
   const DEP_INTRANS = new Set('īrāscor lābor morior orior exorior ēgredior revertor nāscor'.split(' '));
@@ -209,7 +209,7 @@
         F.one('inf.act.pres', 'posse');
       } else {
         const pre = cut(p1, 3);
-        const add = f => (pre === 'prō' && f[0] === 'e') ? 'prōd' + f : pre + f;
+        const add = f => (pre === 'prō' && f[0] === 'e') ? 'prōd' + f : (pre === 'dē' && f[0] === 'e') ? 'de' + f : pre + f;   // prōdest; deest, deesse (vowel before vowel is short)
         F.six('ind', 'act', 'pres', SUM.pres.map(add)); F.six('ind', 'act', 'impf', SUM.impf.map(add)); F.six('ind', 'act', 'fut', SUM.fut.map(add));
         F.six('sub', 'act', 'pres', SUM.spres.map(add)); F.six('sub', 'act', 'impf', SUM.simpf.map(add));
         F.one('imp.act.pres.2s', add('es')); F.one('imp.act.pres.2p', add('este'));
@@ -345,9 +345,10 @@
     if (LOC[nom]) T['loc.sg'] = LOC[nom].slice();
     return T;
   }
-  const cells = (sg, pl) => { const o = {}; CASES.forEach((c, i) => { if (sg) o[c + '.sg'] = [].concat(sg[i]); if (pl) o[c + '.pl'] = [].concat(pl[i]); }); return o; };
+  const cells = (sg, pl) => { const o = {}; CASES.forEach((c, i) => { if (sg && sg[i] != null) o[c + '.sg'] = [].concat(sg[i]); if (pl && pl[i] != null) o[c + '.pl'] = [].concat(pl[i]); }); return o; };   // null cell = not drilled
   const NOUN_IRR = {
-    'vīs': cells(['vīs', 'vīs', 'vī', 'vim', 'vī'], ['vīrēs', 'vīrium', 'vīribus', ['vīrēs', 'vīrīs'], 'vīribus']),
+    'vīs': cells(['vīs', null, 'vī', 'vim', 'vī'],   // gen. sg. vīs is rare (A&G 79): not drilled
+                  ['vīrēs', 'vīrium', 'vīribus', ['vīrēs', 'vīrīs'], 'vīribus']),
     'domus': cells(['domus', 'domūs', ['domuī', 'domō'], 'domum', ['domō', 'domū']], ['domūs', ['domuum', 'domōrum'], 'domibus', ['domōs', 'domūs'], 'domibus']),
     'deus': cells(['deus', 'deī', 'deō', 'deum', 'deō'], [['dī', 'deī', 'diī'], ['deōrum', 'deum'], ['dīs', 'deīs', 'diīs'], 'deōs', ['dīs', 'deīs', 'diīs']]),
     'bōs': cells(['bōs', 'bovis', 'bovī', 'bovem', 'bove'], ['bovēs', 'boum', ['bōbus', 'būbus'], 'bovēs', ['bōbus', 'būbus']]),
@@ -403,6 +404,7 @@
     let sg, pl;
     if (decl === 1) { sg = [nomFix || nom, stem + 'ae', stem + 'ae', stem + 'am', stem + 'ā']; pl = [stem + 'ae', stem + 'ārum', stem + 'īs', stem + 'ās', stem + 'īs'];
       if (/ābus/.test(notes)) { pl[2] = [stem + 'īs', stem + 'ābus']; pl[4] = [stem + 'īs', stem + 'ābus']; }
+      if (nom === 'dea') { pl[2] = ['deābus', 'deīs']; pl[4] = ['deābus', 'deīs']; }   // A&G 43b: deābus (deīs also found)
       if (plOnly) sg = null; }                                      // tenebrae, -ārum: no singular
     if (decl === 2) {
       if (neut) { sg = [nom, stem + 'ī', stem + 'ō', nom, stem + 'ō']; pl = [stem + 'a', stem + 'ōrum', stem + 'īs', stem + 'a', stem + 'īs']; }
@@ -467,7 +469,7 @@
       if (/er$/.test(nom) && p2 === '-a') st = nom;      // e.g. līber, -a, -um
       if (/er$/.test(nom) && p2 === '-era') st = nom;
       const ius = IUS.includes(nom);
-      const g2 = ius ? st + 'īus' : null, d2 = ius ? st + 'ī' : null;
+      const g2 = ius ? (nom === 'alter' ? [st + 'īus', st + 'ius'] : st + 'īus') : null, d2 = ius ? st + 'ī' : null;   // alterius (short i) is the usual form
       const m = [[nom, g2 || st + 'ī', d2 || st + 'ō', st + 'um', st + 'ō'], [st + 'ī', st + 'ōrum', st + 'īs', st + 'ōs', st + 'īs']];
       const f = [[st + 'a', g2 || st + 'ae', d2 || st + 'ae', st + 'am', st + 'ā'], [st + 'ae', st + 'ārum', st + 'īs', st + 'ās', st + 'īs']];
       const n = [[st + 'um', g2 || st + 'ī', d2 || st + 'ō', st + 'um', st + 'ō'], [st + 'a', st + 'ōrum', st + 'īs', st + 'a', st + 'īs']];

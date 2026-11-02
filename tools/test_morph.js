@@ -177,5 +177,15 @@ for (const e of W.filter(x => !x.d)) { const a = M.analyze(e); if (a.skip || !a.
   for (const k in a.tbl) { const bad = !a.tbl[k].length || a.tbl[k].some(f => !f || /undefined|null|NaN/.test(f)) || /undefined/.test(M.label(a.kind, k)); if (bad) { fail++; console.log('FAIL bad cell', e.la, k, a.tbl[k]); } } }
 pass++;
 t('exorior', 'ptc.dep.perf', 'exortus'); t('exorior', 'sup.um', 'exortum');   // "-ortus sum" matches the stem, not the -or ending
+// accuracy fixes (v15): prefix-glued principal parts, dea, alterius, vīs, dēsum
+t('quaerō', 'perf.1s', 'quaesīvī'); t('quaerō', 'sup.um', 'quaesītum'); t('quaerō', 'ptc.pas.perf', 'quaesītus'); t('quaerō', 'ptc.act.fut', 'quaesītūrus');
+t('requīrō', 'perf.1s', 'requīsīvī'); t('requīrō', 'ptc.pas.perf', 'requīsītus');
+t('contemnō', 'perf.1s', 'contempsī'); t('contemnō', 'plup.3s', 'contempserat'); t('contemnō', 'ptc.pas.perf', 'contemptus');
+t('adsum', 'perf.1s', 'adfuī'); t('adsum', 'ptc.act.fut', 'adfutūrus'); t('adsum', 'pres.3s', 'adest');
+t('dēsum', 'pres.3s', 'deest'); t('dēsum', 'impf.1s', 'deeram'); t('dēsum', 'inf.act.pres', 'deesse'); t('dēsum', 'pres.1s', 'dēsum'); t('dēsum', 'perf.1s', 'dēfuī');
+t('dea', 'dat.pl', 'deābus'); t('dea', 'abl.pl', 'deābus');
+{ const [, a] = find('dea'); const ok = a.tbl['dat.pl'].includes('deīs') && a.tbl['abl.pl'].includes('deīs'); ok ? pass++ : fail++; if (!ok) console.log('FAIL dea keeps deīs', a.tbl['dat.pl']); }
+{ const [, a] = find('alter'); const ok = ['m', 'f', 'n'].every(g => a.tbl[g + '.gen.sg'].join() === 'alterīus,alterius'); ok ? pass++ : fail++; if (!ok) console.log('FAIL alter gen.sg', a.tbl['m.gen.sg']); }
+{ const [, a] = find('vīs'); const ok = !a.tbl['gen.sg'] && a.tbl['nom.sg'][0] === 'vīs' && a.tbl['acc.sg'][0] === 'vim'; ok ? pass++ : fail++; if (!ok) console.log('FAIL vīs gen.sg hidden', a.tbl['gen.sg']); }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

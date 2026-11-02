@@ -204,6 +204,13 @@ eq('celer', 'celereris', ALL, []);
 eq('tenebrae', 'tenebrae', ALL, ['nom.pl', 'voc.pl']);                 // plural only: no gen. / dat. sg.
 eq('tenebrae', 'tenebrā', ALL, []);
 { const [, a] = find('quiēscō'); ok(a.tbl['ind.act.perf.1s'][0] === 'quiēvī' && a.tbl['sup.um'][0] === 'quiētum', 'quiēscō: quiēvī, quiētum', a.tbl['ind.act.perf.1s']); }
+// v15 accuracy fixes
+eq('quaerō', 'quaesīvī', ALL, ['ind.act.perf.1s']); eq('quaerō', 'quaersīvī', ALL, []);
+eq('contemnō', 'contempsit', ALL, ['ind.act.perf.3s']); eq('contemnō', 'contemnpsit', ALL, []);
+eq('dea', 'deābus', ALL, ['dat.pl', 'abl.pl']); eq('dea', 'deīs', ALL, ['dat.pl', 'abl.pl']);
+eq('alter', 'alterius', ALL, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('alter', 'alterīus', ALL, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']);
+eq('vīs', 'vīs', ALL, ['nom.sg', 'voc.sg']);                              // rare gen. sg. vīs not drilled
+eq('dēsum', 'deest', ALL, ['ind.act.pres.3s']); eq('dēsum', 'dēest', ALL, []);
 // sweep: in every ambiguous form, each reading can be named by chips, and no two readings share one answer
 let amb = 0;
 for (const df of [DEF, ALL, IMP1, PERS]) for (const w of W) {
