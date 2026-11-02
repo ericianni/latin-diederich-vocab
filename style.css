@@ -64,3 +64,4 @@ details.cs summary{cursor:pointer;padding:6px 0;list-style-position:outside}
 .ovtop{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line);background:var(--card)}
 .ovtop button{padding:8px 12px}
 .ovbody{overflow-y:auto;padding:8px 16px 40px;flex:1;max-width:560px;margin:0 auto;width:100%}
+.mac{display:flex;gap:6px;margin-top:8px}.mac button{flex:1;padding:8px 0;font-family:Georgia,serif;font-size:1.15rem;background:var(--soft);border:1px solid var(--line);color:var(--ink)}

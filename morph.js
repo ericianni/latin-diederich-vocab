@@ -6,6 +6,8 @@
   const MAC = { 'ā': 'a', 'ē': 'e', 'ī': 'i', 'ō': 'o', 'ū': 'u', 'ȳ': 'y', 'Ā': 'a', 'Ē': 'e', 'Ī': 'i', 'Ō': 'o', 'Ū': 'u' };
   const plain = s => s.replace(/[āēīōūȳĀĒĪŌŪ]/g, c => MAC[c]).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const norm = s => plain(String(s).toLowerCase().trim()).replace(/j/g, 'i').replace(/v/g, 'u').replace(/\s+/g, ' ');
+  // Strict (macrons required): keep macrons, drop any other accents; j=i, v=u, case-insensitive.
+  const normM = s => String(s).toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u0303\u0305-\u036f]/g, '').normalize('NFC').replace(/j/g, 'i').replace(/v/g, 'u').replace(/\s+/g, ' ');
   const isV = c => /[aeiouyāēīōūȳ]/i.test(c);
   const ends = (s, e) => s.endsWith(e);
   const cut = (s, n) => s.slice(0, s.length - n);
@@ -523,7 +525,7 @@
     m = a.match(/^(\S+)ī( .+)$/); if (m) out.push(m[1] + 'ae' + m[2], m[1] + 'a' + m[2]);
     return out;
   }
-  function check(input, answers) { const n = norm(input); return answers.some(a => variants(a).some(v => norm(v) === n)); }
-  const api = { analyze, label, check, norm, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
+  function check(input, answers, strict) { const f = strict ? normM : norm, n = f(input); return answers.some(a => variants(a).some(v => f(v) === n)); }
+  const api = { analyze, label, check, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
   root.Morph = api; if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -2,6 +2,7 @@
 """Build data/words.json from Hiberna Caroli Raetici's Diederich 'Lodge' edition (CC BY-SA 3.0)
 and Diederich frequency totals (DWF.csv, same site). No entries are invented."""
 import csv, json, re, sys, unicodedata
+US_SPELLING = [('behaviour', 'behavior'), ('coloured', 'colored'), ('colour', 'color'), ('favourite', 'favorite'), ('fulfil', 'fulfill'), ('honourable', 'honorable'), ('neighbour', 'neighbor'), ('pretence', 'pretense')]  # glosses use US English
 SRC = sys.argv[1] if len(sys.argv) > 1 else '/workspace/src'
 CIRC = str.maketrans('âêîôûÂÊÎÔÛ', 'āēīōūĀĒĪŌŪ')
 def mac(s): return s.translate(CIRC).replace('ŷ','ȳ')
@@ -46,6 +47,7 @@ for k, r in enumerate(rows):
         for alt in re.split(r'\s+or\s+|/', la.split(',')[0]):
             fq = freq.get(norm(alt.strip()))
             if fq: break
+    for gb, us in US_SPELLING: en = re.sub(r'\b' + gb + r'\b', us, en)
     out.append(dict(id=k, la=la, en=en, pos=pos, s=int(sect) if sect else None, ss=int(sub) if sub else None,
                     sub=struct=='xx', d=bool(d), f=fq))
 ranked = sorted([o for o in out if o['f'] is not None], key=lambda o: (-o['f'], o['id']))

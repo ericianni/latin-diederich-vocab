@@ -19,7 +19,7 @@
   function boxFromIvl(c) { const i = c.ivl || 0; if (i <= 0) return c.reps > 0 ? 1 : 0; return i <= 2 ? 1 : i <= 6 ? 2 : i <= 13 ? 3 : i <= 29 ? 4 : i <= 59 ? 5 : i <= 119 ? 6 : 7; }
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
-    s.set = Object.assign({ newPerDay: 10, drillNew: 5 }, s.set || {});
+    s.set = Object.assign({ newPerDay: 10, drillNew: 5, strictMac: false }, s.set || {});
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
         const c = s.cards[k];
@@ -197,6 +197,21 @@
   }
   function bindRW(it) { document.querySelectorAll('#ans button[data-r]').forEach(b => b.onclick = () => grade(it, b.dataset.r === '1')); }
 
+  // Typed answers: macron keys (strict mode only), autofocus, and grading text.
+  const macKeys = () => S.set.strictMac ? `<div class="mac" id="mac">${'āēīōū'.split('').map(c => `<button type="button" data-c="${c}" aria-label="type ${c}">${c}</button>`).join('')}</div>` : '';
+  const macHint = () => S.set.strictMac ? 'Macrons required.' : 'Macrons optional.';
+  function bindTyped(go) {
+    const t = $('#typed'); if (!t) return;
+    t.onkeydown = e => { if (e.key === 'Enter') go(); };
+    document.querySelectorAll('#mac button').forEach(b => {
+      b.onpointerdown = e => e.preventDefault();          // keep focus (and the phone keyboard) on the input
+      b.onclick = () => { const a = t.selectionStart ?? t.value.length, z = t.selectionEnd ?? a; t.setRangeText(b.dataset.c, a, z, 'end'); t.focus({ preventScroll: true }); };
+    });
+    t.focus({ preventScroll: true });                     // synchronous, so a tap on Next/Start also brings up the mobile keyboard
+  }
+  const wrongMsg = (v, answers) => `<div class="no">✗ Wrong${v ? ' — you typed “' + esc(v) + '”' : ''}</div>${v && S.set.strictMac && Morph.check(v, answers) ? '<div class="small muted">Right letters, but the macrons don’t match.</div>' : ''}`;
+  const focusNext = () => { const b = $('#ans .primary'); if (b && matchMedia('(hover:hover)').matches) b.focus({ preventScroll: true }); };
+
   function renderVocab(it) {
     const [dir, id] = it.k.split(':'); const w = BY[id];
     const pills = `<span class="pill">${POS_SHORT[w.pos] || w.pos}</span><span class="pill">rank ${rankTxt(w)}</span>${it.isNew ? '<span class="pill">new</span>' : ''}`;
@@ -209,18 +224,17 @@
       const hs = heads(w.la);
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">English → Latin</div>
         <div class="english">${esc(w.en)}</div>${pills}
-        <div id="ans"><input type="text" id="typed" placeholder="Type the Latin word (optional)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">
+        <div id="ans"><input type="text" id="typed" placeholder="Type the Latin word (optional)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
         <button class="primary big" id="show" style="margin-top:10px">Check</button></div></div>`;
       const go = () => {
         const v = $('#typed').value.trim();
         if (!v) { $('#ans').innerHTML = `<div class="answer"><div class="latin">${esc(w.la)}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; return bindRW(it); }
-        const ok = Morph.check(v, hs);
-        $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong — you typed “${esc(v)}”</div>`}<div class="latin">${esc(w.la)}</div>
+        const ok = Morph.check(v, hs, S.set.strictMac);
+        $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : wrongMsg(v, hs)}<div class="latin">${esc(w.la)}</div>
           <div class="row" style="margin-top:14px">${ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
-        bindRW(it);
+        bindRW(it); focusNext();
       };
-      $('#show').onclick = go; $('#typed').onkeydown = e => { if (e.key === 'Enter') go(); };
-      setTimeout(() => { const t = $('#typed'); if (t && matchMedia('(hover:hover)').matches) t.focus(); }, 0);
+      $('#show').onclick = go; bindTyped(go);
     }
     bindStop();
   }
@@ -244,11 +258,11 @@
     const head = UNITS.length === 0
       ? `<div class="card"><div class="prompt-kind">Form drills</div><p class="no">Nothing matches your choices.</p><p class="small muted">Turn on at least one mood, voice, tense, case, or number below.</p></div>`
       : tot === 0
-        ? `<div class="card done"><div class="check">✓</div><h2>Drills done for today</h2><p class="muted">${d.dn || 0} forms practised today.</p><button class="big" id="dmore">Drill 5 more words</button></div>`
+        ? `<div class="card done"><div class="check">✓</div><h2>Drills done for today</h2><p class="muted">${d.dn || 0} forms practiced today.</p><button class="big" id="dmore">Drill 5 more words</button></div>`
         : `<div class="card"><div class="prompt-kind">Today’s drills · one form per word</div>
           <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${c.dNew}</b><span>new words</span></div><div class="stat"><b>${c.dDue}</b><span>reviews</span></div></div>
           <button class="primary big" id="dgo">Start drills</button>
-          <p class="small muted center" style="margin:10px 0 0">Type the form; macrons optional. ${d.dn ? d.dn + ' done today.' : ''}</p></div>`;
+          <p class="small muted center" style="margin:10px 0 0">Type the form; ${S.set.strictMac ? 'macrons required' : 'macrons optional'}. ${d.dn ? d.dn + ' done today.' : ''}</p></div>`;
     V().innerHTML = head + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
       <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.length}</b> words match</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
@@ -300,22 +314,20 @@
     V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}${it.isNew ? ' · <span class="pill">new</span>' : ''}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>
       <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
       <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
-      <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
-      <div class="small muted" style="margin-top:6px">Macrons optional.${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(answers[0]) ? ' Two words, e.g. “amātus est”.' : ''}</div>
+      <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
+      <div class="small muted" style="margin-top:6px">${macHint()}${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(answers[0]) ? ' Two words, e.g. “amātus est”.' : ''}</div>
       <button class="primary big" id="chk" style="margin-top:10px">Check</button></div></div>`;
     $('#cs').onclick = () => openSheet(ctx.id);
     const go = () => {
       const v = $('#typed').value.trim();
-      const ok = !!v && Morph.check(v, answers);
-      $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong${v ? ' — you typed “' + esc(v) + '”' : ''}</div>`}
+      const ok = !!v && Morph.check(v, answers, S.set.strictMac);
+      $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : wrongMsg(v, answers)}
         <div class="latin">${esc(answers.join(' / '))}</div>${a.flag ? `<div class="small muted">Note: ${esc(a.flag)}</div>` : ''}
         <div class="forms">${miniTable(a, key)}</div>
         <div class="row" style="margin-top:14px">${ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
-      bindRW(it);
+      bindRW(it); focusNext();
     };
-    $('#chk').onclick = go; $('#typed').onkeydown = e => { if (e.key === 'Enter') go(); };
-    setTimeout(() => { const t = $('#typed'); if (t && matchMedia('(hover:hover)').matches) t.focus(); }, 0);
-    bindStop();
+    $('#chk').onclick = go; bindStop(); bindTyped(go);
   }
 
   // ---------- cheat sheet ----------
@@ -570,12 +582,14 @@
     const drillWords = W.filter(w => !an(w).skip).length;
     V().innerHTML = `<div class="card"><h2 style="margin-top:0">Settings</h2>
       <div class="small muted">New flashcard words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+      <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
+      <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p>
       <p class="small muted">Drill settings (which forms, new words per day) are on the Drills tab.</p>
       <div class="row wrap" style="margin-top:14px"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
       <input type="file" id="impf" accept="application/json" hidden></div>
       <div class="card"><h2 style="margin-top:0">How it works</h2>
       <p><b>Today</b> is flashcards: a few new words each day plus whatever is due. Answer <b>Right</b> or <b>Wrong</b> (or type the Latin and it’s checked for you). Cards move through Leitner boxes: each right answer moves a card up a box and spaces it out further (1, 3, 7, 14, 30, 60, 120 days); a wrong answer sends it back to the start and shows it again in a few cards. Latin→English and English→Latin are scheduled separately; the English→Latin card unlocks the day after you first get a word right.</p>
-      <p><b>Drills</b> ask for one form at a time (macrons optional) and check your answer. Choose the moods, voices, tenses, cases and numbers you want. Forms are generated from the dictionary entry using standard paradigms; ${drillWords} of ${W.length} words are drillable. Words that can’t be generated reliably (defective, impersonal, indeclinable words, some irregulars) are left out and say so in the word list. If you think the app marked you wrong unfairly, tap <b>Count as correct</b>.</p>
+      <p><b>Drills</b> ask for one form at a time (macrons optional unless you turn on <b>Require macrons</b>) and check your answer. Choose the moods, voices, tenses, cases and numbers you want. Forms are generated from the dictionary entry using standard paradigms; ${drillWords} of ${W.length} words are drillable. Words that can’t be generated reliably (defective, impersonal, indeclinable words, some irregulars) are left out and say so in the word list. If you think the app marked you wrong unfairly, tap <b>Count as correct</b>.</p>
       <p>The <b>Cheat sheet</b> has endings tables for every declension and conjugation the drills use, plus the main irregular verbs; open it from any drill question.</p>
       <p>Your progress stays on this device (localStorage). No account, no tracking; works offline once installed.</p></div>
       <div class="card"><h2 style="margin-top:0">Sources &amp; credits</h2>
@@ -584,6 +598,7 @@
       <p class="small">List size cross-checked against <b>John Muccigrosso</b>’s <a href="https://github.com/Jmuccigr/Latin_vocabulary" rel="noopener">Latin_vocabulary</a> data (Diederich: 1,474 items).</p>
       <p class="small muted">Made by Eric Ianni. Source code: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>.</p></div>`;
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
+    document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
     $('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'latin1400-progress.json'; a.click(); };
     $('#imp').onclick = () => $('#impf').click();
     $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; S = fix(s); save(); UNITS = buildUnits(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };

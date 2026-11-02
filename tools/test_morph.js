@@ -150,6 +150,11 @@ const ALT3 = [['socius', 'voc.sg', 'socie'], ['ēgregius', 'm.voc.sg', 'ēgregī
 for (const x of V3) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
 for (const [h, key] of NONE3) { const [e, a] = find(h); const ok = !(a.tbl && a.tbl[key]); ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
 for (const [h, key, inp] of ALT3) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key])); ok ? pass++ : fail++; if (!ok) console.log('FAIL alt not accepted', e.la, key, inp, a.tbl && a.tbl[key]); }
+// strict (macrons required) vs lenient comparison
+for (const [inp, ans, strict, exp] of [['amabatis', ['amābātis'], false, true], ['amabatis', ['amābātis'], true, false], ['amābatis', ['amābātis'], true, false],
+  ['amābātis', ['amābātis'], true, true], ['AMĀBĀTIS ', ['amābātis'], true, true], ['iūs', ['jūs'], true, true], ['amāta est', ['amātus est'], true, true], ['amata est', ['amātus est'], true, false],
+  ['amā\u0304', ['amā'], true, false], ['ama\u0304', ['amā'], true, true], ['amáre', ['amāre'], true, false]]) {
+  const ok = M.check(inp, ans, strict) === exp; ok ? pass++ : fail++; if (!ok) console.log('FAIL strict check', inp, ans, strict, 'expected', exp); }
 // labels for the new keys
 for (const [k, exp] of [['ger.gen', 'gerund · genitive'], ['gdv.f', 'gerundive · feminine nom. sg.'], ['sup.u', 'supine in -ū (ablative)'], ['imp.act.fut.3p', 'future']]) { const l = M.label('verb', k); const ok = l.includes(exp); ok ? pass++ : fail++; if (!ok) console.log('FAIL label', k, l); }
 for (const [kind, k, exp] of [['noun', 'voc.sg', 'vocative'], ['noun', 'loc.sg', 'locative'], ['adj', 'm.voc.sg', 'vocative']]) { const l = M.label(kind, k); const ok = l.includes(exp); ok ? pass++ : fail++; if (!ok) console.log('FAIL label', k, l); }
