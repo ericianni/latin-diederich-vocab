@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Latin 1400</string>
+    <string name="title_activity_main">Latin 1400</string>
+    <string name="package_name">io.github.ericianni.latin1400</string>
+    <string name="custom_url_scheme">io.github.ericianni.latin1400</string>
+</resources>

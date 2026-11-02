@@ -597,5 +597,6 @@
     save();   // persist any v1 -> v2 migration
     setTab(['drills', 'cheat', 'quiz', 'list', 'about'].includes(t) ? t : 'today');
   }).catch(() => { V().innerHTML = '<p class="card">Could not load the word list. Check your connection and reload.</p>'; });
-  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // No service worker inside the Capacitor WebView: assets are already bundled in the APK.
+  if ('serviceWorker' in navigator && !window.Capacitor) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 })();

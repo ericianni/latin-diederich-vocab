@@ -30,3 +30,19 @@ python3 tools/build_data.py /path/to/src   # lodge.txt + DWF.csv -> data/words.j
 node tools/test_morph.js                   # paradigm checks (385) + sweep of every word
 python3 -m http.server                     # serve locally
 ```
+
+## Android app (Capacitor)
+
+The same app is wrapped as a native Android app (`io.github.ericianni.latin1400`) with Capacitor. The web files are bundled into the APK, so it works fully offline from first launch; the service worker is skipped inside the app.
+
+Download the APK from [Releases](https://github.com/ericianni/latin-diederich-vocab/releases) and install it (allow "install unknown apps"). Progress is stored on the phone, separately from the browser version.
+
+Build it yourself (Node, JDK 21, Android SDK with platform 36):
+
+```sh
+npm install
+npm run android:debug   # copies the web app into www/, syncs, runs ./gradlew assembleDebug
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Launcher icons and splash come from `icons/icon-512-maskable.png` via `node tools/make_android_assets.js && npx capacitor-assets generate --android`.
