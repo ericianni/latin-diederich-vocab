@@ -71,17 +71,18 @@
   }
   const pCases = df => { const c = C5.filter(x => df.cases.includes(x)); return c.length ? c : C5; };
   const pNums = df => df.nums.length ? ['sg', 'pl'].filter(x => df.nums.includes(x)) : ['sg', 'pl'];
-  // finite verbs (indicative, subjunctive, imperative): limited by the verb Person and Number chips (older saved settings: all)
+  // finite verbs: indicative / subjunctive follow the verb Person and Number chips; imperatives ignore Person
+  // (every imperative person that exists: present 2nd, future 2nd / 3rd) but follow Number. Older saved settings: all
   const vPers = df => df.persons || ['1', '2', '3'], vNums = df => df.vnums || ['sg', 'pl'];
   const PERS_M = { ind: ['1', '2', '3'], sub: ['1', '2', '3'], imp: ['2', '3'] };
   function finiteOk(key, df) {
     const p = key.split('.'); if (!PERS_M[p[0]] || !p[3]) return true;
-    return vPers(df).includes(p[3][0]) && vNums(df).includes(p[3][1] === 's' ? 'sg' : 'pl');
+    return (p[0] === 'imp' || vPers(df).includes(p[3][0])) && vNums(df).includes(p[3][1] === 's' ? 'sg' : 'pl');
   }
-  // can this mood produce any form under the settings? (imperative + only 1st person, or + only perfect: no)
+  // can this mood produce any form under the settings? (imperative + only perfect tense: no; Person doesn't matter for it)
   function moodPossible(m, df) {
     if (MOOD_T[m] && !MOOD_T[m].some(t => df.tenses.includes(t))) return false;
-    if (PERS_M[m] && (!PERS_M[m].some(x => vPers(df).includes(x)) || !vNums(df).length)) return false;
+    if (PERS_M[m] && ((m !== 'imp' && !PERS_M[m].some(x => vPers(df).includes(x))) || !vNums(df).length)) return false;
     return true;
   }
   // gerund and supine: limited by the Case chips too (if none of their cases is on, all of them are drilled)
@@ -151,7 +152,10 @@
     if (!m) return r;
     const tenses = MOOD_T[m] && opts('tense', or(MOOD_T[m].filter(t => df.tenses.includes(t)), MOOD_T[m])), dep = df.voices.includes('dep'),
       voices = opts('voice', ['act', 'pas'].filter(v => df.voices.includes(v) || dep && (v === 'pas' || m === 'ptc' || m === 'inf')));
-    if (PERS_M[m]) r.push(['tense', tenses], ['voice', voices], ['person', opts('person', or(PERS_M[m].filter(x => vPers(df).includes(x)), PERS_M[m]))], ['num', opts('num', or(['sg', 'pl'].filter(x => vNums(df).includes(x)), ['sg', 'pl']))]);
+    // imperative: only the persons this verb has under the other settings (present only -> 2nd, locked)
+    const iPers = m === 'imp' && Object.keys(a.tbl).filter(k => k.startsWith('imp.') && allowed(a, k, df)).map(k => k.split('.')[3][0]);
+    const pers = m === 'imp' ? PERS_M.imp.filter(x => iPers.includes(x)) : PERS_M[m] && PERS_M[m].filter(x => vPers(df).includes(x));
+    if (PERS_M[m]) r.push(['tense', tenses], ['voice', voices], ['person', opts('person', or(pers, PERS_M[m]))], ['num', opts('num', or(['sg', 'pl'].filter(x => vNums(df).includes(x)), ['sg', 'pl']))]);
     else if (m === 'inf') r.push(['tense', tenses], ['voice', voices]);
     else if (m === 'ptc') r.push(['tense', tenses], ['voice', voices], ['case', opts('case', pCases(df))], ['num', opts('num', pNums(df))], ['gender', opts('gender', ['m', 'f', 'n'])]);
     else if (m === 'ger') r.push(['case', opts('case', vCases(df, GER_C))]);

@@ -17,7 +17,8 @@ const SC = [
   { name: 'ptc/ger/gdv/sup, perf, abl sg', df: { types: ['verb'], moods: ['ptc', 'ger', 'gdv', 'sup'], tenses: ['perf'], cases: ['abl'], nums: ['sg'] } },
   { name: 'gerund only, dative only', df: { types: ['verb'], moods: ['ger'], cases: ['dat'] } },
   { name: '3rd person plural only (all moods)', df: { types: ['verb'], persons: ['3'], vnums: ['pl'] } },
-  { name: '1st person singular, ind + imp (imperative impossible)', df: { types: ['verb'], moods: ['ind', 'imp'], persons: ['1'], vnums: ['sg'] } },
+  { name: '1st person singular, ind + imp (imperatives ignore Person)', df: { types: ['verb'], moods: ['ind', 'imp'], persons: ['1'], vnums: ['sg'] }, needImp: true },
+  { name: 'present imperative only, 3rd person checked', df: { types: ['verb'], moods: ['imp'], tenses: ['pres'], persons: ['3'] }, needImp: true },
   { name: 'imperative 2nd sg only', df: { types: ['verb'], moods: ['imp'], persons: ['2'], vnums: ['sg'] } },
 ];
 const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'infinitive', ptc: 'participle', ger: 'gerund', gdv: 'gerundive', sup: 'supine' };
@@ -30,7 +31,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     const pg = await br.newPage();
     await pg.goto(URL + 'manifest.webmanifest'); await pg.evaluate((df, mode) => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, set: { dmode: mode, dlen: 20, df } })); }, df, mode);
     await pg.goto(URL + '#drills'); await pg.waitForSelector('#dgo'); await pg.evaluate(() => document.querySelector('#dgo').click());
-    const issues = new Set(); let n = 0;
+    const issues = new Set(); let n = 0, nImp = 0;
     for (let i = 0; i < 20; i++) {
       await pg.waitForSelector('.prompt-kind');
       const st = await pg.evaluate(() => {
@@ -51,7 +52,9 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
           }
         }
         const pm = label.match(/^([123])(?:st|nd|rd) (sg|pl) · /);   // finite verb: "3rd pl · present active indicative"
-        if (pm && (!df.persons.includes(pm[1]) || !df.vnums.includes(pm[2]))) issues.add(where + ' person/number off: ' + label);
+        if (pm && /imperative/.test(L)) { if (where === 'typed') nImp++; if (pm[1] === '1' || /present/.test(L) && pm[1] !== '2') issues.add(where + ' impossible imperative person: ' + label); }   // imperatives ignore Person
+        else if (pm && !df.persons.includes(pm[1])) issues.add(where + ' person off: ' + label);
+        if (pm && !df.vnums.includes(pm[2])) issues.add(where + ' number off: ' + label);
         const C = { nominative: 'nom', genitive: 'gen', dative: 'dat', accusative: 'acc', ablative: 'abl', vocative: 'voc', locative: 'loc' };
         for (const [w, c] of Object.entries(C)) if (new RegExp('\\b' + w + '\\b').test(L) && !df.cases.includes(c) ) issues.add(where + ' case off: ' + label);
         if (/\bsingular\b|\bsg\b/.test(L) && !df.nums.includes('sg') && /participle|gerundive|^(?!.*\d(st|nd|rd)).*$/.test(L)) issues.add(where + ' num off: ' + label);
@@ -74,8 +77,10 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
           for (const r of rows2) {
             const g = { mood: 'moods', tense: 'tenses', case: 'cases' }[r.a];
             if (g) { const off = r.opts.filter(o => !df[g].includes(o.v)); if (off.length) issues.add('chip row ' + r.a + ' shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
-            if (r.a === 'mood' && r.opts.some(o => o.v === 'imp') && !df.persons.some(x => x !== '1')) issues.add('imperative offered with only 1st person');
-            if (r.a === 'person') { const off = r.opts.filter(o => !df.persons.includes(o.v)); if (off.length) issues.add('chip row person shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
+            const imp = rows2.some(x => x.a === 'mood' && x.opts.some(o => o.v === 'imp' && o.on));
+            if (r.a === 'mood' && df.moods.includes('imp') && ['pres', 'fut'].some(t => df.tenses.includes(t)) && !r.opts.some(o => o.v === 'imp')) issues.add('imperative missing from the mood row');
+            if (r.a === 'person' && imp) { const has = df.tenses.includes('fut') ? ['2', '3'] : ['2'], off = r.opts.filter(o => !has.includes(o.v)); if (off.length || (!df.tenses.includes('fut') && r.opts.length !== 1)) issues.add('imperative person row ' + r.opts.map(o => o.v) + ' (form ' + st.form + ')'); if (!df.tenses.includes('fut')) nImp++; }
+            else if (r.a === 'person') { const off = r.opts.filter(o => !df.persons.includes(o.v)); if (off.length) issues.add('chip row person shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
             if (r.a === 'num' && rows2.some(x => x.a === 'person')) { const off = r.opts.filter(o => !df.vnums.includes(o.v)); if (off.length) issues.add('verb chip row num shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
             else if (r.a === 'num' && r.opts.length > 1 && df.nums.length === 1) issues.add('chip row num shows both (form ' + st.form + ', ' + rows2.map(x => x.a) + ')');
             if (r.opts.length === 1 && !r.opts[0].on) issues.add('single option not auto-selected after mood: ' + r.a);
@@ -93,6 +98,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
       await new Promise(r => setTimeout(r, 30));
       if (await pg.$('#dgo')) break;
     }
+    if (sc.needImp && mode === 'type' && !nImp) issues.add('no imperative questions came up');
     console.log(`[${mode}] ${sc.name}: ${n} questions, ${issues.size} issue(s)`); for (const x of [...issues].slice(0, 12)) console.log('   - ' + x);
     bad += issues.size; await pg.close();
   }
