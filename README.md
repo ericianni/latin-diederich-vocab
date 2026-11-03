@@ -16,6 +16,7 @@ A free, offline-capable web app (PWA) for learning **Paul Diederich's high-frequ
 - **Cheat sheet:** endings for the five declensions (with i-stems and neuters), vocative & locative, adjective classes, gerund/gerundive/supine/future-imperative summary, all four conjugations (plus 3rd -iō and a deponent) in every drilled tense/voice/mood, and *sum, possum, eō, ferō, volō, nōlō, mālō, fīō*. Each drill question links straight to the relevant table.
 - **Words tab:** search, and sort by frequency rank, A–Z or Diederich's order. In Diederich's order the list has sticky headers with his own section and sub-section titles (e.g. *I. Nouns and Related Words · 9. Animals*, *III. Verbs and Related Words · 8. Vocal Activities*, as listed in the Hiberna Caroli Raetici edition) and a word count for each.
 - Forms are generated from principal parts / genitive + gender with standard paradigms. Passives are generated only for verbs whose dictionary entry has a supine and that aren't intransitive; impersonal passives and impersonal gerundives of intransitive verbs aren't drilled. Gerundives are given for verbs with a passive, transitive deponents (passive in meaning) and a few transitive verbs without a supine (timeō, metuō, discō, bibō, urgeō, fugiō, audeō); sum/possum have no gerund or supine, eō no gerundive. Locatives come from a hand-curated list (domī, rūrī/rūre, humī, bellī, mīlitiae) — the list has no city names. Adjectives in -ius take vocative -ie (ēgregie, -ī also accepted); meus → mī. Words that can't be generated reliably are skipped and marked in the word list.
+- **Sentences (beta)** (`sentences.html`, linked from About on the web): short Latin sentences built from 515 hand-tagged Diederich words by 15 fixed grammar templates; nothing is AI-generated at runtime. Translate them into English (typing or word chips) or identify the case/number of a highlighted noun or the tense/person/voice of the verb; right/wrong only. Choose words you've seen (flashcards or drills) or all words, and which sentence types. Every form and agreement in generated sentences is checked against `morph.js` by `tools/test_sentences.js`; the page itself by `tools/test_sentences_browser.js`.
 - **No account, no backend.** Progress lives in your browser's localStorage (export/import in About). Progress from v1 is migrated automatically.
 
 ## Install on your phone
@@ -35,6 +36,7 @@ The study deck has 1,470 entries: the 1,518 lines of the Lodge edition minus 48 
 ```
 python3 tools/build_data.py /path/to/src   # lodge.txt + DWF.csv -> data/words.json
 node tools/test_morph.js                   # paradigm checks (385) + sweep of every word
+node tools/test_sentences.js               # sentence engine: forms, agreement, word pools, identify answers
 python3 -m http.server                     # serve locally
 ```
 

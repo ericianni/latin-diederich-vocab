@@ -598,6 +598,6 @@
     return out;
   }
   function check(input, answers, strict) { const f = strict ? normM : norm, n = f(input); return answers.some(a => variants(a).some(v => f(v) === n)); }
-  const api = { analyze, label, check, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
+  const api = { analyze, label, check, variants, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
   root.Morph = api; if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

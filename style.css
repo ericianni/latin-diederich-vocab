@@ -96,3 +96,10 @@ td.en{font-family:inherit;color:var(--muted);white-space:normal}
 .jump a.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .ovbody .jump{top:-8px;margin:-8px -16px 8px;padding:8px 16px;background:var(--bg)}
 .sheet [id]{scroll-margin-top:calc(var(--jh,48px) + 8px)}
+/* sentences (beta) page */
+body.sent{padding-bottom:env(safe-area-inset-bottom)}
+.top .back{margin-left:auto;font-size:.9rem;white-space:nowrap}
+mark.tgt{background:none;color:var(--accent);font-weight:700;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.sline{min-height:48px;padding:8px;border:1px dashed var(--line);border-radius:12px;align-items:center}
+.sbank{margin-top:10px}.sline button,.sbank button{font-size:1rem;padding:8px 13px}
+.sbank button.used{opacity:.3}
