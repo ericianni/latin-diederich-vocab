@@ -213,5 +213,40 @@ for (const [h, key] of [['egō', 'nom.pl'], ['nōs', 'nom.sg'], ['tū', 'voc.sg'
 for (const [h, p, n] of [['egō', 1, 'sg'], ['tū', 2, 'sg'], ['nōs', 1, 'pl'], ['vōs', 2, 'pl']]) { const [, a] = find(h); const ok = a.kind === 'pron' && a.pron === 'pers' && a.person === p && a.num === n && a.headKey === 'nom.' + n; ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun analysis', h, a); }
 for (const h of ['mē', 'is', 'quī', 'ipse', 'sē']) { const [, a] = find(h); const ok = !!a.skip; ok ? pass++ : fail++; if (!ok) console.log('FAIL other pronouns stay undrilled', h); }
 for (const [k, exp] of [['dat.sg', 'dative singular'], ['n.abl.sg', 'neuter ablative singular']]) { const l = M.label('pron', k); const ok = l === exp; ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun label', k, l); }
+// v19 accuracy release (A&G §201, §203.a; Lewis & Short)
+const ok19 = (cond, ...msg) => { cond ? pass++ : fail++; if (!cond) console.log('FAIL v19', ...msg); };
+const tb = h => find(h)[1].tbl;
+// ex(s)tinguō: L&S headword exstinguō (ext-); both spellings accepted, for exs- words generally
+for (const [k, f] of [['ind.act.pres.1s', 'exstinguō'], ['ind.act.perf.1s', 'exstīnxī'], ['ptc.pas.perf', 'exstīnctus'], ['ind.pas.pres.3s', 'exstinguitur'], ['inf.act.pres', 'exstinguere']]) t('ex(s)tinguō', k, f);
+for (const [h, k, inp, strict] of [['ex(s)tinguō', 'ind.act.pres.1s', 'extinguō', true], ['ex(s)tinguō', 'ind.act.pres.1s', 'exstinguo', false], ['ex(s)tinguō', 'ind.pas.perf.3p', 'extīnctae sunt', true], ['ex(s)tinguō', 'ind.act.perf.1s', 'extinxi', false],
+  ['exsistō', 'ind.act.pres.1s', 'existō', true], ['exspectō', 'ind.act.pres.1s', 'expectō', true]]) ok19(M.check(inp, tb(h)[k], strict), 'exs- variant', h, k, inp);
+ok19(!M.check('exspellō', tb('expellō')['ind.act.pres.1s']), 'no s added to expellō');
+// edō: A&G §201 root forms
+for (const [k, f] of [['ind.act.pres.2s', 'ēs'], ['ind.act.pres.3s', 'ēst'], ['ind.act.pres.2p', 'ēstis'], ['ind.pas.pres.3s', 'ēstur'], ['sub.pas.impf.3s', 'ēssētur'], ['inf.act.pres', 'ēsse'], ['sub.act.impf.1s', 'ēssem'], ['sub.act.impf.3p', 'ēssent'], ['imp.act.pres.2s', 'ēs'], ['imp.act.pres.2p', 'ēste'], ['imp.act.fut.2s', 'ēstō'], ['imp.act.fut.2p', 'ēstōte']])
+  ok19(M.check(f, tb('edō')[k], true), 'edō alt', k, f, tb('edō')[k]);
+for (const [k, f] of [['ind.act.pres.2s', 'edis'], ['ind.act.pres.3s', 'edit'], ['ind.pas.pres.3s', 'editur'], ['inf.act.pres', 'edere'], ['ptc.pas.perf', 'ēsus'], ['ptc.act.fut', 'ēsūrus']]) t('edō', k, f);
+ok19(!M.check('es', tb('edō')['ind.act.pres.2s'], true) && !M.check('est', tb('edō')['ind.act.pres.3s'], true), 'edō ēs/ēst keep the long e in strict mode');
+// ārdeō: intransitive (L&S v. n.); future participle ārsūrus attested (Ov. M. 2, 620; Verg. A. 11, 77)
+{ const a = find('ārdeō')[1]; ok19(a.noPassive && !Object.keys(a.tbl).some(k => /\.pas\.|^gdv\./.test(k)), 'ārdeō has no passive / gerundive', Object.keys(a.tbl).filter(k => /\.pas\.|^gdv\./.test(k)));
+  ok19(!Object.values(a.tbl).flat().some(f => /^ārsus|^ārs[aī] /.test(f)), 'ārdeō: no ārsus'); }
+t('ārdeō', 'ptc.act.fut', 'ārsūrus'); t('ārdeō', 'inf.act.fut', 'ārsūrus esse'); t('ārdeō', 'ind.act.perf.1s', 'ārsī'); t('ārdeō', 'sup.um', 'ārsum');
+// pāscō: 3rd conjugation (L&S pasco, 3), no flag
+{ const [e, a] = find('pāscō'); ok19(e.la === 'pāscō, -ere, pāvī, pāstum' && a.conj === 3 && !a.flag, 'pāscō 3rd conj', e.la, a.conj, a.flag); }
+for (const [k, f] of [['ind.act.pres.2s', 'pāscis'], ['inf.act.pres', 'pāscere'], ['ind.act.fut.1s', 'pāscam'], ['ind.pas.pres.3s', 'pāscitur'], ['ptc.pas.perf', 'pāstus']]) t('pāscō', k, f);
+// eō compounds: transitive ones have a passive (A&G §203.a; L&S transeo: Rhodanus vado transitur, Caes. B. G. 1, 6)
+for (const [k, f] of [['ind.pas.pres.1s', 'trānseor'], ['ind.pas.pres.2s', 'trānsīris'], ['ind.pas.pres.3s', 'trānsītur'], ['ind.pas.pres.1p', 'trānsīmur'], ['ind.pas.pres.3p', 'trānseuntur'], ['ind.pas.impf.3s', 'trānsībātur'], ['ind.pas.fut.3s', 'trānsībitur'], ['ind.pas.fut.2s', 'trānsīberis'],
+  ['sub.pas.pres.3s', 'trānseātur'], ['sub.pas.impf.3s', 'trānsīrētur'], ['inf.pas.pres', 'trānsīrī'], ['ind.pas.perf.3s', 'trānsitus est'], ['ptc.pas.perf', 'trānsitus'], ['inf.pas.fut', 'trānsitum īrī'], ['gdv.m', 'trānseundus']]) t('trānseō', k, f);
+for (const [k, f] of [['ind.pas.pres.1s', 'adeor'], ['ind.pas.pres.3s', 'adītur'], ['ind.pas.impf.1s', 'adībar'], ['ind.pas.fut.1s', 'adībor'], ['sub.pas.impf.1s', 'adīrer'], ['ind.pas.perf.1s', 'aditus sum'], ['inf.pas.pres', 'adīrī'], ['gdv.m', 'adeundus']]) t('adeō', k, f);
+for (const h of ['ineō', 'obeō', 'praetereō', 'subeō']) ok19(!find(h)[1].noPassive && !!tb(h)['ind.pas.pres.3s'], 'passive for', h);
+for (const h of ['eō', 'abeō', 'exeō', 'pereō', 'redeō']) ok19(find(h)[1].noPassive && !tb(h)['ind.pas.pres.3s'] && !tb(h)['gdv.m'], 'no personal passive for', h);
+t('trānseō', 'ind.act.pres.3s', 'trānsit'); t('trānseō', 'ind.act.perf.1s', 'trānsiī');
+// lavō: L&S lautum, lavātum (class. prose: sup. always lavātum; perf. part. lautus)
+t('lavō', 'ptc.pas.perf', 'lautus'); t('lavō', 'ind.pas.perf.3s', 'lautus est'); t('lavō', 'sup.um', 'lavātum');
+for (const [k, f] of [['ptc.pas.perf', 'lavātus'], ['ind.pas.perf.3s', 'lavātus est'], ['ind.pas.perf.3p', 'lavātī sunt'], ['inf.pas.perf', 'lavātus esse'], ['sup.um', 'lautum'], ['ptc.act.fut', 'lavātūrus'], ['inf.pas.fut', 'lavātum īrī'], ['ind.pas.perf.3s', 'lavāta est']])
+  ok19(M.check(f, tb('lavō')[k], true), 'lavō alt', k, f, tb('lavō')[k]);
+// unchanged: adsum, contemnō
+for (const [k, f] of [['ind.act.pres.1s', 'adsum'], ['ind.act.pres.3s', 'adest'], ['inf.act.pres', 'adesse'], ['ind.act.perf.1s', 'adfuī'], ['ptc.act.fut', 'adfutūrus'], ['ind.act.impf.1s', 'aderam'], ['sub.act.pres.1s', 'adsim'], ['sub.act.impf.1s', 'adessem']]) t('adsum', k, f);
+ok19(find('adsum')[1].noPassive, 'adsum no passive');
+for (const [k, f] of [['ind.act.pres.1s', 'contemnō'], ['ind.act.perf.1s', 'contempsī'], ['sup.um', 'contemptum'], ['ptc.pas.perf', 'contemptus'], ['ind.pas.pres.3s', 'contemnitur'], ['gdv.m', 'contemnendus']]) t('contemnō', k, f);
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

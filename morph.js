@@ -16,6 +16,7 @@
   function clean(la) {
     const notes = [];
     let s = la.replace(/\s\(([^)]*)\)/g, (m, x) => { notes.push(x); return ''; });
+    s = s.replace(/^ex\(s\)/, 'exs');                 // ex(s)tinguō -> exstinguō (L&S headword; ext- accepted in check)
     s = s.replace(/(\S)\(([^)\s]*)\)/g, '$1');      // dex-t(e)ra -> -tra, hiem(p)s -> hiems
     s = s.replace(/^\(([^)]*)\)/, '');
     const parts = s.split(/,\s*/).map(p => p.trim().split(/\s+or\s+|\//)[0].trim()).filter(p => p !== '');
@@ -170,15 +171,34 @@
     return alt2s(F.T);
   }
   // verbs that take no personal passive (intransitive), even though the source gives a supine
-  const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pūgnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ardeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō exeō ' +
+  const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pūgnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ārdeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō exeō ' +
     'occidō cadō dēsistō resistō cōnsistō īnsistō persistō assurgō cōnsurgō ēnītor nūbō pareō').split(' '));
   const FUT_FIX = { 'adsum': 'adfutūrus', 'orior': 'oritūrus', 'exorior': 'exoritūrus', 'morior': 'moritūrus', 'nāscor': 'nāscitūrus', 'iuvō': 'iuvātūrus', 'pariō': 'paritūrus', 'ruō': 'ruitūrus', 'secō': 'secātūrus', 'sonō': 'sonātūrus', 'fruor': 'fruitūrus', 'adiuvō': 'adiūtūrus' };
   const SUP_FIX = { 'quiēscō': 'quiētum', 'quaerō': 'quaesītum', 'requīrō': 'requīsītum', 'contemnō': 'contemptum', 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
-  const CONJ_FIX = { 'pāscō': ['source has -āre; treated as 3rd conj.', 'pāscere'] };
+  const CONJ_FIX = {};   // pāscō: the source's -āre is corrected in data/words.json (L&S: pasco, 3)
   // intransitive deponents: gerund yes, but no personal gerundive
   const DEP_INTRANS = new Set('īrāscor lābor morior orior exorior ēgredior revertor nāscor'.split(' '));
   // transitive verbs whose entry lacks a supine, but whose gerundive is standard
   const GDV_EXTRA = new Set('timeō metuō discō bibō urgeō fugiō'.split(' '));
+  // eō compounds used transitively, with a personal passive (A&G §203.a; L&S: "v. n. and a.", e.g. Rhodanus vado transitur, Caes. B. G. 1, 6)
+  const EO_PAS = new Set('adeō ineō obeō praetereō subeō trānseō'.split(' '));
+  // extra accepted forms, appended after the regular ones
+  const addAlt = (T, k, ...fs) => { if (T[k]) for (const f of fs) if (!T[k].includes(f)) T[k].push(f); };
+  const ALT_FORMS = {
+    // A&G §201: edō also has root forms without the thematic vowel (ēs, ēst, ēstis, ēsse, ēssem ...; pass. ēstur, ēssētur)
+    'edō': T => {
+      addAlt(T, 'ind.act.pres.2s', 'ēs'); addAlt(T, 'ind.act.pres.3s', 'ēst'); addAlt(T, 'ind.act.pres.2p', 'ēstis');
+      ['ēssem', 'ēssēs', 'ēsset', 'ēssēmus', 'ēssētis', 'ēssent'].forEach((f, i) => addAlt(T, 'sub.act.impf.' + P[i], f));
+      addAlt(T, 'imp.act.pres.2s', 'ēs'); addAlt(T, 'imp.act.pres.2p', 'ēste');
+      addAlt(T, 'imp.act.fut.2s', 'ēstō'); addAlt(T, 'imp.act.fut.3s', 'ēstō'); addAlt(T, 'imp.act.fut.2p', 'ēstōte');
+      addAlt(T, 'inf.act.pres', 'ēsse'); addAlt(T, 'ind.pas.pres.3s', 'ēstur'); addAlt(T, 'sub.pas.impf.3s', 'ēssētur');
+    },
+    // L&S: lavō, lāvī, lautum, lavātum (class. prose: sup. always lavātum; perf. part. lautus)
+    'lavō': T => {
+      for (const k in T) T[k] = T[k].concat(T[k].filter(f => /^laut/.test(f)).map(f => f.replace(/^laut/, 'lavāt')).filter(f => !T[k].includes(f)));
+      for (const k of ['sup.um', 'sup.u', 'inf.pas.fut']) if (T[k]) T[k].reverse();   // supine: lavātum first
+    },
+  };
   const DEFECTIVE = ['meminī', 'ōdī', 'coepī', 'inquam', 'aiō', 'salvē', 'quaesō', 'apage', 'ave', 'avē'];
   const pppFrom = x => x && /um$/.test(x) ? cut(x, 2) + 'us' : null;
   const futFrom = (p1, x) => FUT_FIX[p1] || (x && /ūrus$/.test(x) ? x : x && /ūrum$/.test(x) ? cut(x, 2) + 'us' : x && /(um|us)$/.test(x) ? cut(x, 2) + 'ūrus' : null);
@@ -233,10 +253,19 @@
       F.six('sub', 'act', 'plup', PLUP_SUB.map(f => [pre + 'ī' + f.slice(1), pre + 'i' + f]));
       F.one('imp.act.pres.2s', A('ī')); F.one('imp.act.pres.2p', A('īte'));
       F.fimp('act', ['ītō', 'ītō', 'ītōte', 'euntō'].map(A));
-      F.ger(A('eund'), false); F.sup(A('itum'), false);     // no gerundive / passive for eō
+      const pas = EO_PAS.has(p1);                           // A&G §203.a: adeō, ineō and other transitive compounds have a passive
+      F.ger(A('eund'), pas); F.sup(A('itum'), pas);       // eō itself and intransitive compounds: no gerundive / personal passive
+      if (pas) {
+        F.six('ind', 'pas', 'pres', ['eor', 'īris', 'ītur', 'īmur', 'īminī', 'euntur'].map(A));
+        F.six('ind', 'pas', 'impf', impfPas('ībar').map(A)); F.six('ind', 'pas', 'fut', ['ībor', 'īberis', 'ībitur', 'ībimur', 'ībiminī', 'ībuntur'].map(A));
+        F.six('sub', 'pas', 'pres', ['ear', 'eāris', 'eātur', 'eāmur', 'eāminī', 'eantur'].map(A));
+        F.six('sub', 'pas', 'impf', ['īrer', 'īrēris', 'īrētur', 'īrēmur', 'īrēminī', 'īrentur'].map(A));
+        F.one('inf.pas.pres', A('īrī')); F.perfPeri(A('itus'), 'pas');
+        alt2s(F.T);
+      }
       F.one('inf.act.pres', A('īre')); F.one('inf.act.perf', [A('īsse'), A('iisse')]); F.one('inf.act.fut', A('itūrus esse'));
       F.one('ptc.act.pres', A('iēns')); F.one('ptc.act.fut', A('itūrus'));
-      return done({ conj: 'irr', irr: 'eō', voice: 'act', noPassive: true }, F.T);
+      return done({ conj: 'irr', irr: 'eō', voice: 'act', noPassive: !pas }, F.T);
     }
     if (/ferre$/.test(inf) && ends(p1, 'ferō')) {
       const pre = cut(p1, 4), F = Forms(), A = f => pre + f;
@@ -327,6 +356,7 @@
     const ppp = pppFrom(pp4);
     const passive = !!ppp && !INTRANS.has(p1);
     const T = regular({ conj, stem, p1, voice: 'act', pst: pp3 && /ī$/.test(pp3) ? cut(pp3, 1) : null, ppp, futp: futFrom(p1, pp4), passive, gdv: passive || GDV_EXTRA.has(p1), sup: pp4 });
+    if (ALT_FORMS[p1]) ALT_FORMS[p1](T);
     return done({ conj, voice: 'act', flag, noPassive: !passive, noPassiveWhy: !ppp ? 'no supine/perfect passive participle in the source' : !passive ? 'intransitive' : null }, T);
   }
   // ---------- nouns ----------
@@ -557,6 +587,7 @@
     const out = [a];
     let m = a.match(/^(\S+)us( .+)$/); if (m) out.push(m[1] + 'a' + m[2], m[1] + 'um' + m[2]);
     m = a.match(/^(\S+)ī( .+)$/); if (m) out.push(m[1] + 'ae' + m[2], m[1] + 'a' + m[2]);
+    if (/^exs/.test(a)) return out.concat(out.map(v => 'ex' + v.slice(3)));   // ex(s)-: exstinguō / extinguō, exspectō / expectō, exsistō / existō (L&S)
     return out;
   }
   function check(input, answers, strict) { const f = strict ? normM : norm, n = f(input); return answers.some(a => variants(a).some(v => f(v) === n)); }

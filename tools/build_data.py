@@ -22,6 +22,8 @@ with open(f'{SRC}/DWF.csv', encoding='latin-1') as f:
         for w in re.split(r',\s*', p[0]):
             w = norm(w.strip().lstrip('-'))
             if w and w not in freq: freq[w] = tot
+# corrections to obvious source errors, each checked against Lewis & Short
+SOURCE_FIX = {'pāscō, -āre, pāvī, pāstum': 'pāscō, -ere, pāvī, pāstum'}   # L&S: pasco, pāvi, pastum, 3
 SECT = {'1':'noun','2':'pronoun','3':'verb','4':'adjective','5':'adverb','6':'interjection','7':'conjunction','8':'preposition'}
 VERB_INF = re.compile(r'^-?\S*(āre|ēre|ere|īre|ārī|āri|ērī|ēri|ī|īrī|īri|esse|sse|ferre|re|rī)$')
 GEN_RE = re.compile(r',\s*(m|f|n|mf|c|m\.\s*f|m\./f)\.?(\s*\(pl\.\))?(\s|$|,|\()')
@@ -29,6 +31,7 @@ out = []
 for k, r in enumerate(rows):
     struct, d, sect, sub, la, en = r
     la = mac(la.strip()); en = en.strip()
+    la = SOURCE_FIX.get(la, la)
     head = re.split(r'[ ,]', la)[0].replace('(','').replace(')','').strip('-')
     parts = [p.strip() for p in re.split(r',\s*', re.sub(r'\(.*?\)', '', la))]
     pos = None
