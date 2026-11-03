@@ -247,7 +247,7 @@
     t.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
     document.querySelectorAll('#mac button').forEach(b => {
       b.onpointerdown = e => e.preventDefault();          // keep focus (and the phone keyboard) on the input
-      b.onclick = () => { const a = t.selectionStart ?? t.value.length, z = t.selectionEnd ?? a; t.setRangeText(b.dataset.c, a, z, 'end'); t.focus({ preventScroll: true }); };
+      b.onclick = () => { const a = t.selectionStart ?? t.value.length, z = t.selectionEnd ?? a; t.setRangeText(b.dataset.c, a, z, 'end'); t.dispatchEvent(new Event('input')); t.focus({ preventScroll: true }); };
     });
     t.focus({ preventScroll: true });                     // synchronous, so a tap on Next/Start also brings up the mobile keyboard
   }
@@ -266,8 +266,8 @@
       const hs = heads(w.la);
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">English → Latin</div>
         <div class="english">${esc(w.en)}</div>${pills}
-        <div id="ans"><input type="text" id="typed" placeholder="Type the Latin word (optional)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
-        <button class="primary big" id="show" style="margin-top:10px">Check</button></div></div>`;
+        <div id="ans"><input type="text" id="typed" placeholder="Optional: type the Latin to check yourself" aria-label="Optional: type the Latin to check yourself" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
+        <button class="primary big" id="show" style="margin-top:10px">Show answer</button></div></div>`;
       const go = () => {
         const v = $('#typed').value.trim();
         if (!v) { $('#ans').innerHTML = `<div class="answer"><div class="latin">${esc(w.la)}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; return bindRW(it); }
@@ -277,6 +277,9 @@
         bindRW(it); focusNext();
       };
       $('#show').onclick = go; bindTyped(go);
+      // the button says what it will do: Show answer while the box is empty, Check once something is typed
+      const lbl = () => { $('#show').textContent = $('#typed').value.trim() ? 'Check' : 'Show answer'; };
+      $('#typed').addEventListener('input', lbl);
     }
     bindStop();
   }

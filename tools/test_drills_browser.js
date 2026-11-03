@@ -214,6 +214,52 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     if (!t2.length || t2.some(x => !/3rd pl/.test(x))) { bad++; console.log('   - verb weak spot outside person / number settings'); }
     await pg.close();
   }
+  // English → Latin flashcards: the button reads Show answer while the optional box is empty, Check once something is typed
+  {
+    const ST = async (re) => {
+  re = new RegExp(re);
+  const sleep = ms => new Promise(r => setTimeout(r, ms)), $ = s => document.querySelector(s), bad = [];
+  const typeIn = (t, v) => { t.value = v; t.dispatchEvent(new Event('input', { bubbles: true })); };
+  let seen = 0, typedChecks = 0;
+  for (let i = 0; i < 40 && seen < 3; i++) {
+    await sleep(30);
+    const k = $('.prompt-kind'); if (!k) break;
+    const t = $('#typed'), s = $('#show');
+    if (re.test(k.textContent) && t && s) {
+      seen++;
+      if (!/optional/i.test(t.placeholder)) bad.push('placeholder does not say typing is optional: ' + t.placeholder);
+      if (s.textContent !== 'Show answer') bad.push('empty box: button reads ' + s.textContent);
+      typeIn(t, 'x'); if (s.textContent !== 'Check') bad.push('after typing: button reads ' + s.textContent);
+      typeIn(t, '   '); if (s.textContent !== 'Show answer') bad.push('spaces only: button reads ' + s.textContent);
+      typeIn(t, ''); if (s.textContent !== 'Show answer') bad.push('cleared: button reads ' + s.textContent);
+      const key = $('#mac button');
+      if (key) { key.click(); if (s.textContent !== 'Check') bad.push('accent key: button reads ' + s.textContent); typeIn(t, ''); }
+      if (seen === 2) {   // typed a wrong answer: Check grades it
+        typeIn(t, 'zzzq'); s.click(); typedChecks++;
+        if (!/Wrong/.test(($('#ans') || {}).textContent || '')) bad.push('Check with a typed answer did not grade it');
+      } else {            // empty: Show answer reveals it
+        s.click();
+        if (!/Did you know it/.test(($('#ans') || {}).textContent || '')) bad.push('Show answer with an empty box did not reveal the answer');
+      }
+    } else if (s) s.click();
+    const g = $('#ans button[data-r="1"]') || $('#ans button[data-r]'); if (g) g.click();
+  }
+  if (!seen) bad.push('no English-to-target card came up');
+  return (bad.length ? 'BAD ' + [...new Set(bad)].join('; ') : 'ok') + ` (${seen} cards, ${typedChecks} typed)`;
+};
+    const pg = await br.newPage(); await pg.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+    await pg.goto(URL + 'manifest.webmanifest');
+    const words = await pg.evaluate(() => fetch('data/words.json').then(r => r.json()));
+    const ids = (Array.isArray(words) ? words : words.words || Object.values(words)).slice(0, 6).map(w => w.id);
+    for (const mac of [false, true]) {
+      await pg.evaluate((ids, mac) => { const cards = {}; ids.forEach(id => { cards['p:' + id] = { box: 1, due: 0 }; cards['r:' + id] = { box: 2, due: 1e9 }; });
+        localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards, v: 3, set: { newPerDay: 0, strictMac: mac } })); }, ids, mac);
+      await pg.goto(URL + '#today'); await pg.waitForSelector('#go'); await pg.evaluate(() => document.querySelector('#go').click()); await pg.waitForSelector('.prompt-kind');
+      const r = await pg.evaluate(ST, 'English → Latin'); console.log('[cards] Show answer / Check' + (mac ? ' (macron keys)' : '') + ': ' + r); if (!/^ok/.test(r)) bad++;
+      await pg.goto(URL + 'manifest.webmanifest');
+    }
+    await pg.close();
+  }
   // cheat sheet: sticky chip bar on a phone-sized screen, in the Cheat sheet tab and in the overlay opened from a drill
   {
     const JT = async (inOverlay) => {
