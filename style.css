@@ -57,7 +57,7 @@ td b{color:var(--accent)}
 details.cs{border-top:1px solid var(--line);padding:8px 0}
 details.cs summary{cursor:pointer;padding:6px 0;list-style-position:outside}
 .sheet h2{font-family:Georgia,serif;color:var(--accent);margin-top:22px}
-.cst,.csg{margin:10px 0;overflow-x:auto;scroll-margin-top:56px}
+.cst,.csg{margin:10px 0;overflow-x:auto}
 .csh{font-size:.85rem;font-weight:600;margin:4px 0}
 .flash{animation:fl 1.6s}@keyframes fl{0%,40%{background:rgba(217,130,95,.25)}100%{background:transparent}}
 #overlay{position:fixed;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column}
@@ -89,3 +89,10 @@ td.en{font-family:inherit;color:var(--muted);white-space:normal}
 .list .sec1{flex-basis:100%;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.list .sec2{flex:1;font-weight:600}.list .secn{font-size:.8rem;color:var(--muted)}
 .parses li.got,.parses li.missed{list-style:none;margin-left:-18px}.parses li.got{color:var(--good)}.parses li.missed{opacity:.85}
 .andq{margin:8px 0 2px;line-height:1.4}.andmsg{margin-top:4px}.andall{color:var(--good);font-weight:600;margin:2px 0 4px}
+/* cheat sheet: sticky section chips */
+.jump{position:sticky;top:0;z-index:4;display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:var(--card);margin:0 -18px 8px;padding:8px 18px;border-bottom:1px solid var(--line)}
+.jump::-webkit-scrollbar{display:none}
+.jump a{flex:none;white-space:nowrap}
+.jump a.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ovbody .jump{top:-8px;margin:-8px -16px 8px;padding:8px 16px;background:var(--bg)}
+.sheet [id]{scroll-margin-top:calc(var(--jh,48px) + 8px)}

@@ -214,5 +214,64 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     if (!t2.length || t2.some(x => !/3rd pl/.test(x))) { bad++; console.log('   - verb weak spot outside person / number settings'); }
     await pg.close();
   }
+  // cheat sheet: sticky chip bar on a phone-sized screen, in the Cheat sheet tab and in the overlay opened from a drill
+  {
+    const JT = async (inOverlay) => {
+  const sleep = ms => new Promise(r => setTimeout(r, ms)), frames = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const root = inOverlay ? document.querySelector('#overlay .ovbody') : document.querySelector('.card.sheet');
+  const bar = root && root.querySelector('.jump'); if (!bar) return 'BAD no chip bar';
+  const sc = inOverlay ? root : null, bad = [], cs = getComputedStyle(bar), links = [...bar.querySelectorAll('a')];
+  const top0 = () => sc ? sc.getBoundingClientRect().top : 0;
+  const scrollTo = y => sc ? sc.scrollTo(0, y) : window.scrollTo(0, y), scrollY_ = () => sc ? sc.scrollTop : window.scrollY;
+  if (cs.position !== 'sticky') bad.push('bar not sticky: ' + cs.position);
+  if (cs.flexWrap !== 'nowrap' || !/auto|scroll/.test(cs.overflowX)) bad.push('bar does not scroll sideways: ' + cs.flexWrap + ' ' + cs.overflowX);
+  const on = () => links.filter(a => a.classList.contains('on'));
+  const tgt = a => root.querySelector(a.getAttribute('href'));
+  scrollTo(0); await sleep(100); await frames();
+  if (on().length !== 1 || on()[0] !== links[0]) bad.push('at the top, first chip not current: ' + on().map(a => a.textContent));
+  const atEnd = () => sc ? sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4 : innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+  // tap each chip (last to first, then first to last): section lands just under the bar, bar stays at the top, that chip is current and visible
+  const order = links.map((a, i) => i).reverse().concat(links.map((a, i) => i));
+  let taps = 0;
+  for (const i of order) {
+    const a = links[i], t = tgt(a); if (!t) { bad.push('no target for ' + a.textContent); continue; }
+    const wasShut = t.tagName === 'DETAILS' && !t.open;
+    a.click(); taps++;
+    for (let k = 0; k < 40; k++) { const y = scrollY_(); await sleep(60); if (Math.abs(scrollY_() - y) < 1 && k > 3) break; }
+    await sleep(80); await frames();
+    const bb = bar.getBoundingClientRect(), tt = t.getBoundingClientRect().top;
+    if (bb.top < top0() - 2 || (!atEnd() && bb.top - top0() > 2)) bad.push(a.textContent + ': bar not at top (' + (bb.top - top0()).toFixed(0) + ')');
+    if (tt < bb.bottom - 1) bad.push(a.textContent + ': section hidden under bar (' + (tt - bb.bottom).toFixed(0) + ')');
+    if (!atEnd() && Math.abs(tt - bb.bottom - 8) > 4) bad.push(a.textContent + ': section not just below bar (' + (tt - bb.bottom).toFixed(0) + ')');
+    if (wasShut && !t.open) bad.push(a.textContent + ': collapsed section did not open');
+    if (on().length !== 1 || on()[0] !== a) bad.push(a.textContent + ': current chip is ' + on().map(x => x.textContent));
+    const ab = a.getBoundingClientRect(); if (ab.left < bb.left - 1 || ab.right > bb.right + 1) bad.push(a.textContent + ': chip scrolled out of view in bar');
+  }
+  // scroll by hand: the chip follows the section under the bar
+  let spied = 0;
+  for (let i = 0; i < links.length; i++) {
+    const t = tgt(links[i]); scrollTo(scrollY_() + t.getBoundingClientRect().top - bar.getBoundingClientRect().bottom - 2); await sleep(120); await frames();
+    if (atEnd()) continue; spied++;
+    if (on()[0] !== links[i]) bad.push('scrolled to ' + links[i].textContent + ', current chip is ' + on().map(x => x.textContent));
+  }
+  scrollTo(sc ? sc.scrollHeight : document.documentElement.scrollHeight); await sleep(150); await frames();
+  if (on()[0] !== links[links.length - 1]) bad.push('at the bottom, last chip not current: ' + on().map(x => x.textContent));
+  scrollTo(0); await sleep(100); await frames();
+  if (on()[0] !== links[0]) bad.push('back at top, first chip not current');
+  return (bad.length ? 'BAD ' + bad.join('; ') : 'ok') + ` (${links.length} chips, ${taps} taps, ${spied} scroll checks, overflow ${bar.scrollWidth > bar.clientWidth})`;
+};
+    const pg = await br.newPage(); await pg.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+    await pg.goto(URL + 'manifest.webmanifest'); await pg.evaluate(() => localStorage.clear());
+    await pg.goto(URL + '#cheat'); await pg.waitForSelector('.sheet .jump');
+    const r1 = await pg.evaluate(JT, false); console.log('[cheat] tab: ' + r1); if (!/^ok/.test(r1)) bad++;
+    await pg.goto(URL + 'manifest.webmanifest'); await pg.evaluate(df => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, set: { dmode: 'type', dlen: 10, df } })); }, ALL);
+    await pg.goto(URL + '#drills'); await pg.waitForSelector('#dgo'); await pg.evaluate(() => document.querySelector('#dgo').click());
+    await pg.waitForSelector('#cs'); await pg.evaluate(() => document.querySelector('#cs').click()); await pg.waitForSelector('#overlay .jump');
+    await new Promise(r => setTimeout(r, 300));
+    const deep = await pg.evaluate(() => { const b = document.querySelector('#overlay .jump').getBoundingClientRect(), d = [...document.querySelectorAll('#overlay details[open]')].pop(); return d ? d.getBoundingClientRect().top - b.bottom : null; });
+    if (deep == null || deep < 0) { bad++; console.log('   - drill link: section hidden under the bar', deep); }
+    const r2 = await pg.evaluate(JT, true); console.log('[cheat] overlay: ' + r2 + ', drill link lands ' + Math.round(deep) + 'px below the bar'); if (!/^ok/.test(r2)) bad++;
+    await pg.close();
+  }
   console.log(bad ? 'ISSUES: ' + bad : 'ALL OK'); await br.close(); srv.close(); process.exit(bad ? 1 : 0);
 })();
