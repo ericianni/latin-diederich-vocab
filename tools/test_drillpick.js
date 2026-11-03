@@ -36,6 +36,16 @@ const m = P.masses(ents), sum = pre => [...m].filter(([c]) => c.startsWith(pre))
 ok(Math.abs(sum('v') - 0.5) < 1e-9 && Math.abs(sum('n') - 0.5) < 1e-9, 'verbs and nouns get equal shares');
 ok(Math.abs(sum('v1|') / sum('vsum|') - 10) < 1e-9, 'big paradigm outweighs small one by sqrt(words)');
 
+// pronouns: app.js files personal pronouns (pp) under the noun share and hic / ille (pd) under the adjective share,
+// so turning pronouns on doesn't add a fourth equal slice; each pronoun group is small (sqrt of 4 or 2 words)
+{ const e2 = [];
+  for (let i = 0; i < 12; i++) e2.push({ c: 'n1|k' + i, kind: 'noun', g: 'n1', nw: 100 }, { c: 'a12|k' + i, kind: 'adj', g: 'a12', nw: 100 }, { c: 'v1|k' + i, kind: 'verb', g: 'v1', nw: 100 });
+  const base = P.masses(e2);
+  for (let i = 0; i < 10; i++) e2.push({ c: 'pp|k' + i, kind: 'noun', g: 'pp', nw: 4 }, { c: 'pd|k' + i, kind: 'adj', g: 'pd', nw: 2 });
+  const m2 = P.masses(e2), s2 = pre => [...m2].filter(([c]) => c.startsWith(pre)).reduce((a, [, x]) => a + x, 0);
+  ok(Math.abs(s2('v1|') - [...base].filter(([c]) => c.startsWith('v1|')).reduce((a, [, x]) => a + x, 0)) < 1e-9, 'pronouns leave the verb share unchanged');
+  ok(Math.abs(s2('pp|') / s2('n1|') - 2 / 10) < 1e-9 && Math.abs(s2('pd|') / s2('a12|') - Math.SQRT2 / 10) < 1e-9, 'pronoun groups weighted by sqrt(words) inside their share'); }
+
 // pickCombo distribution
 function freq(entries, stats, n, opts) { const f = {}, r = rng(7); for (let i = 0; i < n; i++) { const c = P.pickCombo(entries, stats, Object.assign({ now: NOW, q, rnd: r }, opts)); f[c] = (f[c] || 0) + 1; } return f; }
 const E = ['n3|dat.pl', 'n3|gen.sg', 'n3|acc.pl', 'n3|abl.sg'].map(c => ({ c, kind: 'noun', g: 'n3', nw: 50 }));

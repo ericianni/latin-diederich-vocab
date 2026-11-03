@@ -12,7 +12,7 @@
   // ---------- state ----------
   // Cards: { box: 0-7, due: local day number }. Leitner boxes: right moves a card up one box, wrong sends it to box 0.
   const INT = [0, 1, 3, 7, 14, 30, 60, 120];   // days until the next review after reaching box n
-  const DF = { types: ['verb', 'noun', 'adj'], moods: ['ind'], voices: ['act', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'], persons: ['1', '2', '3'], vnums: ['sg', 'pl'], conj: ['1', '2', '3', '3io', '4', 'irr'],
+  const DF = { types: ['verb', 'noun', 'adj', 'pron'], moods: ['ind'], voices: ['act', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'], persons: ['1', '2', '3'], vnums: ['sg', 'pl'], conj: ['1', '2', '3', '3io', '4', 'irr'],
     cases: ['nom', 'gen', 'dat', 'acc', 'abl'], nums: ['sg', 'pl'], decl: ['1', '2', '3', '4', '5', 'irr'] };
   let S = load();
   function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.cards) return fix(s); } catch (e) { /* fresh */ } return fix({}); }
@@ -39,6 +39,10 @@
       for (const [k, n] of Object.entries(s.ds.f || {})) { const c = k.split(':')[0]; if (!s.dst[c]) s.dst[c] = { r: 0, n: 0, a: n, ok: 0, t: Date.now() }; }   // seen, accuracy unknown
       delete s.set.drillNew; s.v = 3;
     }
+    if (s.v < 4) {                              // v4: pronouns added; on wherever nouns or adjectives already were
+      const t = s.set.df.types; if (!t.includes('pron') && (t.includes('noun') || t.includes('adj'))) t.push('pron');
+      s.v = 4;
+    }
     delete s.ds.f;
     return s;
   }
@@ -55,7 +59,7 @@
   // ---------- data ----------
   let W = [], BY = {}, UNITS = new Map();
   const AN = {};
-  const an = w => AN[w.id] || (AN[w.id] = ['verb', 'noun', 'adjective'].includes(w.pos) ? Morph.analyze(w) : { skip: 'not drilled (' + w.pos + ')' });
+  const an = w => AN[w.id] || (AN[w.id] = ['verb', 'noun', 'adjective', 'pronoun'].includes(w.pos) ? Morph.analyze(w) : { skip: 'not drilled (' + w.pos + ')' });
   const rankTxt = w => w.r ? '#' + w.r : '—';
 
   function heads(la) {
@@ -78,12 +82,14 @@
       return df.moods.includes(mood) && df.voices.includes(voice) && df.tenses.includes(tense) && Identify.finiteOk(key, df);   // person & number: finite forms only
     }
     if (a.kind === 'noun') return key !== 'nom.sg' && df.cases.includes(k[0]) && df.nums.includes(k[1]);
+    if (a.kind === 'pron' && a.pron === 'pers') return key !== a.headKey && df.cases.includes(k[0]) && df.nums.includes(k[1]);
     return key !== 'm.nom.sg' && df.cases.includes(k[1]) && df.nums.includes(k[2]);
   }
   function wordOk(a, df) {
     if (a.skip) return false;
     if (a.kind === 'verb') return df.types.includes('verb') && df.conj.includes(conjKey(a));
     if (a.kind === 'noun') return df.types.includes('noun') && df.decl.includes(String(a.decl));
+    if (a.kind === 'pron') return df.types.includes('pron');      // pronouns follow Case and Number, not Declension
     return df.types.includes('adj') && (a.decl === 3 ? df.decl.includes('3') : df.decl.includes('1') || df.decl.includes('2'));
   }
   const drillKeys = a => Object.keys(a.tbl).filter(k => keyOk(a, k, S.set.df));
@@ -94,11 +100,13 @@
       for (const k of drillKeys(a)) { const c = g + '|' + k; if (!u.has(c)) u.set(c, []); u.get(c).push(w.id); } }
     return u;
   }
-  const kindOfC = c => ({ v: 'verb', n: 'noun', a: 'adj' })[c[0]];
+  const kindOfC = c => ({ v: 'verb', n: 'noun', a: 'adj', p: 'pron' })[c[0]];
+  // drill share: personal pronouns count with the nouns, hic / ille with the adjectives (each pronoun paradigm is one small group)
+  const shareKind = c => c[0] === 'p' ? (c[1] === 'p' ? 'noun' : 'adj') : kindOfC(c);
   const groupWords = () => { const g = {}; for (const [c, ids] of UNITS) { const k = c.split('|')[0]; (g[k] = g[k] || new Set()); ids.forEach(i => g[k].add(i)); } return g; };
   function entries(only) {
     const gw = groupWords(), out = [];
-    for (const c of UNITS.keys()) if (!only || only.has(c)) { const g = c.split('|')[0]; out.push({ c, kind: kindOfC(c), g, nw: gw[g].size }); }
+    for (const c of UNITS.keys()) if (!only || only.has(c)) { const g = c.split('|')[0]; out.push({ c, kind: shareKind(c), g, nw: gw[g].size }); }
     return out;
   }
   // next drill question: a combo (weighted toward weak, unseen and not-recent), then a word that has it
@@ -275,7 +283,7 @@
 
   // ---------- drills ----------
   const CHIPS = {
-    types: [['verb', 'Verbs'], ['noun', 'Nouns'], ['adj', 'Adjectives']],
+    types: [['verb', 'Verbs'], ['noun', 'Nouns'], ['adj', 'Adjectives'], ['pron', 'Pronouns']],
     moods: [['ind', 'Indicative'], ['sub', 'Subjunctive'], ['imp', 'Imperative'], ['inf', 'Infinitive'], ['ptc', 'Participle'], ['ger', 'Gerund'], ['gdv', 'Gerundive'], ['sup', 'Supine']],
     voices: [['act', 'Active'], ['pas', 'Passive'], ['dep', 'Deponent']],
     tenses: [['pres', 'Present'], ['impf', 'Imperfect'], ['fut', 'Future'], ['perf', 'Perfect'], ['plup', 'Pluperfect'], ['fperf', 'Fut. perfect']],
@@ -307,9 +315,9 @@
       <div class="small muted" style="margin-top:2px">Seen in drills so far: ${plur(Object.keys(S.ds.w).length, 'word')} · ${plur(Object.keys(S.dst).length, 'form')}</div>
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('persons', 'Person')}${chipRow('vnums', 'Number')}${chipRow('conj', 'Conjugation')}
-        <h3>Nouns &amp; adjectives</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
+        <h3>Nouns, adjectives &amp; pronouns</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
         <div class="small muted chiph">Questions per set</div><div class="seg" id="sdr">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.dlen === n ? 'on' : ''}">${n}</button>`).join('')}</div>
-        <p class="small muted">Imperatives come in present and future (use the Tense chips) and have only 2nd and 3rd persons. Imperatives ignore the Person chips. Verb Person applies to indicative and subjunctive forms, verb Number to indicative, subjunctive and imperative forms; infinitives, participles, gerunds, gerundives and supines ignore them (participles and gerundives use the noun Case and Number chips). Gerund, gerundive and supine ignore the voice and tense chips. The Case and Number chips also apply to participles, gerunds, gerundives and supines (if none of a form’s cases is on, it is drilled in all of them). Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Locative exists only for domus, rūs, humus, bellum and mīlitia. In Identify, a form with several readings (puellae, amāre) accepts any one of them; the optional <b>And…?</b> follow-up (on by default, see Settings) asks for the others, counting only readings these settings allow, of the word shown.</p>
+        <p class="small muted">Imperatives come in present and future (use the Tense chips) and have only 2nd and 3rd persons. Imperatives ignore the Person chips. Verb Person applies to indicative and subjunctive forms, verb Number to indicative, subjunctive and imperative forms; infinitives, participles, gerunds, gerundives and supines ignore them (participles and gerundives use the noun Case and Number chips). Gerund, gerundive and supine ignore the voice and tense chips. The Case and Number chips also apply to participles, gerunds, gerundives and supines (if none of a form’s cases is on, it is drilled in all of them). Passive appears only for verbs that have one (not sum, eō, volō, intransitives); deponents always use passive forms (in Identify, the voice row is just Active / Passive and deponents are answered by their form). Pronouns are ego, tū, nōs, vōs, hic and ille; they use the Case and Number chips and ignore Declension (no vocative). Locative exists only for domus, rūs, humus, bellum and mīlitia. In Identify, a form with several readings (puellae, amāre) accepts any one of them; the optional <b>And…?</b> follow-up (on by default, see Settings) asks for the others, counting only readings these settings allow, of the word shown.</p>
         <button class="primary big" id="tdone">Done</button>
         <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}
       </div>
@@ -330,7 +338,7 @@
   let drillEnd = null;
   const WEAK_N = 12, WEAK_MAX = 0.85;   // weak spot = recent accuracy under 85%
   const GROUP = { v1: '1st conj.', v2: '2nd conj.', v3: '3rd conj.', v3io: '3rd conj. -iō', v4: '4th conj.', vsum: 'sum', vpossum: 'possum', veo: 'eō', vfero: 'ferō', vvolo: 'volō/nōlō/mālō', vfio: 'fīō',
-    n1: '1st decl.', n2: '2nd decl.', n3: '3rd decl.', n3i: '3rd decl. i-stem', n4: '4th decl.', n5: '5th decl.', nirr: 'irregular noun', a12: '1st/2nd-decl. adj.', a3: '3rd-decl. adj.' };
+    n1: '1st decl.', n2: '2nd decl.', n3: '3rd decl.', n3i: '3rd decl. i-stem', n4: '4th decl.', n5: '5th decl.', nirr: 'irregular noun', pp: 'personal pronoun', pd: 'hic / ille', a12: '1st/2nd-decl. adj.', a3: '3rd-decl. adj.' };
   const comboLabel = c => { const i = c.indexOf('|'), g = c.slice(0, i); return (GROUP[g] || g) + ' · ' + Morph.label(kindOfC(c), c.slice(i + 1)); };
   const pct = st => st && st.n > 0 ? Math.round(100 * DrillPick.acc(st)) + '%' : '—';
   function renderWeak() {
@@ -355,7 +363,8 @@
     const all = g => df[g].length === CHIPS[g].length;
     const parts = [];
     if (df.types.includes('verb')) parts.push(`verbs: ${names('moods').join(', ') || 'no mood'}; ${names('voices').join('/') || 'no voice'}; ${all('tenses') ? 'all tenses' : names('tenses').join(', ') || 'no tense'}${all('persons') && all('vnums') ? '' : '; ' + (all('persons') ? 'all persons' : names('persons').join(', ') || 'no person') + ' ' + (all('vnums') ? '' : names('vnums').join('/') || 'no number')}`);
-    if (df.types.includes('noun') || df.types.includes('adj')) parts.push(`${df.types.includes('noun') ? 'nouns' : ''}${df.types.includes('noun') && df.types.includes('adj') ? ' & ' : ''}${df.types.includes('adj') ? 'adjectives' : ''}: ${all('cases') ? 'all cases' : names('cases').join(' ')}${all('nums') ? '' : ', ' + names('nums').join(' ')}`);
+    const nt = [['noun', 'nouns'], ['adj', 'adjectives'], ['pron', 'pronouns']].filter(x => df.types.includes(x[0])).map(x => x[1]);
+    if (nt.length) parts.push(`${nt.length < 3 ? nt.join(' & ') : nt.slice(0, 2).join(', ') + ' & ' + nt[2]}: ${all('cases') ? 'all cases' : names('cases').join(' ')}${all('nums') ? '' : ', ' + names('nums').join(' ')}`);
     return parts.join(' · ') || 'nothing selected';
   }
   function miniTable(a, key) {
@@ -365,7 +374,7 @@
       const pre = ['ger', 'gdv', 'sup'].includes(k[0]) ? k[0] + '.' : k[0] === 'inf' || k[0] === 'ptc' ? k[0] + '.' + k[1] + '.' : k.slice(0, 3).join('.') + '.';
       const NM = { m: 'masc.', f: 'fem.', n: 'neut.', um: '-um', u: '-ū' };
       rows = Object.keys(a.tbl).filter(x => x.startsWith(pre)).map(x => { const r = x.slice(pre.length); return [NM[r] || r.replace(/^(\d)s$/, '$1 sg').replace(/^(\d)p$/, '$1 pl'), x]; });
-    } else if (a.kind === 'noun') rows = Morph.CASES_X.map(c => [c, c + '.' + k[1]]);
+    } else if (a.kind === 'noun' || k.length === 2) rows = Morph.CASES_X.map(c => [c, c + '.' + k[1]]);
     else rows = Morph.CASES_X.map(c => [c, k[0] + '.' + c + '.' + k[2]]);
     return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(a.tbl[x].join(' / '))}</td></tr>`).join('')}</table>`;
   }
@@ -374,7 +383,7 @@
     const w = BY[it.id], a = an(w), key = it.key;
     const sub = Identify.typedSub(a, key, S.set.df);   // participle / gerundive in an allowed case and number when nom. sg. is off
     const answers = sub ? sub.forms : a.tbl[key];
-    const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective';
+    const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : a.kind === 'pron' ? 'Decline the pronoun' : 'Decline the adjective';
     const ctx = csTarget(a, key);
     V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w)}
       <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
@@ -397,7 +406,7 @@
 
   // ---------- "new" tags: a word never drilled, or a form (paradigm + attributes) never attempted ----------
   const plur = (n, x) => `<b>${n}</b> ${x}${n === 1 ? '' : 's'}`;
-  const pdg = a => a.kind === 'verb' ? 'v' + (a.conj === 'irr' ? IRR_ID[a.irr] || 'irr' : conjKey(a)) : a.kind === 'noun' ? 'n' + (a.decl === 3 && a.istem ? '3i' : a.decl) : 'a' + (a.decl === 3 ? '3' : '12');
+  const pdg = a => a.kind === 'verb' ? 'v' + (a.conj === 'irr' ? IRR_ID[a.irr] || 'irr' : conjKey(a)) : a.kind === 'noun' ? 'n' + (a.decl === 3 && a.istem ? '3i' : a.decl) : a.kind === 'pron' ? (a.pron === 'pers' ? 'pp' : 'pd') : 'a' + (a.decl === 3 ? '3' : '12');
   const LESSON_ID = { vpossum: 'sum', vsum: 'sum', veo: 'eo', vfero: 'fero', vvolo: 'volo', a12: 'a12', a3: 'a3' };
   const lessonOf = a => { const p = pdg(a), id = LESSON_ID[p] || (/^(n[1-5]|n3i|v[1-4]|v3io)$/.test(p) ? p : null); return LS.find(l => l.id === id) || null; };
   function newTags(it, w) {
@@ -473,6 +482,7 @@
           if (v === sel[attr]) b.classList.add(off.has(attr) ? 'wrong' : 'right'); else if (off.has(attr) && want != null && Identify.hit(want, v)) b.classList.add('want'); }); });
       const many = ps.length > 1, lex = a.kind === 'noun' ? `<div class="small muted"><b>${esc(entry)}</b>: ${Identify.genders(w, a).map(x => ({ m: 'masculine', f: 'feminine', n: 'neuter' })[x]).join(' or ')}, ${a.decl === 'irr' ? 'irregular' : ORD[a.decl] + ' declension'}</div>`
         : a.kind === 'adj' ? `<div class="small muted"><b>${esc(entry)}</b>: ${a.decl === 3 ? '3rd' : '1st/2nd'}-declension adjective</div>`
+        : a.kind === 'pron' ? `<div class="small muted"><b>${esc(entry)}</b>: ${a.pron === 'pers' ? ORD[a.person] + '-person personal pronoun, ' + (a.num === 'sg' ? 'singular' : 'plural') : 'demonstrative pronoun / adjective'}</div>`
         : ps.some(p => p.dep) ? `<div class="small muted"><b>${esc(entry)}</b> is deponent: passive forms, active meaning. Voice is judged by the form${ps.some(p => p.dep && p.at.voice === 'act') ? ' (its present and future participles and future infinitive look active)' : ''}.</div>` : '';
       const offTxt = g.off.map(x => Identify.TITLE[x].toLowerCase().replace('mood / form', 'mood')).join(', ');
       $('#ans').innerHTML = `<div class="answer">${g.ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong${offTxt ? ' — check the ' + esc(offTxt) : ''}</div>`}
@@ -507,6 +517,7 @@
       const name = a.conj === 'irr' ? (a.irr === 'dō' ? '1st conj.' : a.irr) : ORD[a.conj] + ' conj.';
       return { id: `cs-v-${base}-${mood}-${v}`, label: `${name} · ${Morph.MOODS[mood]}${voice === 'pas' || voice === 'dep' ? ' passive' : ''}` };
     }
+    if (a.kind === 'pron') return { id: a.pron === 'pers' ? 'cs-p-pers' : 'cs-p-dem', label: a.pron === 'pers' ? 'personal pronouns' : 'hic / ille' };
     const kc = key.split('.')[a.kind === 'noun' ? 0 : 1];
     if (kc === 'voc' || kc === 'loc') return { id: 'cs-vl', label: kc === 'voc' ? 'vocative' : 'locative' };
     if (a.kind === 'noun') {
@@ -532,9 +543,16 @@
     return `<div class="cst"><div class="csh">${esc(w.la.split(',').slice(0, 2).join(','))} <span class="muted">${esc(note || '')}</span></div><table><tr><th></th>${nums.map(n => `<th>${n === 'sg' ? 'singular' : 'plural'}</th>`).join('')}</tr>
       ${Morph.CASES_X.filter(c => nums.some(n => a.tbl[c + '.' + n])).map(c => `<tr><th>${c}.</th>${nums.map(n => `<td>${cell(a, c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table></div>`;
   }
+  // ego / nōs, tū / vōs side by side (Diederich lists each number as its own word)
+  function persTable() {
+    const P = ['ego', 'nōs', 'tū', 'vōs'].map(h => { const w = findW(h); return w ? an(w) : null; });
+    if (P.some(a => !a || a.skip)) return '';
+    return `<div class="cst"><div class="forms"><table><tr><th></th><th>I</th><th>we</th><th>you (sg.)</th><th>you (pl.)</th></tr>
+      ${Morph.CASES.map(k => `<tr><th>${k}.</th>${P.map(a => `<td>${esc((a.tbl[k + '.' + a.num] || ['–']).join(' / '))}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
+  }
   function adjTable(h, note) {
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
-    const g = a.tbl['m.gen.sg'][0], stem = [g.replace(/(īus|ī|is)$/, '')];
+    const g = a.tbl['m.gen.sg'][0], stem = a.kind === 'pron' ? (h === 'ille' ? ['ill'] : null) : [g.replace(/(īus|ī|is)$/, '')];
     const gs = ['m', 'f', 'n'].filter(x => a.tbl[x + '.nom.sg']);
     const one = n => `<table><tr><th>${n === 'sg' ? 'sg.' : 'pl.'}</th>${gs.map(x => `<th>${{ m: 'masc.', f: 'fem.', n: 'neut.' }[x]}</th>`).join('')}</tr>${Morph.CASES_X.filter(c => gs.some(x => a.tbl[x + '.' + c + '.' + n])).map(c => `<tr><th>${c}.</th>${gs.map(x => `<td>${cell(a, x + '.' + c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table>`;
     return `<div class="cst"><div class="csh">${esc(w.la.split(',').slice(0, 3).join(','))} <span class="muted">${esc(note || '')}</span></div>${one('sg')}<div style="height:6px"></div>${one('pl')}</div>`;
@@ -604,7 +622,7 @@
   function cheatHTML() {
     if (CHEAT) return CHEAT;
     CHEAT = `<p class="small muted">Endings are in <b>bold</b>. Tap a heading to open it.</p>
-    <div class="chips jump"><a href="#cs-nouns">Nouns</a><a href="#cs-adjs">Adjectives</a><a href="#cs-verbs">Verbs</a><a href="#cs-irr">Irregular verbs</a></div>
+    <div class="chips jump"><a href="#cs-nouns">Nouns</a><a href="#cs-adjs">Adjectives</a><a href="#cs-prons">Pronouns</a><a href="#cs-verbs">Verbs</a><a href="#cs-irr">Irregular verbs</a></div>
     <h2 id="cs-nouns">Nouns</h2>
     ${det('cs-n-1', '1st declension', nounTable('puella', 'f.'), 'Mostly feminine. Gen. sg. -ae.')}
     ${det('cs-n-2', '2nd declension', nounTable('dominus', 'm.') + nounTable('puer', 'm., keeps e') + nounTable('ager', 'm., drops e') + nounTable('bellum', 'neuter'), 'Gen. sg. -ī. Neuters: nom. = acc., plural -a.')}
@@ -617,6 +635,9 @@
     <h2 id="cs-adjs">Adjectives</h2>
     ${det('cs-a-12', '1st/2nd declension', adjTable('bonus') + adjTable('līber', '-er, keeps e') + adjTable('pulcher', '-er, drops e') + adjTable('tōtus', 'gen. -īus, dat. -ī'), 'Feminine like puella; masculine and neuter like dominus and bellum. ūnus, sōlus, tōtus, nūllus, alius etc. have gen. sg. -īus and dat. sg. -ī.')}
     ${det('cs-a-3', '3rd declension', adjTable('ācer', 'three endings') + adjTable('omnis', 'two endings') + adjTable('ingēns', 'one ending') + adjTable('melior', 'comparative (not i-stem)'), 'i-stems: abl. sg. -ī, gen. pl. -ium, neut. pl. -ia. Comparatives use -e, -um, -a.')}
+    <h2 id="cs-prons">Pronouns</h2>
+    ${det('cs-p-pers', 'Personal pronouns', persTable(), 'No vocative in A&amp;G. Gen. plural: nostrum / vestrum are partitive (ūnus nostrum “one of us”), nostrī / vestrī objective (memor nostrī “mindful of us”). With cum: mēcum, tēcum, nōbīscum, vōbīscum.')}
+    ${det('cs-p-dem', 'hic, haec, hoc · ille, illa, illud', adjTable('hic', 'this') + adjTable('ille', 'that'), 'Gen. sg. huius / illīus and dat. sg. huic / illī in all genders; otherwise ille is like bonus except nom. sg. ille, illud. hōc (abl.) has a long ō; hoc (nom./acc. neut.) is short. No vocative.')}
     <h2 id="cs-verbs">Verbs</h2>
     <p class="small muted">Perfect passive forms (and all deponent perfects) = perfect participle + a form of <i>sum</i>; the participle agrees with the subject (amātus / amāta / amātum est).</p>
     ${det('cs-v-gx', 'At a glance: gerund, gerundive, supine, future imperative', gxSummary(), 'Gerund = verbal noun (amandī “of loving”); no nominative — use the infinitive. Gerundive = passive verbal adjective, “to be …” (amandus, -a, -um), declined like bonus; deponent gerundives are passive in meaning too (hortandus “to be encouraged”). Supine in -um after verbs of motion (vēnit spectātum), in -ū with adjectives (facile dictū). Future passive infinitive = supine + īrī (amātum īrī).')}
@@ -909,7 +930,7 @@
     if (!a.skip) {
       const T = (cols, rows, get) => `<table><tr><th></th>${cols.map(c => `<th>${c}</th>`).join('')}</tr>${rows.map(r => `<tr><th>${r}</th>${cols.map(c => `<td>${esc((get(r, c) || ['–']).join(' / '))}</td>`).join('')}</tr>`).join('')}</table>`;
       if (a.kind === 'verb') forms = verbGroups(a, null, null) + (a.noPassiveWhy ? `<div class="small muted">No passive: ${esc(a.noPassiveWhy)}.</div>` : '') + (a.note ? `<div class="small muted">${esc(a.note)}</div>` : '');
-      else if (a.kind === 'noun') forms = T(['sg', 'pl'].filter(n => a.tbl['nom.' + n] || a.tbl['gen.' + n]), Morph.CASES_X.filter(r => a.tbl[r + '.sg'] || a.tbl[r + '.pl']), (r, c) => a.tbl[r + '.' + c]);
+      else if (a.kind === 'noun' || a.pron === 'pers') forms = T(['sg', 'pl'].filter(n => a.tbl['nom.' + n] || a.tbl['gen.' + n]), Morph.CASES_X.filter(r => a.tbl[r + '.sg'] || a.tbl[r + '.pl']), (r, c) => a.tbl[r + '.' + c]);
       else forms = ['sg', 'pl'].map(n => T(['m', 'f', 'n'].filter(g => a.tbl[g + '.nom.' + n]), Morph.CASES_X.filter(r => a.tbl['m.' + r + '.' + n] || a.tbl['f.' + r + '.' + n]), (r, g) => a.tbl[g + '.' + r + '.' + n])).join('<div style="height:6px"></div>');
     }
     return `<div class="answer small"><div>Diederich section ${w.s || '–'}.${w.ss || ''} · frequency ${w.f != null ? w.f : '–'} · ${POS_SHORT[w.pos]}</div>
@@ -935,7 +956,7 @@
       <p><b>Today</b> is flashcards: a few new words each day plus whatever is due. Answer <b>Right</b> or <b>Wrong</b> (or type the Latin and it’s checked for you). Cards move through Leitner boxes: each right answer moves a card up a box and spaces it out further (1, 3, 7, 14, 30, 60, 120 days); a wrong answer sends it back to the start and shows it again in a few cards. Latin→English and English→Latin are scheduled separately; the English→Latin card unlocks the day after you first get a word right.</p>
       <p><b>Drills</b> ask for one form at a time (macrons optional unless you turn on <b>Require macrons</b>) and check your answer. Choose the moods, voices, tenses, cases and numbers you want. Forms are generated from the dictionary entry using standard paradigms; ${drillWords} of ${W.length} words are drillable. Words that can’t be generated reliably (defective, impersonal, indeclinable words, some irregulars) are left out and say so in the word list. If you think the app marked you wrong unfairly, tap <b>Count as correct</b>.</p>
       <p>Drills have no schedule: practice in short sets and stop anytime. The app keeps a recent-weighted right/wrong score for each form in each paradigm (say, dative plural in the 3rd declension) and asks more often about forms you miss, haven’t tried, or haven’t seen lately, then picks a word with that form, slightly favoring common words and words you know from flashcards. A form you miss comes back a few questions later with a different word. <b>Weak spots</b> on the Drills tab lists your lowest-accuracy forms.</p>
-      <p>The <b>Cheat sheet</b> has endings tables for every declension and conjugation the drills use, plus the main irregular verbs; open it from any drill question.</p>
+      <p>The <b>Cheat sheet</b> has endings tables for every declension and conjugation the drills use, plus the pronouns and the main irregular verbs; open it from any drill question.</p>
       <p>Your progress stays on this device (localStorage). No account, no tracking; works offline once installed.</p></div>
       <div class="card"><h2 style="margin-top:0">Sources &amp; credits</h2>
       <p class="small">Word list: <b>Paul B. Diederich</b>, <i>The Frequency of Latin Words and Their Endings</i> (University of Chicago, 1939) — the basic vocabulary of about 1,500 words grouped by topic.</p>

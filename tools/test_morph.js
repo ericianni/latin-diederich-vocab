@@ -187,5 +187,31 @@ t('dea', 'dat.pl', 'deābus'); t('dea', 'abl.pl', 'deābus');
 { const [, a] = find('dea'); const ok = a.tbl['dat.pl'].includes('deīs') && a.tbl['abl.pl'].includes('deīs'); ok ? pass++ : fail++; if (!ok) console.log('FAIL dea keeps deīs', a.tbl['dat.pl']); }
 { const [, a] = find('alter'); const ok = ['m', 'f', 'n'].every(g => a.tbl[g + '.gen.sg'].join() === 'alterīus,alterius'); ok ? pass++ : fail++; if (!ok) console.log('FAIL alter gen.sg', a.tbl['m.gen.sg']); }
 { const [, a] = find('vīs'); const ok = !a.tbl['gen.sg'] && a.tbl['nom.sg'][0] === 'vīs' && a.tbl['acc.sg'][0] === 'vim'; ok ? pass++ : fail++; if (!ok) console.log('FAIL vīs gen.sg hidden', a.tbl['gen.sg']); }
+// v16: personal pronouns (A&G 143), hic / ille (A&G 146), and the senex / arcus / castellum fixes
+const PR = [
+  ['egō', 'nom.sg', 'ego'], ['egō', 'gen.sg', 'meī'], ['egō', 'dat.sg', 'mihi'], ['egō', 'acc.sg', 'mē'], ['egō', 'abl.sg', 'mē'],
+  ['tū', 'nom.sg', 'tū'], ['tū', 'gen.sg', 'tuī'], ['tū', 'dat.sg', 'tibi'], ['tū', 'acc.sg', 'tē'], ['tū', 'abl.sg', 'tē'],
+  ['nōs', 'nom.pl', 'nōs'], ['nōs', 'gen.pl', 'nostrum'], ['nōs', 'dat.pl', 'nōbīs'], ['nōs', 'acc.pl', 'nōs'], ['nōs', 'abl.pl', 'nōbīs'],
+  ['vōs', 'nom.pl', 'vōs'], ['vōs', 'gen.pl', 'vestrum'], ['vōs', 'dat.pl', 'vōbīs'], ['vōs', 'acc.pl', 'vōs'], ['vōs', 'abl.pl', 'vōbīs'],
+  ['senex', 'gen.sg', 'senis'], ['senex', 'acc.sg', 'senem'], ['senex', 'abl.sg', 'sene'], ['senex', 'nom.pl', 'senēs'], ['senex', 'gen.pl', 'senum'], ['senex', 'dat.pl', 'senibus'], ['senex', 'acc.pl', 'senēs'],
+  ['arcus', 'gen.sg', 'arcūs'], ['arcus', 'dat.pl', 'arcubus'], ['arcus', 'abl.pl', 'arcubus'], ['arcus', 'gen.pl', 'arcuum'],
+  ['castellum', 'nom.pl', 'castella'], ['castellum', 'acc.pl', 'castella'], ['castellum', 'voc.pl', 'castella'], ['castellum', 'gen.pl', 'castellōrum'], ['castellum', 'acc.sg', 'castellum'],
+];
+const DEM = {
+  hic: { m: [['hic', 'huius', 'huic', 'hunc', 'hōc'], ['hī', 'hōrum', 'hīs', 'hōs', 'hīs']], f: [['haec', 'huius', 'huic', 'hanc', 'hāc'], ['hae', 'hārum', 'hīs', 'hās', 'hīs']], n: [['hoc', 'huius', 'huic', 'hoc', 'hōc'], ['haec', 'hōrum', 'hīs', 'haec', 'hīs']] },
+  ille: { m: [['ille', 'illīus', 'illī', 'illum', 'illō'], ['illī', 'illōrum', 'illīs', 'illōs', 'illīs']], f: [['illa', 'illīus', 'illī', 'illam', 'illā'], ['illae', 'illārum', 'illīs', 'illās', 'illīs']], n: [['illud', 'illīus', 'illī', 'illud', 'illō'], ['illa', 'illōrum', 'illīs', 'illa', 'illīs']] },
+};
+for (const h in DEM) for (const g of ['m', 'f', 'n']) DEM[h][g].forEach((row, i) => row.forEach((f, j) => PR.push([h, `${g}.${M.CASES[j]}.${i ? 'pl' : 'sg'}`, f])));
+for (const x of PR) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
+for (const [h, key, inp] of [['nōs', 'gen.pl', 'nostrī'], ['vōs', 'gen.pl', 'vestrī'], ['egō', 'dat.sg', 'mī'], ['egō', 'nom.sg', 'egō']]) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key], true)); ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun alt', e.la, key, inp); }
+// what must not exist: other numbers of the personal pronouns, vocatives, arcibus, a masculine castellī plural, senexēs
+for (const [h, key] of [['egō', 'nom.pl'], ['nōs', 'nom.sg'], ['tū', 'voc.sg'], ['vōs', 'voc.pl'], ['egō', 'voc.sg'], ['hic', 'm.voc.sg'], ['ille', 'n.voc.pl'], ['tū', 'loc.sg']]) { const [e, a] = find(h); const ok = !a.tbl[key]; ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
+{ const [, a] = find('arcus'); const ok = !a.tbl['dat.pl'].includes('arcibus') && !a.tbl['abl.pl'].includes('arcibus'); ok ? pass++ : fail++; if (!ok) console.log('FAIL arcibus', a.tbl['dat.pl']); }
+{ const [, a] = find('castellum'); const ok = a.g === 'n' && !Object.values(a.tbl).flat().some(f => /castellī$|castellōs$/.test(f) && f !== 'castellī'); ok ? pass++ : fail++; if (!ok) console.log('FAIL castellum neuter', a.g, a.tbl); }
+{ const [, a] = find('senex'); const ok = !Object.values(a.tbl).flat().some(f => /^senex./.test(f)); ok ? pass++ : fail++; if (!ok) console.log('FAIL senex stem', a.tbl); }
+{ const [, a] = find('hic'); const ok = a.kind === 'pron' && a.pron === 'dem' && a.headKey === 'm.nom.sg'; ok ? pass++ : fail++; if (!ok) console.log('FAIL hic analysis', a); }
+for (const [h, p, n] of [['egō', 1, 'sg'], ['tū', 2, 'sg'], ['nōs', 1, 'pl'], ['vōs', 2, 'pl']]) { const [, a] = find(h); const ok = a.kind === 'pron' && a.pron === 'pers' && a.person === p && a.num === n && a.headKey === 'nom.' + n; ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun analysis', h, a); }
+for (const h of ['mē', 'is', 'quī', 'ipse', 'sē']) { const [, a] = find(h); const ok = !!a.skip; ok ? pass++ : fail++; if (!ok) console.log('FAIL other pronouns stay undrilled', h); }
+for (const [k, exp] of [['dat.sg', 'dative singular'], ['n.abl.sg', 'neuter ablative singular']]) { const l = M.label('pron', k); const ok = l === exp; ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun label', k, l); }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

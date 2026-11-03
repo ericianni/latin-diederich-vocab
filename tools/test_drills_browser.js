@@ -8,11 +8,13 @@ const ROOT = path.join(__dirname, '..'), TYPES = { '.html': 'text/html', '.js': 
 const srv = http.createServer((q, r) => { const p = path.join(ROOT, decodeURIComponent(q.url.split(/[?#]/)[0]).replace(/\/$/, '/index.html'));
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': TYPES[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(r); });
 let URL;
-const ALL = { types: ['verb', 'noun', 'adj'], moods: ['ind', 'sub', 'imp', 'inf', 'ptc', 'ger', 'gdv', 'sup'], voices: ['act', 'pas', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'], persons: ['1', '2', '3'], vnums: ['sg', 'pl'],
+const ALL = { types: ['verb', 'noun', 'adj', 'pron'], moods: ['ind', 'sub', 'imp', 'inf', 'ptc', 'ger', 'gdv', 'sup'], voices: ['act', 'pas', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'], persons: ['1', '2', '3'], vnums: ['sg', 'pl'],
   conj: ['1', '2', '3', '3io', '4', 'irr'], cases: ['nom', 'gen', 'dat', 'acc', 'abl', 'voc', 'loc'], nums: ['sg', 'pl'], decl: ['1', '2', '3', '4', '5', 'irr'] };
 const SC = [
   { name: 'perfect passive only (verbs, all moods)', df: { types: ['verb'], tenses: ['perf'], voices: ['pas'] } },
   { name: 'subjunctive only', df: { types: ['verb'], moods: ['sub'], voices: ['act'] } },
+  { name: 'pronouns only, genitive + dative', df: { types: ['pron'], cases: ['gen', 'dat'] } },
+  { name: 'pronouns only, plural only', df: { types: ['pron'], nums: ['pl'] } },
   { name: 'ablative plural only (nouns+adj)', df: { types: ['noun', 'adj'], cases: ['abl'], nums: ['pl'] } },
   { name: 'ptc/ger/gdv/sup, perf, abl sg', df: { types: ['verb'], moods: ['ptc', 'ger', 'gdv', 'sup'], tenses: ['perf'], cases: ['abl'], nums: ['sg'] } },
   { name: 'gerund only, dative only', df: { types: ['verb'], moods: ['ger'], cases: ['dat'] } },
@@ -66,7 +68,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
         for (const r of st.rows) {
           if (r.a === 'mood' || r.a === 'tense' || r.a === 'case') { const off = r.opts.filter(o => !df[{ mood: 'moods', tense: 'tenses', case: 'cases' }[r.a]].includes(o.v)); if (off.length && !(r.a === 'case' && st.rows.some(x => x.a === 'mood' && x.opts.find(o => o.on && ['ger','sup','ptc','gdv'].includes(o.v)) && false))) issues.add('chip row ' + r.a + ' shows ' + off.map(o => o.v) + ' (form ' + st.form + ')'); }
           if (r.a === 'voice') { const okv = ['act', 'pas'].filter(v => df.voices.includes(v) || df.voices.includes('dep')); const off = r.opts.filter(o => !okv.includes(o.v)); if (off.length) issues.add('chip row voice shows ' + off.map(o => o.v)); }
-          if (r.a === 'num' && (df.types.includes('noun') || df.types.includes('adj') || st.rows.some(x => x.a === 'gender'))) { const off = r.opts.filter(o => !df.nums.includes(o.v)); if (off.length) issues.add('chip row num shows ' + off.map(o => o.v)); }
+          if (r.a === 'num' && (df.types.includes('noun') || df.types.includes('adj') || df.types.includes('pron') || st.rows.some(x => x.a === 'gender'))) { const off = r.opts.filter(o => !df.nums.includes(o.v)); if (off.length) issues.add('chip row num shows ' + off.map(o => o.v)); }
           if (r.opts.length === 1 && !r.opts[0].on) issues.add('single option not auto-selected: ' + r.a);
         }
         // answer: pick first in every open row until check enabled
@@ -111,7 +113,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     await clk('#tset'); await pg.waitForSelector('#dset');
     const rowsShown = await pg.$$eval('#dset .chips', cs => cs.map(c => c.dataset.g).join());
     if (!/tenses,persons,vnums,conj/.test(rowsShown)) { bad++; console.log('   - Person / Number chip rows missing from settings: ' + rowsShown); }
-    for (const [g, v] of [['types', 'noun'], ['types', 'adj'], ['tenses', 'pres'], ['tenses', 'impf'], ['tenses', 'fut'], ['tenses', 'plup'], ['tenses', 'fperf'], ['voices', 'act'], ['voices', 'dep'], ['voices', 'pas'], ['persons', '1'], ['persons', '2'], ['vnums', 'sg']])
+    for (const [g, v] of [['types', 'noun'], ['types', 'adj'], ['types', 'pron'], ['tenses', 'pres'], ['tenses', 'impf'], ['tenses', 'fut'], ['tenses', 'plup'], ['tenses', 'fperf'], ['voices', 'act'], ['voices', 'dep'], ['voices', 'pas'], ['persons', '1'], ['persons', '2'], ['vnums', 'sg']])
       await clk(`.chips[data-g="${g}"] button[data-v="${v}"]`);
     const sum = await pg.$eval('#view', v => v.textContent); if (!/3rd plural/.test(sum)) { bad++; console.log('   - summary lacks person/number'); }
     await clk('#dmode button[data-m="id"]'); await clk('#dgo');
@@ -140,6 +142,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     }, sel);
     const SC2 = [
       { name: '1st-decl. nouns, nom/gen/dat (puellae)', df: Object.assign({}, ALL, { types: ['noun'], decl: ['1'], cases: ['nom', 'gen', 'dat'] }) },
+      { name: 'pronouns, gen/dat/abl (huius, illī, hīs, nōbīs)', df: Object.assign({}, ALL, { types: ['pron'], cases: ['gen', 'dat', 'abl'] }) },
       { name: 'pres. infinitive + imperative, 1st person only (amāre: imperatives ignore Person)', df: Object.assign({}, ALL, { types: ['verb'], moods: ['inf', 'imp'], tenses: ['pres'], voices: ['act', 'pas'], persons: ['1'], conj: ['1', '3'] }) },
     ];
     for (const sc of SC2) for (const style of ['all', 'dup+wrong', 'off']) {

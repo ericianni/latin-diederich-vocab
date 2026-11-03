@@ -4,9 +4,9 @@ const I = require('../identify.js'); const W = require('../data/words.json').fil
 const find = h => { const w = W.find(x => M.plain(x.la.split(/[ ,]/)[0]) === M.plain(h)); if (!w) throw new Error('missing ' + h); return [w, M.analyze(w)]; };
 let pass = 0, fail = 0;
 const ok = (c, ...msg) => { c ? pass++ : fail++; if (!c) console.log('FAIL', ...msg); };
-const ALL = { types: ['verb', 'noun', 'adj'], moods: ['ind', 'sub', 'imp', 'inf', 'ptc', 'ger', 'gdv', 'sup'], voices: ['act', 'pas', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'],
+const ALL = { types: ['verb', 'noun', 'adj', 'pron'], moods: ['ind', 'sub', 'imp', 'inf', 'ptc', 'ger', 'gdv', 'sup'], voices: ['act', 'pas', 'dep'], tenses: ['pres', 'impf', 'fut', 'perf', 'plup', 'fperf'],
   conj: ['1', '2', '3', '3io', '4', 'irr'], cases: ['nom', 'gen', 'dat', 'acc', 'abl', 'voc', 'loc'], nums: ['sg', 'pl'], decl: ['1', '2', '3', '4', '5', 'irr'] };
-const DEF = { types: ['verb', 'noun', 'adj'], moods: ['ind'], voices: ['act', 'dep'], tenses: ALL.tenses, conj: ALL.conj, cases: ['nom', 'gen', 'dat', 'acc', 'abl'], nums: ['sg', 'pl'], decl: ALL.decl };
+const DEF = { types: ['verb', 'noun', 'adj', 'pron'], moods: ['ind'], voices: ['act', 'dep'], tenses: ALL.tenses, conj: ALL.conj, cases: ['nom', 'gen', 'dat', 'acc', 'abl'], nums: ['sg', 'pl'], decl: ALL.decl };
 const keysOf = (h, form, df) => { const [w, a] = find(h); return I.parses(a, w, form, df).map(p => p.key).sort().join(' '); };
 const eq = (h, form, df, exp) => { const got = keysOf(h, form, df); ok(got === exp.slice().sort().join(' '), h, form, 'got', got, 'expected', exp.join(' ')); };
 
@@ -136,6 +136,18 @@ eq('mare', 'marī', Object.assign({}, DEF, { cases: ['dat'] }), ['dat.sg']);    
   ok(r.length === 5 && r.every(([, v]) => v.length === 1), 'every finite row single-option (pre-selected and locked in the app)', JSON.stringify(r));
   ok(ro({ types: ALL.types, moods: ['ind'], voices: ['act'], tenses: ALL.tenses, conj: ALL.conj, cases: ALL.cases, nums: ['sg'], decl: ALL.decl }, 'ind').num === 'sg,pl', 'noun Number chips do not limit finite verbs; old settings without verb person / number: all'); }
 
+// pronouns: every reading of a form, case / number (personal) or gender / case / number (hic, ille)
+eq('nōs', 'nōs', DEF, ['nom.pl', 'acc.pl']); eq('egō', 'mē', DEF, ['acc.sg', 'abl.sg']); eq('tū', 'tē', DEF, ['acc.sg', 'abl.sg']);
+eq('vōs', 'vestrī', DEF, ['gen.pl']); eq('vōs', 'vōbīs', DEF, ['dat.pl', 'abl.pl']); eq('egō', 'mihi', DEF, ['dat.sg']); eq('egō', 'mī', DEF, ['dat.sg']);
+eq('hic', 'huius', DEF, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('hic', 'hīs', DEF, ['m.dat.pl', 'f.dat.pl', 'n.dat.pl', 'm.abl.pl', 'f.abl.pl', 'n.abl.pl']);
+eq('hic', 'haec', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('hic', 'hoc', DEF, ['n.nom.sg', 'n.acc.sg']); eq('hic', 'hōc', DEF, ['m.abl.sg', 'n.abl.sg']);
+eq('ille', 'illī', DEF, ['m.dat.sg', 'f.dat.sg', 'n.dat.sg', 'm.nom.pl']); eq('ille', 'illa', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('ille', 'illud', DEF, ['n.nom.sg', 'n.acc.sg']);
+eq('ille', 'illā', DEF, ['f.abl.sg']); eq('ille', 'illīs', Object.assign({}, DEF, { cases: ['dat'] }), ['m.dat.pl', 'f.dat.pl', 'n.dat.pl']);
+{ const [w, a] = find('egō'); const rs = Object.fromEntries(I.rows(a, ALL)); ok(Object.keys(rs).join() === 'case,num', 'personal pronoun rows are case / number', Object.keys(rs));
+  ok(I.attrs(a, w, 'gen.sg').gender === undefined, 'personal pronoun has no gender attribute'); }
+{ const [, a] = find('ille'); const rs = Object.fromEntries(I.rows(a, ALL)); ok(Object.keys(rs).join() === 'case,num,gender', 'hic / ille rows are case / number / gender', Object.keys(rs)); }
+{ const [w, a] = find('hic'); const ps = I.parses(a, w, 'huius', DEF); ok(I.parseLabel(a, ps[0]).includes('genitive singular'), 'hic label', I.parseLabel(a, ps[0]));
+  const r = I.andGrade({ case: 'gen', num: 'sg', gender: 'f' }, ps, [ps.find(p => p.key === 'm.gen.sg')]); ok(r.kind === 'new' && r.p.key === 'f.gen.sg', 'huius: And…? feminine'); }
 // sweep: for every drillable word and every key in the expanded table, the form's own key is among its parses,
 // and every parse's attributes appear in the chip rows for its mood (so a right answer is always possible)
 let n = 0;
@@ -144,7 +156,7 @@ const NARROW = Object.assign({}, ALL, { tenses: ['perf'], cases: ['dat'], nums: 
 const PERS = Object.assign({}, ALL, { persons: ['1', '3'], vnums: ['pl'] }), IMPF = Object.assign({}, ALL, { moods: ['imp', 'inf'], persons: ['3'] });
 const IMP1 = Object.assign({}, ALL, { moods: ['ind', 'imp'], persons: ['1'] }), IMPP = Object.assign({}, ALL, { moods: ['imp'], tenses: ['pres'], persons: ['3'], vnums: ['sg'] });
 for (const df of [DEF, ALL, DEP, PAS, NARROW, PERS, IMPF, IMP1, IMPP]) for (const w of W) {
-  const a = M.analyze(w); if (a.skip || !a.tbl || !['noun', 'adj', 'verb'].includes(a.kind)) continue;
+  const a = M.analyze(w); if (a.skip || !a.tbl || !['noun', 'adj', 'verb', 'pron'].includes(a.kind)) continue;
   const x = I.expand(a);
   for (const k in x) {
     if (!I.allowed(a, k, df)) continue; n++;
@@ -214,7 +226,7 @@ eq('dēsum', 'deest', ALL, ['ind.act.pres.3s']); eq('dēsum', 'dēest', ALL, [])
 // sweep: in every ambiguous form, each reading can be named by chips, and no two readings share one answer
 let amb = 0;
 for (const df of [DEF, ALL, IMP1, PERS]) for (const w of W) {
-  const a = M.analyze(w); if (a.skip || !a.tbl || !['noun', 'adj', 'verb'].includes(a.kind)) continue;
+  const a = M.analyze(w); if (a.skip || !a.tbl || !['noun', 'adj', 'verb', 'pron'].includes(a.kind)) continue;
   const x = I.expand(a), seen = new Set();
   for (const k in x) for (const f of x[k]) {
     if (!I.allowed(a, k, df) || seen.has(M.normM(f))) continue; seen.add(M.normM(f));

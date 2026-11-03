@@ -358,6 +358,10 @@
   const GPL_UM = ['pater', 'māter', 'frāter', 'canis', 'iuvenis', 'senex', 'sēdēs', 'vātēs', 'parēns', 'mēnsis', 'apis', 'volucris'];
   const GPL_BOTH = ['parēns', 'mēnsis', 'vātēs', 'apis', 'volucris', 'mūs', 'fraus', 'laus', 'cliēns', 'sapiēns', 'adulēscēns', 'cīvitās', 'aetās'];
   const GPL_IUM_X = ['os', 'cor', 'carō', 'imber', 'linter', 'venter', 'ūter', 'nix', 'līs', 'mās', 'glīs', 'faux', 'fauces'];
+  // source corrections: the list's entry is wrong or too short to decline from
+  const GEN_FIX = { 'senex': 'senis' };              // senex, senis (A&G 79): stem sen-, pl. senēs, gen. pl. senum
+  const GENDER_FIX = { 'castellum': 'n' };           // the list has "m."; castellum is neuter (pl. castella)
+  const UBUS = ['arcus'];                            // dat./abl. pl. arcubus (L&S; cf. A&G 68)
   const syl = s => (plain(s).match(/[aeiouy]+/g) || []).length;
   function noun(e) {
     const { parts, notes } = clean(e.la);
@@ -366,7 +370,7 @@
     if (/indecl/.test(notes) || /indecl/.test(e.la)) return { skip: 'indeclinable' };
     if (parts.length === 2) { const mm = parts[1].match(/^(\S+)\s+(m|f|n|mf|c)\.$/); if (mm) parts.splice(1, 1, mm[1], mm[2] + '.'); }
     if (parts.length < 3) return { skip: 'defective / unusual entry' };
-    let gender = (parts.find((p, i) => i >= 2 && /^-?\.?(m|f|n|mf|c)\.?$/.test(p)) || '').replace(/[-.]/g, '');
+    let gender = GENDER_FIX[nom] || (parts.find((p, i) => i >= 2 && /^-?\.?(m|f|n|mf|c)\.?$/.test(p)) || '').replace(/[-.]/g, '');
     if (!gender) return { skip: 'no gender given' };
     const neut = gender === 'n';
     let gRaw = parts[1];
@@ -394,7 +398,8 @@
     else if (g === 'ūs') { decl = 4; stem = nom.replace(/(us|ū)$/, ''); }
     else {
       decl = 3;
-      if (gRaw[0] !== '-') gen = gRaw;
+      if (GEN_FIX[nom]) gen = GEN_FIX[nom];
+      else if (gRaw[0] !== '-') gen = gRaw;
       else if (g === 'is') gen = (/(is|ēs|e)$/.test(nom) ? nom.replace(/(is|ēs|e)$/, '') : nom) + 'is';
       else if (isV(g[0])) gen = lastVowelStem() + g;
       else gen = expandPart(nom, nom, gRaw);
@@ -437,7 +442,7 @@
     }
     if (decl === 4) {
       const n = /ū$/.test(nom);
-      const dp = /-ubus/.test(notes) ? [stem + 'ibus', stem + 'ubus'] : stem + 'ibus';
+      const dp = UBUS.includes(nom) ? stem + 'ubus' : /-ubus/.test(notes) ? [stem + 'ibus', stem + 'ubus'] : stem + 'ibus';
       sg = n ? [nom, stem + 'ūs', stem + 'ū', nom, stem + 'ū'] : [nom, stem + 'ūs', stem + 'uī', stem + 'um', stem + 'ū'];
       pl = n ? [stem + 'ua', stem + 'uum', dp, stem + 'ua', dp] : [stem + 'ūs', stem + 'uum', dp, stem + 'ūs', dp];
     }
@@ -497,12 +502,36 @@
     const n = [[nNom, st + 'is', st + 'ī', nNom, abl], [npl, gpl, st + 'ibus', npl, st + 'ibus']];
     return { kind: 'adj', decl: 3, tbl: adjVoc(adjTbl(mf(mNom), mf(fNom), memor ? null : n)) };
   }
+  // ---------- pronouns ----------
+  // Personal pronouns (A&G 143) take case.num keys like nouns; hic and ille (A&G 146) take g.case.num keys like
+  // adjectives. No vocatives: A&G gives none. Diederich lists ego/nōs and tū/vōs as separate words, so each has one number.
+  const PRON = {
+    'ego': { pron: 'pers', person: 1, tbl: () => cells([['ego', 'egō'], 'meī', ['mihi', 'mī'], 'mē', 'mē'], null) },
+    'nōs': { pron: 'pers', person: 1, tbl: () => cells(null, ['nōs', ['nostrum', 'nostrī'], 'nōbīs', 'nōs', 'nōbīs']) },
+    'tū': { pron: 'pers', person: 2, tbl: () => cells(['tū', 'tuī', 'tibi', 'tē', 'tē'], null) },
+    'vōs': { pron: 'pers', person: 2, tbl: () => cells(null, ['vōs', ['vestrum', 'vestrī'], 'vōbīs', 'vōs', 'vōbīs']) },
+    'hic': { pron: 'dem', tbl: () => adjTbl(
+      [['hic', 'huius', 'huic', 'hunc', 'hōc'], ['hī', 'hōrum', 'hīs', 'hōs', 'hīs']],
+      [['haec', 'huius', 'huic', 'hanc', 'hāc'], ['hae', 'hārum', 'hīs', 'hās', 'hīs']],
+      [['hoc', 'huius', 'huic', 'hoc', 'hōc'], ['haec', 'hōrum', 'hīs', 'haec', 'hīs']]) },
+    'ille': { pron: 'dem', tbl: () => adjTbl(
+      [['ille', 'illīus', 'illī', 'illum', 'illō'], ['illī', 'illōrum', 'illīs', 'illōs', 'illīs']],
+      [['illa', 'illīus', 'illī', 'illam', 'illā'], ['illae', 'illārum', 'illīs', 'illās', 'illīs']],
+      [['illud', 'illīus', 'illī', 'illud', 'illō'], ['illa', 'illōrum', 'illīs', 'illa', 'illīs']]) },
+  };
+  function pronoun(e) {
+    const h = plain(e.la.split(/[ ,(]/)[0]) === 'ego' ? 'ego' : e.la.split(/[ ,(]/)[0], P0 = PRON[h];
+    if (!P0) return { skip: 'pronoun (not drilled)' };
+    const tbl = P0.tbl(), head = P0.pron === 'dem' ? 'm.nom.sg' : tbl['nom.sg'] ? 'nom.sg' : 'nom.pl';
+    return { kind: 'pron', pron: P0.pron, person: P0.person || null, head: h, headKey: head, num: P0.pron === 'pers' ? (tbl['nom.sg'] ? 'sg' : 'pl') : null, tbl };
+  }
   function analyze(e) {
     try {
       if (e.pos === 'verb') return verb(e);
       if (e.pos === 'noun') return noun(e);
       if (e.pos === 'adjective') return adj(e);
-      return { skip: 'not inflected / pronoun (not drilled)' };
+      if (e.pos === 'pronoun') return pronoun(e);
+      return { skip: 'not inflected' };
     } catch (err) { if (root.DEBUG) throw err; return { skip: 'generator error: ' + err.message }; }
   }
   // human-readable label for a table key
@@ -520,7 +549,7 @@
       if (mood === 'inf') return `${TENSES[tense]} ${vw}infinitive${dep}`;
       return `${TENSES[tense]} ${vw}participle${dep} (nom. masc. sg.)`;
     }
-    if (kind === 'noun') return `${CASE_N[k[0]]} ${k[1] === 'sg' ? 'singular' : 'plural'}`;
+    if (kind === 'noun' || k.length === 2) return `${CASE_N[k[0]]} ${k[1] === 'sg' ? 'singular' : 'plural'}`;
     return `${GEN_N[k[0]]} ${CASE_N[k[1]]} ${k[2] === 'sg' ? 'singular' : 'plural'}`;
   }
   // also accept feminine / neuter participles in compound forms (amāta est, amātum esse)
