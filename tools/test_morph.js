@@ -248,5 +248,10 @@ for (const [k, f] of [['ptc.pas.perf', 'lavātus'], ['ind.pas.perf.3s', 'lavātu
 for (const [k, f] of [['ind.act.pres.1s', 'adsum'], ['ind.act.pres.3s', 'adest'], ['inf.act.pres', 'adesse'], ['ind.act.perf.1s', 'adfuī'], ['ptc.act.fut', 'adfutūrus'], ['ind.act.impf.1s', 'aderam'], ['sub.act.pres.1s', 'adsim'], ['sub.act.impf.1s', 'adessem']]) t('adsum', k, f);
 ok19(find('adsum')[1].noPassive, 'adsum no passive');
 for (const [k, f] of [['ind.act.pres.1s', 'contemnō'], ['ind.act.perf.1s', 'contempsī'], ['sup.um', 'contemptum'], ['ptc.pas.perf', 'contemptus'], ['ind.pas.pres.3s', 'contemnitur'], ['gdv.m', 'contemnendus']]) t('contemnō', k, f);
+// v20: adsum variants (L&S ad-sum (assum), adfuī (aff-), adfore)
+for (const [k, f] of [['ind.act.pres.1s', 'assum'], ['ind.act.pres.1p', 'assumus'], ['ind.act.perf.1s', 'affuī'], ['ind.act.perf.3s', 'affuit'], ['ind.act.perf.3p', 'affuērunt'], ['ind.act.plup.3s', 'affuerat'], ['ind.act.fperf.1s', 'affuerō'], ['sub.act.perf.3s', 'affuerit'], ['sub.act.plup.3s', 'affuisset'], ['inf.act.perf', 'affuisse'], ['inf.act.fut', 'adfore'], ['inf.act.fut', 'affore'], ['inf.act.fut', 'affutūrus esse'], ['ptc.act.fut', 'affutūrus']])
+  ok19(M.check(f, tb('adsum')[k], true), 'adsum alt', k, f, tb('adsum')[k]);
+for (const [k, f] of [['ind.act.pres.1s', 'adsum'], ['ind.act.pres.1p', 'adsumus'], ['ind.act.perf.1s', 'adfuī'], ['ind.act.plup.3s', 'adfuerat'], ['inf.act.perf', 'adfuisse'], ['inf.act.fut', 'adfutūrus esse'], ['ptc.act.fut', 'adfutūrus']]) t('adsum', k, f);
+ok19(!M.check('assum', tb('sum')['ind.act.pres.1s']) && !M.check('affuī', tb('absum')['ind.act.perf.1s'] || []), 'variants stay on adsum');
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

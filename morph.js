@@ -193,6 +193,12 @@
       addAlt(T, 'imp.act.fut.2s', 'ēstō'); addAlt(T, 'imp.act.fut.3s', 'ēstō'); addAlt(T, 'imp.act.fut.2p', 'ēstōte');
       addAlt(T, 'inf.act.pres', 'ēsse'); addAlt(T, 'ind.pas.pres.3s', 'ēstur'); addAlt(T, 'sub.pas.impf.3s', 'ēssētur');
     },
+    // L&S: ad-sum (assum), adfuī (aff-); adfore for adfutūrum esse. adfuī stays the main answer
+    'adsum': T => {
+      addAlt(T, 'ind.act.pres.1s', 'assum'); addAlt(T, 'ind.act.pres.1p', 'assumus');
+      for (const k in T) T[k] = T[k].concat(T[k].filter(f => /^adfu/.test(f)).map(f => 'aff' + f.slice(3)).filter(f => !T[k].includes(f)));
+      addAlt(T, 'inf.act.fut', 'adfore', 'affore');
+    },
     // L&S: lavō, lāvī, lautum, lavātum (class. prose: sup. always lavātum; perf. part. lautus)
     'lavō': T => {
       for (const k in T) T[k] = T[k].concat(T[k].filter(f => /^laut/.test(f)).map(f => f.replace(/^laut/, 'lavāt')).filter(f => !T[k].includes(f)));
@@ -239,6 +245,7 @@
         if (fp) { F.one('inf.act.fut', p1 === 'sum' ? [fp + ' esse', 'fore'] : fp + ' esse'); F.one('ptc.act.fut', fp); }
       }
       F.perfAct(pst);
+      if (ALT_FORMS[p1]) ALT_FORMS[p1](F.T);
       return done({ conj: 'irr', irr: p1 === 'possum' ? 'possum' : 'sum', voice: 'act', noPassive: true }, F.T);
     }
     if (ends(p1, 'eō') && /īre$/.test(inf)) {          // eō and compounds
