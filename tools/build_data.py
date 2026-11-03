@@ -23,7 +23,9 @@ with open(f'{SRC}/DWF.csv', encoding='latin-1') as f:
             w = norm(w.strip().lstrip('-'))
             if w and w not in freq: freq[w] = tot
 # corrections to obvious source errors, each checked against Lewis & Short
-SOURCE_FIX = {'pāscō, -āre, pāvī, pāstum': 'pāscō, -ere, pāvī, pāstum'}   # L&S: pasco, pāvi, pastum, 3
+SOURCE_FIX = {'pāscō, -āre, pāvī, pāstum': 'pāscō, -ere, pāvī, pāstum', 'terra, -ae, .f': 'terra, -ae, f.'}   # L&S: pasco, pāvi, pastum, 3
+# part of speech where the Diederich section (or the fallback) doesn't fit the word; keyed by entry id, s/ss are kept
+POS_FIX = {1496: 'verb', 1494: 'adjective', 1506: 'adjective', 1475: 'adverb', 1478: 'adverb', 1510: 'adverb', 1511: 'conjunction', 1514: 'prefix', 1515: 'prefix', 1516: 'prefix', 1517: 'prefix', 1453: 'pronoun', 464: 'adverb', 784: 'adverb', 1125: 'adverb', 1140: 'adverb', 1152: 'adverb', 1178: 'adverb', 1251: 'adverb', 1280: 'adverb', 1314: 'adverb', 604: 'preposition', 470: 'pronoun', 501: 'adverb', 1420: 'conjunction', 1421: 'conjunction', 1435: 'adverb', 1436: 'adverb', 1452: 'adverb'}
 SECT = {'1':'noun','2':'pronoun','3':'verb','4':'adjective','5':'adverb','6':'interjection','7':'conjunction','8':'preposition'}
 VERB_INF = re.compile(r'^-?\S*(āre|ēre|ere|īre|ārī|āri|ērī|ēri|ī|īrī|īri|esse|sse|ferre|re|rī)$')
 GEN_RE = re.compile(r',\s*(m|f|n|mf|c|m\.\s*f|m\./f)\.?(\s*\(pl\.\))?(\s|$|,|\()')
@@ -51,6 +53,7 @@ for k, r in enumerate(rows):
             fq = freq.get(norm(alt.strip()))
             if fq: break
     for gb, us in US_SPELLING: en = re.sub(r'\b' + gb + r'\b', us, en)
+    pos = POS_FIX.get(k, pos)
     out.append(dict(id=k, la=la, en=en, pos=pos, s=int(sect) if sect else None, ss=int(sub) if sub else None,
                     sub=struct=='xx', d=bool(d), f=fq))
 ranked = sorted([o for o in out if o['f'] is not None], key=lambda o: (-o['f'], o['id']))

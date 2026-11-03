@@ -253,5 +253,28 @@ for (const [k, f] of [['ind.act.pres.1s', 'assum'], ['ind.act.pres.1p', 'assumus
   ok19(M.check(f, tb('adsum')[k], true), 'adsum alt', k, f, tb('adsum')[k]);
 for (const [k, f] of [['ind.act.pres.1s', 'adsum'], ['ind.act.pres.1p', 'adsumus'], ['ind.act.perf.1s', 'adfuī'], ['ind.act.plup.3s', 'adfuerat'], ['inf.act.perf', 'adfuisse'], ['inf.act.fut', 'adfutūrus esse'], ['ptc.act.fut', 'adfutūrus']]) t('adsum', k, f);
 ok19(!M.check('assum', tb('sum')['ind.act.pres.1s']) && !M.check('affuī', tb('absum')['ind.act.perf.1s'] || []), 'variants stay on adsum');
+// v21: part of speech follows the word, not the Diederich section (s/ss unchanged)
+{ const fs = require('fs'), HEAD = process.env.WORDS_HEAD, OLD = HEAD && fs.existsSync(HEAD) ? require(HEAD) : null;   // optional: words.json from before v21
+  const SECT = { 1496: '8.1', 1494: '8.1', 1506: '8.1', 1475: '8.1', 1478: '8.1', 1510: '8.1', 1511: '8.1', 1514: '8.1', 1515: '8.1', 1516: '8.1', 1517: '8.1', 1453: '7.1', 464: '1.23', 784: '3.3', 1125: '4.1', 1140: '4.1', 1152: '4.2', 1178: '4.2', 1251: '4.7', 1280: '4.7', 1314: '4.8', 604: '3.1', 470: '1.23', 501: '2.1', 1420: '5.4', 1421: '5.4', 1435: '6.1', 1436: '6.1', 1452: '7.1' };   // Diederich section.subsection, unchanged
+  const POS = { 1496: 'verb', 1494: 'adjective', 1506: 'adjective', 1475: 'adverb', 1478: 'adverb', 1510: 'adverb', 1511: 'conjunction', 1514: 'prefix', 1515: 'prefix', 1516: 'prefix', 1517: 'prefix', 1453: 'pronoun',
+    464: 'adverb', 784: 'adverb', 1125: 'adverb', 1140: 'adverb', 1152: 'adverb', 1178: 'adverb', 1251: 'adverb', 1280: 'adverb', 1314: 'adverb', 604: 'preposition', 470: 'pronoun', 501: 'adverb', 1420: 'conjunction', 1421: 'conjunction', 1435: 'adverb', 1436: 'adverb', 1452: 'adverb' };
+  for (const [id, p] of Object.entries(POS)) ok19(W[id].pos === p, 'pos', id, W[id].la, W[id].pos, p);
+  for (const [id, x] of Object.entries(SECT)) ok19(W[id].s + '.' + W[id].ss === x, 'section kept', id, W[id].la, W[id].s, W[id].ss);
+  if (OLD) for (const e of W) { const o = OLD[e.id]; ok19(o && o.s === e.s && o.ss === e.ss && o.la === e.la && o.en === e.en && (POS[e.id] || o.pos) === e.pos, 'only pos changed', e.id, e.la); }
+  const drilled = e => ['verb', 'noun', 'adjective', 'pronoun'].includes(e.pos) && !M.analyze(e).skip;
+  for (const id of [1494, 1496, 1506]) ok19(drilled(W[id]), 'now drilled', W[id].la);
+  ok19(W[1453].pos === W[517].pos, 'quīdam matches its section-2 entry');
+  const by = id => M.analyze(W[id]).tbl, tt = (id, k, f) => ok19((by(id)[k] || [])[0] === f, W[id].la, k, f, by(id)[k]);
+  ok19(M.analyze(W[1496]).conj === 1 && !M.analyze(W[1496]).noPassive && !M.analyze(W[1496]).flag, 'superō 1st conj, transitive');
+  for (const [k, f] of [['ind.act.pres.1s', 'superō'], ['ind.act.pres.3s', 'superat'], ['inf.act.pres', 'superāre'], ['ind.act.perf.1s', 'superāvī'], ['sup.um', 'superātum'], ['ind.act.impf.3p', 'superābant'], ['ind.act.fut.3s', 'superābit'],
+    ['ind.pas.pres.3s', 'superātur'], ['ind.pas.perf.3s', 'superātus est'], ['ptc.pas.perf', 'superātus'], ['sub.act.pres.3s', 'superet'], ['gdv.m', 'superandus']]) tt(1496, k, f);
+  // comparatives, A&G §120: -ior, -ius; gen. -iōris; abl. -iōre; n. pl. -iōra; gen. pl. -iōrum
+  for (const [id, st] of [[1494, 'superi'], [1506, 'ulteri']]) {
+    ok19(M.analyze(W[id]).kind === 'adj', 'comparative adj', W[id].la);
+    for (const [k, end] of [['m.nom.sg', 'or'], ['f.nom.sg', 'or'], ['n.nom.sg', 'us'], ['n.acc.sg', 'us'], ['m.acc.sg', 'ōrem'], ['m.gen.sg', 'ōris'], ['m.dat.sg', 'ōrī'], ['m.abl.sg', 'ōre'],
+      ['m.nom.pl', 'ōrēs'], ['m.acc.pl', 'ōrēs'], ['n.nom.pl', 'ōra'], ['n.acc.pl', 'ōra'], ['m.gen.pl', 'ōrum'], ['f.dat.pl', 'ōribus']]) tt(id, k, st + end);
+    ok19(!M.check(st + 'ius', by(id)['m.nom.sg']) && !M.check(st + 'ōrium', by(id)['m.gen.pl']), 'comparative not i-stem', W[id].la);
+  }
+}
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

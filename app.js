@@ -6,7 +6,7 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const today = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000); };
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const POS_SHORT = { noun: 'noun', verb: 'verb', adjective: 'adj.', adverb: 'adv.', conjunction: 'conj.', preposition: 'prep.', pronoun: 'pron.', indeclinable: 'indecl.', interjection: 'interj.' };
+  const POS_SHORT = { noun: 'noun', verb: 'verb', adjective: 'adj.', adverb: 'adv.', conjunction: 'conj.', preposition: 'prep.', pronoun: 'pron.', indeclinable: 'indecl.', interjection: 'interj.', prefix: 'prefix' };
   const REVIEW_CAP = 60;
 
   // ---------- state ----------
