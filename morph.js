@@ -17,6 +17,7 @@
     const notes = [];
     let s = la.replace(/\s\(([^)]*)\)/g, (m, x) => { notes.push(x); return ''; });
     s = s.replace(/^ex\(s\)/, 'exs');                 // ex(s)tinguō -> exstinguō (L&S headword; ext- accepted in check)
+    s = s.replace(/^c\(h\)arta/, 'charta');         // c(h)arta -> charta (L&S headword; carta kept as a variant)
     s = s.replace(/(\S)\(([^)\s]*)\)/g, '$1');      // dex-t(e)ra -> -tra, hiem(p)s -> hiems
     s = s.replace(/^\(([^)]*)\)/, '');
     const parts = s.split(/,\s*/).map(p => p.trim().split(/\s+or\s+|\//)[0].trim()).filter(p => p !== '');
@@ -484,7 +485,15 @@
       pl = n ? [stem + 'ua', stem + 'uum', dp, stem + 'ua', dp] : [stem + 'ūs', stem + 'uum', dp, stem + 'ūs', dp];
     }
     if (decl === 5) { sg = [nom, gen, gen, stem + 'em', stem + 'ē']; pl = [stem + 'ēs', stem + 'ērum', stem + 'ēbus', stem + 'ēs', stem + 'ēbus']; }
-    return { kind: 'noun', decl, g: gender, istem: decl === 3 ? istemOut : false, plOnly, flag: nomFix ? 'source has rēgīnā; corrected to rēgīna' : null, tbl: addVoc(cells(sg, pl), nom, decl, gender) };
+    const tbl = addVoc(cells(sg, pl), nom, decl, gender);
+    // c(h)arta: primary forms follow L&S charta; the spelling carta is the other reading of the entry (Wiktionary: alternative form)
+    if (decl === 1 && /^c\(h\)arta\b/.test(e.la)) {
+      for (const k in tbl) for (const f of tbl[k].slice()) {
+        const alt = f.replace(/^ch/, 'c');
+        if (alt !== f && !tbl[k].includes(alt)) tbl[k].push(alt);
+      }
+    }
+    return { kind: 'noun', decl, g: gender, istem: decl === 3 ? istemOut : false, plOnly, flag: nomFix ? 'nominative -ā shortened to -a (A&G §40)' : null, tbl };
   }
   // ---------- adjectives ----------
   const GEN = ['m', 'f', 'n'];

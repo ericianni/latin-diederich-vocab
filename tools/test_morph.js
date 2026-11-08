@@ -290,5 +290,21 @@ for (const strict of [false, true]) {
   if (M.checkHead('ne', ['-nē'], true)) throw Error('strict affix lost macron');
 }
 console.log('v23 affix grading: 34 checks passed');
+// v25: 1st-declension audit against Wiktionary inflection tables.
+// c(h)arta: L&S headword charta, ae, f.; carta is the other spelling of the entry (Wiktionary alternative form).
+for (const [k, f] of [['nom.sg', 'charta'], ['gen.sg', 'chartae'], ['dat.sg', 'chartae'], ['acc.sg', 'chartam'], ['abl.sg', 'chartā'], ['voc.sg', 'charta'],
+  ['nom.pl', 'chartae'], ['gen.pl', 'chartārum'], ['dat.pl', 'chartīs'], ['acc.pl', 'chartās'], ['abl.pl', 'chartīs'], ['voc.pl', 'chartae']]) t('c(h)arta', k, f);
+for (const [k, f] of [['nom.sg', 'carta'], ['gen.sg', 'cartae'], ['dat.sg', 'cartae'], ['acc.sg', 'cartam'], ['abl.sg', 'cartā'], ['voc.sg', 'carta'],
+  ['nom.pl', 'cartae'], ['gen.pl', 'cartārum'], ['dat.pl', 'cartīs'], ['acc.pl', 'cartās'], ['abl.pl', 'cartīs'], ['voc.pl', 'cartae']])
+  ok19(M.check(f, tb('c(h)arta')[k], true), 'carta spelling', k, f, tb('c(h)arta')[k]);
+ok19(!tb('c(h)arta')['loc.sg'], 'charta has no locative');
+// rēgīna: nominative -a is short (A&G §40; L&S rēgīna, ae). Ablative stays rēgīnā.
+{ const e = W.find(x => x.id === 841); ok19(e.la === 'rēgīna, -ae, f.', 'regina lemma', e.la);
+  const a = M.analyze(e); ok19(!a.flag && a.tbl['nom.sg'][0] === 'rēgīna' && a.tbl['abl.sg'][0] === 'rēgīnā' && a.tbl['gen.sg'][0] === 'rēgīnae' && a.tbl['acc.sg'][0] === 'rēgīnam', 'regina paradigm', a.flag, a.tbl['nom.sg'], a.tbl['abl.sg']); }
+// forms the audit kept: dea/fīlia -ābus (A&G §43.e), mīlitiae locative, plural-only tenebrae
+t('fīlia', 'dat.pl', 'fīliīs'); t('fīlia', 'abl.pl', 'fīliīs');
+ok19(M.check('fīliābus', tb('fīlia')['dat.pl'], true) && M.check('fīliābus', tb('fīlia')['abl.pl'], true), 'filia abus', tb('fīlia')['dat.pl']);
+t('mīlitia', 'loc.sg', 'mīlitiae');
+{ const a = find('tenebrae')[1]; ok19(!a.tbl['nom.sg'] && a.tbl['nom.pl'][0] === 'tenebrae' && a.tbl['gen.pl'][0] === 'tenebrārum', 'tenebrae plural only', a.tbl['nom.sg']); }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
