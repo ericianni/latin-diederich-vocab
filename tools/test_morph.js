@@ -276,5 +276,19 @@ ok19(!M.check('assum', tb('sum')['ind.act.pres.1s']) && !M.check('affuī', tb('a
     ok19(!M.check(st + 'ius', by(id)['m.nom.sg']) && !M.check(st + 'ōrium', by(id)['m.gen.pl']), 'comparative not i-stem', W[id].la);
   }
 }
+
+
+// v23: dictionary enclitic notation, ASCII and phone-keyboard dashes.
+for (const strict of [false, true]) {
+  for (const d of ['', '-', '‐', '‑', '‒', '–', '—', '―', '−', '﹣', '－']) {
+    if (!M.checkHead(d + 'que', ['-que'], strict)) throw Error('enclitic rejected: ' + d);
+  }
+  for (const bad of ['quae', 'q-ue', '--que', 'que-']) {
+    if (M.checkHead(bad, ['-que'], strict)) throw Error('bad enclitic accepted: ' + bad);
+  }
+  if (M.checkHead('-amo', ['amō'], strict)) throw Error('ordinary word accepts dash');
+  if (M.checkHead('ne', ['-nē'], true)) throw Error('strict affix lost macron');
+}
+console.log('v23 affix grading: 34 checks passed');
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

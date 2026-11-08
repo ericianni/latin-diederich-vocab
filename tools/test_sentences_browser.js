@@ -5,7 +5,10 @@
 let puppeteer; try { puppeteer = require(process.env.PUPPETEER_DIR || 'puppeteer-core'); } catch (e) { console.log('SKIPPED: puppeteer-core not installed'); process.exit(0); }
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
-const srv = http.createServer((q, r) => { const p = path.join(ROOT, decodeURIComponent(q.url.split(/[?#]/)[0]).replace(/\/$/, '/index.html'));
+const srv = http.createServer((q, r) => {
+  // Chrome requests this automatically; it is not an app asset.
+  if (q.url === '/favicon.ico') { r.writeHead(204); return r.end(); }
+  const p = path.join(ROOT, decodeURIComponent(q.url.split(/[?#]/)[0]).replace(/\/$/, '/index.html'));
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': TYPES[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(r); });
 let bad = 0; const fail = m => { bad++; console.log('FAIL', m); };
 (async () => {

@@ -68,7 +68,7 @@
     const noNotes = h.replace(/\s+\([^)]*\)/g, '');
     for (const alt of noNotes.split(/\s+or\s+|\//)) { out.add(alt.replace(/\([^)]*\)/g, '')); out.add(alt.replace(/[()]/g, '')); }
     const m = h.match(/\s\((?:or\s+)?([^)]*)\)/); if (m && !/\s/.test(m[1].trim())) out.add(m[1]);
-    return [...out].map(s => s.trim().replace(/^-|-$/g, '')).filter(Boolean);
+    return [...out].map(s => s.trim()).filter(Boolean);
   }
 
   // ---------- drill filters ----------
@@ -271,7 +271,7 @@
       const go = () => {
         const v = $('#typed').value.trim();
         if (!v) { $('#ans').innerHTML = `<div class="answer"><div class="latin">${esc(w.la)}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; return bindRW(it); }
-        const ok = Morph.check(v, hs, S.set.strictMac);
+        const ok = Morph.checkHead(v, hs, S.set.strictMac);
         $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : wrongMsg(v, hs)}<div class="latin">${esc(w.la)}</div>
           <div class="row" style="margin-top:14px">${ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
         bindRW(it); focusNext();
@@ -431,7 +431,7 @@
     const q = Identify.pick(a, [it.key], df); if (!q) return false;
     const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
-    const sel = {}; let done = false, phase = 'ask', first = null, missTry = null; const found = [];
+    const sel = {}; let done = false, phase = 'ask', first = null; const found = [];
     const entry = w.la.replace(/\s\([^)]*\)$/, '');   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
     V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w)}
       <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
@@ -468,7 +468,7 @@
         const r = Identify.andGrade(sel, ps, found);
         if (r.kind === 'dup') return andStep('You already named that one.');
         if (r.kind === 'new') { found.push(r.p); return found.length === ps.length ? finish() : andStep('✓ Yes, that’s another one.'); }
-        missTry = Object.assign({}, sel); return finish();     // not a reading: the step ends and shows the rest
+        return andStep('✗ Wrong — that isn’t a reading of this form. Try again, or skip (no penalty).');
       }
       done = true;
       const g = Identify.grade(sel, ps); if ($('#pretip')) $('#pretip').remove();
@@ -489,7 +489,7 @@
       const offTxt = g.off.map(x => Identify.TITLE[x].toLowerCase().replace('mood / form', 'mood')).join(', ');
       $('#ans').innerHTML = `<div class="answer">${g.ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong${offTxt ? ' — check the ' + esc(offTxt) : ''}</div>`}
         ${andDone ? (found.length === ps.length ? `<div class="small andall">★ All ${ps.length} readings. Nice!</div>`
-          : `<div class="small muted">${missTry ? 'That isn’t a reading of this form. ' : ''}You named ${found.length} of ${ps.length} readings. The others are below.</div>`) : ''}
+          : `<div class="small muted">You named ${found.length} of ${ps.length} readings. The others are below.</div>`) : ''}
         <div class="small muted chiph">${many ? `${ps.length} valid answers (any one counts)` : 'The answer'}</div>
         <ul class="parses">${ps.map(p => andDone ? `<li class="${found.includes(p) ? 'got' : 'missed'}">${found.includes(p) ? '✓' : '○'} ${lbl(p)}${found.includes(p) ? '' : ' <span class="muted">(missed)</span>'}</li>`
           : `<li${!g.ok && p === g.best ? ' class="near"' : ''}>${lbl(p)}</li>`).join('')}</ul>${lex}

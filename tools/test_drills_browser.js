@@ -149,7 +149,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
       const pg = await br.newPage(); await pg.goto(URL + 'manifest.webmanifest');
       await pg.evaluate((df, on) => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, set: { dmode: 'id', dlen: 20, df, andMore: on } })); }, sc.df, style !== 'off');
       await pg.goto(URL + '#drills'); await pg.waitForSelector('#dgo'); await pg.evaluate(() => document.querySelector('#dgo').click());
-      const issues = []; let amb = 0, n = 0;
+      const issues = []; let amb = 0, n = 0, multi = 0;
       for (let i = 0; i < 20; i++) {
         if (await pg.$('#dgo')) break;
         await pg.waitForSelector('#idrows .idrow'); n++;
@@ -161,7 +161,25 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
         if (style === 'off' || ps.length === 1) { if (shown) issues.push('And…? shown for ' + form + (style === 'off' ? ' with the setting off' : ' (one reading)')); }
         else if (!shown) issues.push('no And…? for ' + form);
         else if (style === 'all') {
-          for (const p of ps.slice(1)) { await choose(pg, selOf(p)); await pg.evaluate(() => document.querySelector('#chk').click()); }
+          for (const [j, p] of ps.slice(1).entries()) {
+            await choose(pg, selOf(p)); await pg.evaluate(() => document.querySelector('#chk').click());
+            if (j === 0 && ps.length >= 3) {
+              multi++;
+              if (!await pg.$('#andskip')) throw Error('ended after one extra reading: ' + form);
+              // A non-reading must not end the step, even after a successful extra reading.
+              const wrong = await pg.evaluate(ps => {
+                for (const r of document.querySelectorAll('#idrows .idrow:not(.locked)')) for (const b of r.querySelectorAll('button')) {
+                  const sel = Object.fromEntries([...document.querySelectorAll('#idrows .idrow')].map(r => [r.dataset.a, r.querySelector('.on')?.dataset.v]));
+                  sel[r.dataset.a] = b.dataset.v;
+                  if (!ps.some(p => Object.entries(p.at).every(([k,v]) => Array.isArray(v) ? v.includes(sel[k]) : v === sel[k]))) { b.click(); return true; }
+                } return false;
+              }, ps);
+              if (wrong) {
+                await pg.evaluate(() => document.querySelector('#chk').click());
+                if (!await pg.$('#andskip') || await pg.$('#ans [data-r]')) throw Error('wrong guess ended 3+ reading follow-up: ' + form);
+              }
+            }
+          }
           if (!await pg.$('.andall')) issues.push('naming all ' + ps.length + ' readings of ' + form + ' gave no “All readings” note');
           if (await pg.$$eval('.parses li.missed', x => x.length)) issues.push('readings marked missed after naming all: ' + form);
         } else {
@@ -170,7 +188,9 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
           // a non-reading: change the case / mood to a value no reading has
           const bad = await pg.evaluate(ps => { for (const r of document.querySelectorAll('#idrows .idrow:not(.locked)')) for (const b of r.querySelectorAll('button')) { const a = r.dataset.a, v = b.dataset.v;
             if (ps.every(p => p.at[a] != null && p.at[a] !== v && !(Array.isArray(p.at[a]) && p.at[a].includes(v)))) return { a, v }; } return null; }, ps);
-          if (bad) { await pg.evaluate(b => document.querySelector(`#idrows .idrow[data-a="${b.a}"] button[data-v="${b.v}"]`).click(), bad); await pg.evaluate(() => document.querySelector('#chk').click()); }
+          if (bad) { await pg.evaluate(b => document.querySelector(`#idrows .idrow[data-a="${b.a}"] button[data-v="${b.v}"]`).click(), bad); await pg.evaluate(() => document.querySelector('#chk').click());
+            if (!await pg.$('#andskip') || !await pg.$('.andmsg')) issues.push('wrong guess ended follow-up: ' + form);
+            await pg.evaluate(() => document.querySelector('#andskip').click()); }
           else await pg.evaluate(() => document.querySelector('#andskip').click());     // every chip fits some reading: skip instead
           const miss = await pg.$$eval('.parses li.missed', x => x.length); if (miss !== ps.length - 1) issues.push(`${bad ? 'wrong And…? guess' : 'skip'}: ${miss} missed shown, expected ${ps.length - 1} (${form})`);
         }
@@ -181,6 +201,8 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
       const st = await pg.evaluate(() => JSON.parse(localStorage.getItem('latin1400.v1')).dst || {});
       if (Object.values(st).some(x => x.ok !== x.a)) issues.push('a drill stat recorded a miss although every first answer was right');
       if (!amb) issues.push('no ambiguous form came up');
+      if (style === 'all' && sc === SC2[0] && !multi) issues.push('no 3+ reading regression exercised');
+      if (style === 'all') console.log('[and regression] ' + multi + ' forms with 3+ readings');
       console.log(`[and…?/${style}] ${sc.name}: ${n} questions, ${amb} ambiguous, ${issues.length} issue(s)`); for (const x of issues.slice(0, 12)) console.log('   - ' + x);
       bad += issues.length; await pg.close();
     }
@@ -259,6 +281,24 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
       await pg.goto(URL + 'manifest.webmanifest');
     }
     await pg.close();
+  }
+  // Rank #1 enclitic: exercise the real flashcard headword extraction, not just Morph.
+  {
+    const pg = await br.newPage(); await pg.goto(URL + 'manifest.webmanifest');
+    const w = require('../data/words.json').find(w => w.la === '-que');
+    if (!w) throw Error('missing -que card');
+    for (const strictMac of [false, true]) for (const input of ['que', '-que', '‐que', '–que', '—que', '−que']) {
+      await pg.evaluate((id, strictMac) => {
+        localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({v:3, cards: {
+          ['p:' + id]: {box:1, due:0}, ['r:' + id]: {box:2, due:1e9}
+        }, set: {newPerDay:0, strictMac}}));
+      }, w.id, strictMac);
+      await pg.goto(URL + '#today'); await pg.waitForSelector('#go'); await pg.click('#go'); await pg.waitForSelector('#typed');
+      await pg.type('#typed', input); await pg.click('#show');
+      if (!await pg.$('#ans .ok')) throw Error('flashcard rejected ' + input + ' strict=' + strictMac);
+      await pg.goto(URL + 'manifest.webmanifest');
+    }
+    console.log('[cards] enclitic: 12 checks passed'); await pg.close();
   }
   // cheat sheet: sticky chip bar on a phone-sized screen, in the Cheat sheet tab and in the overlay opened from a drill
   {

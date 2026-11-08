@@ -598,6 +598,16 @@
     return out;
   }
   function check(input, answers, strict) { const f = strict ? normM : norm, n = f(input); return answers.some(a => variants(a).some(v => f(v) === n)); }
-  const api = { analyze, label, check, variants, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
+  // Dictionary affix hyphens are notation, not letters. Normalize only answers
+  // marked as affixes; ordinary words and internal punctuation stay strict.
+  function checkHead(input, answers, strict) {
+    const dash = s => String(s).replace(/[\u2010-\u2015\u2212\ufe63\uff0d]/g, '-').trim();
+    return answers.some(a => {
+      const key = dash(a), affix = /^-|-$/.test(key);
+      const bare = s => s.replace(key.startsWith('-') ? /^-/ : /-$/, '');
+      return check(affix ? bare(dash(input)) : input, [affix ? bare(key) : a], strict);
+    });
+  }
+  const api = { analyze, label, check, checkHead, variants, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
   root.Morph = api; if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : this);
