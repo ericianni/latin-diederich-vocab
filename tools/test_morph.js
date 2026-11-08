@@ -133,7 +133,7 @@ const V3 = [
   ['ferō', 'sup.um', 'lātum'], ['ferō', 'sup.u', 'lātū'], ['ferō', 'inf.pas.fut', 'lātum īrī'], ['referō', 'sup.um', 'relātum'],
   ['volō', 'ger.gen', 'volendī'], ['nōlō', 'imp.act.fut.2s', 'nōlītō'], ['nōlō', 'imp.act.fut.2p', 'nōlītōte'], ['nōlō', 'imp.act.fut.3p', 'nōluntō'],
   // vocative / locative
-  ['dominus', 'voc.sg', 'domine'], ['dominus', 'voc.pl', 'dominī'], ['fīlius', 'voc.sg', 'fīlī'], ['socius', 'voc.sg', 'socī'], ['deus', 'voc.sg', 'deus'], ['deus', 'voc.pl', 'dī'],
+  ['dominus', 'voc.sg', 'domine'], ['dominus', 'voc.pl', 'dominī'], ['fīlius', 'voc.sg', 'fīlī'], ['socius', 'voc.sg', 'socie'], ['deus', 'voc.sg', 'deus'], ['deus', 'voc.pl', 'dī'],
   ['puer', 'voc.sg', 'puer'], ['puella', 'voc.sg', 'puella'], ['rēx', 'voc.sg', 'rēx'], ['rēx', 'voc.pl', 'rēgēs'], ['bellum', 'voc.sg', 'bellum'], ['manus', 'voc.sg', 'manus'],
   ['domus', 'loc.sg', 'domī'], ['rūs', 'loc.sg', 'rūrī'], ['humus', 'loc.sg', 'humī'], ['bellum', 'loc.sg', 'bellī'], ['mīlitia', 'loc.sg', 'mīlitiae'],
   ['bonus', 'm.voc.sg', 'bone'], ['bonus', 'f.voc.sg', 'bona'], ['bonus', 'n.voc.sg', 'bonum'], ['bonus', 'm.voc.pl', 'bonī'], ['meus', 'm.voc.sg', 'mī'], ['ēgregius', 'm.voc.sg', 'ēgregie'],
@@ -146,7 +146,7 @@ const NONE3 = [
   ['morior', 'gdv.m'], ['morior', 'sup.um'], ['orior', 'gdv.m'], ['nāscor', 'gdv.m'], ['īrāscor', 'gdv.m'], ['hortor', 'inf.pas.fut'], ['hortor', 'imp.dep.fut.2p'],
   ['timeō', 'sup.um'], ['dominus', 'loc.sg'], ['rēx', 'loc.sg'], ['amō', 'imp.pas.fut.2p'],
 ];
-const ALT3 = [['socius', 'voc.sg', 'socie'], ['ēgregius', 'm.voc.sg', 'ēgregī'], ['deus', 'voc.pl', 'deī'], ['rūs', 'loc.sg', 'rūre'], ['amō', 'inf.pas.fut', 'amatum iri']];
+const ALT3 = [['ēgregius', 'm.voc.sg', 'ēgregī'], ['deus', 'voc.pl', 'deī'], ['rūs', 'loc.sg', 'rūre'], ['amō', 'inf.pas.fut', 'amatum iri']];
 for (const x of V3) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
 for (const [h, key] of NONE3) { const [e, a] = find(h); const ok = !(a.tbl && a.tbl[key]); ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
 for (const [h, key, inp] of ALT3) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key])); ok ? pass++ : fail++; if (!ok) console.log('FAIL alt not accepted', e.la, key, inp, a.tbl && a.tbl[key]); }
@@ -306,5 +306,59 @@ t('fīlia', 'dat.pl', 'fīliīs'); t('fīlia', 'abl.pl', 'fīliīs');
 ok19(M.check('fīliābus', tb('fīlia')['dat.pl'], true) && M.check('fīliābus', tb('fīlia')['abl.pl'], true), 'filia abus', tb('fīlia')['dat.pl']);
 t('mīlitia', 'loc.sg', 'mīlitiae');
 { const a = find('tenebrae')[1]; ok19(!a.tbl['nom.sg'] && a.tbl['nom.pl'][0] === 'tenebrae' && a.tbl['gen.pl'][0] === 'tenebrārum', 'tenebrae plural only', a.tbl['nom.sg']); }
+// v26: 2nd-declension audit (Wiktionary tables, confirmed in A&G / L&S).
+// Contracted gen. sg. of -ius/-ium is long -ī, kept beside -iī (A&G §49.b). A short final i is not a form.
+{ let n2 = 0;
+  for (const e of W) {
+    if (e.pos !== 'noun') continue;
+    const a = M.analyze(e);
+    const nom = e.la.split(',')[0].trim();
+    if (a.decl !== 2 && nom !== 'deus') continue;
+    n2++;
+    const g = a.tbl['gen.sg'];
+    if (!g) continue;
+    ok19(g.every(f => !/i$/.test(M.plain(f)) || /ī$/.test(f)), 'gen. sg. final i is long', e.la, g);
+  }
+  ok19(n2 === 147, '2nd-declension nouns audited', n2); }
+t('fīlius', 'gen.sg', 'fīliī');
+ok19(M.check('fīlī', tb('fīlius')['gen.sg'], true) && !M.check('fīli', tb('fīlius')['gen.sg'], true), 'filius contracted genitive', tb('fīlius')['gen.sg']);
+t('ingenium', 'gen.sg', 'ingeniī');
+ok19(M.check('ingenī', tb('ingenium')['gen.sg'], true) && !M.check('ingeni', tb('ingenium')['gen.sg'], true), 'ingenium contracted genitive', tb('ingenium')['gen.sg']);
+t('somnium', 'gen.sg', 'somniī');
+ok19(tb('somnium')['gen.sg'].includes('somnī') && !tb('somnium')['gen.sg'].includes('somni'), 'somnium genitive', tb('somnium')['gen.sg']);
+// Vocative: ordinary -ius nouns take -e (socie). fīlius takes -ī only (A&G §49.c). fīlie is Old Latin (L&S: Livius Andronicus).
+for (const [h, v] of [['socius', 'socie'], ['gladius', 'gladie'], ['fluvius', 'fluvie'], ['nūntius', 'nūntie']]) {
+  t(h, 'voc.sg', v);
+  ok19(tb(h)['voc.sg'].length === 1, h + ' vocative only -ie', tb(h)['voc.sg']);
+}
+ok19(tb('fīlius')['voc.sg'].join() === 'fīlī' && !M.check('fīlie', tb('fīlius')['voc.sg'], true), 'filius vocative', tb('fīlius')['voc.sg']);
+// A&G §48.a: no plural. Accusative of these neuters is the nominative, not -um.
+for (const h of ['pelagus', 'vulgus']) {
+  const a = find(h)[1];
+  ok19(!a.tbl['nom.pl'] && !a.tbl['gen.pl'] && !a.tbl['acc.pl'] && a.tbl['acc.sg'][0] === h && a.tbl['voc.sg'][0] === h, h + ' singular only', a.tbl);
+}
+ok19(!M.check('pelaga', [].concat(tb('pelagus')['nom.pl'], tb('pelagus')['acc.pl']).filter(Boolean), true) && !M.check('pelagē', tb('pelagus')['nom.sg'], true), 'no pelaga or pelage');
+ok19(!M.check('vulgum', tb('vulgus')['acc.sg'], true) && !M.check('vulge', tb('vulgus')['voc.sg'], true) && !M.check('vulgū', tb('vulgus')['abl.sg'], true), 'vulgus stays neuter singular', tb('vulgus'));
+// iocus plurals iocī and ioca (A&G §106.b); locus already notes pl. -a.
+t('iocus', 'nom.pl', 'iocī');
+ok19(M.check('ioca', tb('iocus')['nom.pl'], true) && M.check('ioca', tb('iocus')['acc.pl'], true) && M.check('ioca', tb('iocus')['voc.pl'], true), 'iocus ioca', tb('iocus')['nom.pl'], tb('iocus')['acc.pl']);
+ok19(M.check('loca', tb('locus')['nom.pl'], true) && M.check('locōs', tb('locus')['acc.pl'], true), 'locus loca kept', tb('locus')['nom.pl']);
+// laurus, -ī (or -ūs): 4th-declension forms L&S cites (Vergil, Horace, Pliny). 2nd declension stays primary.
+t('laurus', 'gen.sg', 'laurī'); t('laurus', 'voc.sg', 'laure'); t('laurus', 'acc.pl', 'laurōs');
+ok19(['laurūs', 'laurū'].every(f => M.check(f, [].concat(tb('laurus')['gen.sg'], tb('laurus')['abl.sg'], tb('laurus')['nom.pl'], tb('laurus')['acc.pl'], tb('laurus')['voc.pl']), true)), 'laurus 4th forms', tb('laurus'));
+ok19(M.check('laurūs', tb('laurus')['gen.sg'], true) && M.check('laurū', tb('laurus')['abl.sg'], true) && M.check('laurūs', tb('laurus')['nom.pl'], true) && M.check('laurūs', tb('laurus')['acc.pl'], true), 'laurus cases', tb('laurus'));
+ok19(!M.check('lauruī', tb('laurus')['dat.sg'], true) && !M.check('lauruum', tb('laurus')['gen.pl'], true) && !M.check('lauribus', tb('laurus')['dat.pl'], true), 'laurus: no uncited 4th forms');
+// castellum headword is neuter (L&S). Paradigm was already neuter.
+{ const e = W.find(x => x.id === 359); ok19(e.la === 'castellum, -ī, n.', 'castellum headword', e.la);
+  ok19(find('castellum')[1].g === 'n' && tb('castellum')['nom.pl'][0] === 'castella' && tb('castellum')['acc.sg'][0] === 'castellum', 'castellum neuter paradigm'); }
+// Kept on purpose, and forms the audit refused.
+ok19(M.check('deum', tb('deus')['gen.pl'], true) && M.check('diī', tb('deus')['nom.pl'], true) && M.check('dīs', tb('deus')['dat.pl'], true) && M.check('deīs', tb('deus')['abl.pl'], true), 'deus plurals', tb('deus'));
+ok19(!M.check('dee', tb('deus')['voc.sg'], true), 'dee is not the classical vocative', tb('deus')['voc.sg']);
+ok19(tb('vir')['gen.pl'].join() === 'virōrum' && !M.check('virum', tb('vir')['gen.pl'], true), 'virum is the poetic genitive plural');
+ok19(tb('humus')['abl.sg'].join() === 'humō' && tb('humus')['loc.sg'].join() === 'humī' && tb('humus')['voc.sg'].join() === 'hume', 'humus', tb('humus'));
+ok19(!tb('humus')['abl.sg'].includes('humū'), 'Varro humu not accepted');
+ok19(tb('bellum')['loc.sg'].join() === 'bellī' && !tb('focus')['loc.sg'] && !tb('animus')['loc.sg'] && !tb('lūcus')['loc.sg'], 'locatives stay the curated set');
+ok19(tb('sīgnum')['nom.sg'][0] === 'sīgnum' && tb('sīgnum')['gen.sg'][0] === 'sīgnī', 'signum keeps the long i (A&G §603.d)');
+ok19(!M.check('fīlibus', tb('fīlius')['dat.pl'], true), 'filibus is inscriptional', tb('fīlius')['dat.pl']);
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

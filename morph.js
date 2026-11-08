@@ -373,12 +373,12 @@
   const CASES_X = CASES.concat(['voc', 'loc']);
   // locative: hand-curated, only words on the list that take one (no city names are on Diederich's list)
   const LOC = { 'domus': ['domī'], 'rūs': ['rūrī', 'rūre'], 'humus': ['humī'], 'bellum': ['bellī'], 'mīlitia': ['mīlitiae'] };
-  // vocative: 2nd-decl. -us -> -e, -ius -> -ī (fīlī); deus -> deus; everything else = nominative
+  // vocative: 2nd-decl. -us -> -e (domine, socie). A&G §49.c: proper names in -ius, and fīlius and genius, have -ī (not -ie). deus is irregular (voc. deus).
   function addVoc(T, nom, decl, g) {
     if (T['nom.pl']) T['voc.pl'] = T['nom.pl'].slice();
     if (!T['nom.sg']) return T;
     let v = T['nom.sg'].slice();
-    if (decl === 2 && g !== 'n' && /us$/.test(nom)) v = /ius$/.test(nom) ? (/^(fīlius|genius)$/.test(nom) ? [cut(nom, 3) + 'ī'] : [cut(nom, 3) + 'ī', cut(nom, 2) + 'e']) : [cut(nom, 2) + 'e'];
+    if (decl === 2 && g !== 'n' && /us$/.test(nom)) v = /^(fīlius|genius)$/.test(nom) ? [cut(nom, 3) + 'ī'] : [cut(nom, 2) + 'e'];
     T['voc.sg'] = v;
     if (LOC[nom]) T['loc.sg'] = LOC[nom].slice();
     return T;
@@ -398,7 +398,7 @@
   const GPL_IUM_X = ['os', 'cor', 'carō', 'imber', 'linter', 'venter', 'ūter', 'nix', 'līs', 'mās', 'glīs', 'faux', 'fauces'];
   // source corrections: the list's entry is wrong or too short to decline from
   const GEN_FIX = { 'senex': 'senis' };              // senex, senis (A&G 79): stem sen-, pl. senēs, gen. pl. senum
-  const GENDER_FIX = { 'castellum': 'n' };           // the list has "m."; castellum is neuter (pl. castella)
+  const GENDER_FIX = { 'castellum': 'n' };           // castellum, -ī is neuter (L&S; pl. castella)
   const UBUS = ['arcus'];                            // dat./abl. pl. arcubus (L&S; cf. A&G 68)
   const syl = s => (plain(s).match(/[aeiouy]+/g) || []).length;
   function noun(e) {
@@ -452,8 +452,17 @@
     if (decl === 2) {
       if (neut) { sg = [nom, stem + 'ī', stem + 'ō', nom, stem + 'ō']; pl = [stem + 'a', stem + 'ōrum', stem + 'īs', stem + 'a', stem + 'īs']; }
       else { sg = [nom, stem + 'ī', stem + 'ō', stem + 'um', stem + 'ō']; pl = [stem + 'ī', stem + 'ōrum', stem + 'īs', stem + 'ōs', stem + 'īs']; }
-      if (/iī$/.test(sg[1])) sg[1] = [sg[1], cut(sg[1], 1)];        // fīliī / fīlī
-      if (/pl\. -a/.test(notes)) { pl[0] = [pl[0], stem + 'a']; pl[3] = [pl[3], stem + 'a']; }
+      // A&G §49.b: gen. sg. of -ius/-ium is -iī or contracted -ī. The contracted vowel is long (§10.c, §38.g), so fīlī not fīli.
+      if (sg && /iī$/.test(sg[1])) sg[1] = [sg[1], sg[1].replace(/iī$/, 'ī')];
+      // locus: the entry notes pl. -a. iocus has the same two plurals (A&G §106.b: ioca n., iocī m.).
+      if (/pl\. -a/.test(notes) || nom === 'iocus') { pl[0] = [pl[0], stem + 'a']; pl[3] = [pl[3], stem + 'a']; }
+      // laurus is 2nd or 4th (headword "or -ūs"; A&G §105.a, plant names). L&S cites these 4th-declension forms from classical authors.
+      if (nom === 'laurus') {
+        sg[1] = [sg[1], stem + 'ūs']; sg[4] = [sg[4], stem + 'ū'];
+        pl[0] = [pl[0], stem + 'ūs']; pl[3] = [pl[3], stem + 'ūs'];
+      }
+      // A&G §48.a: pelagus and vulgus are not used in the plural (pelagē is rare and is not generated).
+      if (nom === 'pelagus' || nom === 'vulgus') pl = null;
       if (plOnly) sg = null;
     }
     if (decl === 3) {
