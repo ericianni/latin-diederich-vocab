@@ -46,14 +46,18 @@
     return [...ids].filter(id => CONTENT.has(id));
   }
 
+  // Test mode (from the app's word list): sentences.html?word=ID shows only sentences that use that word, from all words.
+  const TW = +(new URLSearchParams(location.search).get('word')) || null;
+
   // ---------- session ----------
   let ses = null;
   function makeSentence(rng, seen) {
-    for (let tries = 0; tries < 40 && ses.tpls.length; tries++) {
+    for (let tries = 0; tries < (TW ? 3000 : 40) && ses.tpls.length; tries++) {
       const tpl = ses.tpls[Math.floor(rng() * ses.tpls.length)];
       let s;
       try { s = E.generate(rng, { template: tpl }); } catch (e) { ses.tpls = ses.tpls.filter(t => t !== tpl); continue; } // this template can't be built from the pool
       if (seen.has(s.la)) continue;
+      if (TW && !E.sentenceIds(s).includes(TW)) continue;
       if (set.ex === 'identify') {
         const ts = E.identifyTargets(s); if (!ts.length) continue;
         const verbs = ts.filter(t => t.kind === 'verb'), nouns = ts.filter(t => t.kind === 'noun');
@@ -64,12 +68,12 @@
     return null;
   }
   function start() {
-    E.setPool(set.pool === 'seen' ? seenIds() : null);
+    E.setPool(TW ? null : set.pool === 'seen' ? seenIds() : null);
     const seed = (Date.now() % 2147483647) >>> 0;
     ses = { rng: E.mulberry32(seed), tpls: set.tpl.slice(), items: [], i: 0, right: 0, missed: [], picked: [], chips: null, checked: false, sel: {} };
     const seen = new Set();
     for (let n = 0; n < set.len; n++) { const s = makeSentence(ses.rng, seen); if (!s) break; ses.items.push(s); }
-    if (!ses.items.length) { renderHome(set.pool === 'seen'
+    if (!ses.items.length) { renderHome(TW ? 'No sentences with this word in the chosen sentence types. Choose more types; some words aren’t used by the sentence engine yet.' : set.pool === 'seen'
       ? 'Not enough of your words fit these sentence types yet. Learn a few more words, choose more sentence types, or switch to All words.'
       : 'No sentences could be made with these sentence types. Choose more types.'); return; }
     ses.short = ses.items.length < set.len;
@@ -166,13 +170,14 @@
     const nSeen = seenIds().length;
     const opt = (g, v, l) => `<button data-g="${g}" data-v="${v}" class="${String(set[g]) === String(v) ? 'on' : ''}" aria-pressed="${String(set[g]) === String(v)}">${l}</button>`;
     V().innerHTML = `${msg ? `<div class="card small no" id="msg">${esc(msg)}</div>` : ''}
+      ${TW ? `<div class="card" id="tword"><div class="prompt-kind">Test mode · only sentences with <span lang="la">${esc((self.LatinWords[TW] || {}).la || TW)}</span></div><a class="link small" href="./#list">‹ Back to the word list</a></div>` : ''}
       <div class="card"><div class="prompt-kind">Sentences · beta</div>
         <p class="small muted" style="margin:6px 0 12px">Short Latin sentences built from the Diederich words by fixed grammar rules (no AI). Translate them, or identify one word’s form.</p>
         <button class="primary big" id="go">Start ${set.len} sentences</button></div>
       <div class="card"><div class="small muted chiph" style="margin-top:0">Exercise</div><div class="seg" id="o-ex">${opt('ex', 'translate', 'Translate')}${opt('ex', 'identify', 'Identify forms')}</div>
         ${set.ex === 'translate' ? `<div class="small muted chiph">Answer by</div><div class="seg" id="o-ans">${opt('ans', 'typed', 'Typing')}${opt('ans', 'chips', 'Word chips')}</div>` : ''}
-        <div class="small muted chiph">Words</div><div class="seg" id="o-pool">${opt('pool', 'seen', `Words I’ve seen (${nSeen})`)}${opt('pool', 'all', `All (${CONTENT.size})`)}</div>
-        <p class="small muted" style="margin:6px 0 0">“Seen” means words you have a flashcard for or have met in drills. Prepositions, egō/tū/nōs/vōs and sum are always used.</p>
+        ${TW ? '' : `<div class="small muted chiph">Words</div><div class="seg" id="o-pool">${opt('pool', 'seen', `Words I’ve seen (${nSeen})`)}${opt('pool', 'all', `All (${CONTENT.size})`)}</div>
+        <p class="small muted" style="margin:6px 0 0">“Seen” means words you have a flashcard for or have met in drills. Prepositions, egō/tū/nōs/vōs and sum are always used.</p>`}
         <div class="small muted chiph">Sentences per session</div><div class="seg" id="o-len">${opt('len', 10, '10')}${opt('len', 20, '20')}</div>
         <div class="row" style="margin-top:14px"><div class="small muted grow">Sentence types (${set.tpl.length} of ${E.TEMPLATES.length})</div><button class="link small" id="tall">${set.tpl.length === E.TEMPLATES.length ? 'None' : 'All'}</button></div>
         <div class="chips" id="o-tpl">${E.TEMPLATES.map(t => `<button data-t="${t}" class="${set.tpl.includes(t) ? 'on' : ''}" aria-pressed="${set.tpl.includes(t)}">${esc(TPL_NAMES[t] || t)}</button>`).join('')}</div></div>`;

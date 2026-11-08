@@ -46,7 +46,8 @@
     delete s.ds.f;
     return s;
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or private mode */ } }
+  let TEST = null;   // Test mode: { id, snap }. Nothing is saved while it is on; leaving it restores the progress snapshot.
+  function save() { if (TEST) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or private mode */ } }
   function day() { const t = today(); if (S.day.d !== t) S.day = { d: t, nv: 0, nd: 0, extra: 0, dx: 0, dn: 0 }; return S.day; }
   function sched(c, right) {
     const t = today();
@@ -160,13 +161,13 @@
     if (k[0] === 'r' && right && !S.cards['p' + k.slice(1)]) { const p = newCard(); p.due = today() + 1; S.cards['p' + k.slice(1)] = p; }
     save();
     Q.done++;
-    if (!right) { Q.items.splice(Math.min(3, Q.items.length), 0, { k }); Q.total++; }
+    if (!right && !TEST) { Q.items.splice(Math.min(3, Q.items.length), 0, { k }); Q.total++; }
     next();
   }
   function next() {
     if (Q && Q.kind === 'drill') return nextDrill();
     const it = Q && Q.items.shift();
-    if (!it) { Q = null; return renderToday(); }
+    if (!it) { Q = null; return TEST ? renderTest() : renderToday(); }
     renderVocab(it);
   }
   function nextDrill() {
@@ -176,7 +177,7 @@
       if (ids) { const id = DrillPick.pickWord(ids.map(x => ({ id: x, r: BY[x].r, fc: !!S.cards['r:' + x] })), new Set([r.avoid])); it = { c: r.c, id, key: r.c.slice(r.c.indexOf('|') + 1), redo: true }; }
       else Q.total--; }
     if (!it && Q.asked < Q.len) { const q = drillQ(Q.only, new Set(Q.recent.map(x => x.c)), new Set(Q.recent.map(x => x.id))); if (q) { it = q; Q.asked++; } }
-    if (!it) { if (Q.redo.length) return nextDrill(); const fin = { n: Q.done, ok: Q.ok, only: Q.only }; Q = null; drillEnd = fin; return renderDrills(); }
+    if (!it) { if (Q.redo.length) return nextDrill(); const fin = { n: Q.done, ok: Q.ok, only: Q.only }; Q = null; if (TEST) return renderTest(fin); drillEnd = fin; return renderDrills(); }
     Q.recent = Q.recent.concat({ c: it.c, id: it.id }).slice(-3);
     renderDrill(it);
   }
@@ -187,7 +188,7 @@
   function setTab(t) {
     TAB = t;
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'quiz' ? 'today' : t)));
-    Q = null; closeSheet();
+    Q = null; closeSheet(); exitTest();
     ({ today: renderToday, learn: renderLearn, drills: renderDrills, cheat: renderCheat, quiz: renderQuiz, list: renderList, about: renderAbout })[t]();
     window.scrollTo(0, 0);
   }
@@ -199,9 +200,9 @@
   function sessionHead() {
     if (!Q) return '';
     const pct = Q.total ? 100 * Q.done / Q.total : 0;
-    return `<div class="row small muted"><span class="grow">${Q.done} / ${Q.total}</span><button class="link" id="stop">Stop — progress is saved</button></div><div class="bar"><i style="width:${pct}%"></i></div>`;
+    return `<div class="row small muted"><span class="grow">${Q.done} / ${Q.total}</span>${TEST ? '<span class="tag" style="margin-right:8px">Test mode</span><button class="link" id="stop">Stop</button>' : '<button class="link" id="stop">Stop — progress is saved</button>'}</div><div class="bar"><i style="width:${pct}%"></i></div>`;
   }
-  function bindStop() { const b = $('#stop'); if (b) b.onclick = () => { const kind = Q && Q.kind; Q = null; kind === 'drill' ? renderDrills() : renderToday(); }; }
+  function bindStop() { const b = $('#stop'); if (b) b.onclick = () => { const kind = Q && Q.kind; Q = null; TEST ? renderTest() : kind === 'drill' ? renderDrills() : renderToday(); }; }
 
   function renderToday() {
     $('#sub').textContent = 'Flashcards';
@@ -431,7 +432,7 @@
     const q = Identify.pick(a, [it.key], df); if (!q) return false;
     const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
-    const sel = {}; let done = false, phase = 'ask', first = null; const found = [];
+    const sel = {}; let done = false, phase = 'ask', first = null, guesses = 0; const found = [];   // guesses: And…? tries left (one per remaining reading)
     const entry = w.la.replace(/\s\([^)]*\)$/, '');   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
     V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w)}
       <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
@@ -452,9 +453,9 @@
     const lbl = p => `<b>${esc(q.form)}</b> = ${esc(Identify.parseLabel(a, p))}`;
     // the "And…?" step: chips stay live (pre-set to the first answer); Check names one more reading, Skip / Done ends it
     const andStep = msg => {
-      const left = ps.length - found.length;
+      const left = ps.length - found.length, gl = guesses;
       $('#ans').innerHTML = `<div class="answer"><div class="ok">✓ Right</div><ul class="parses">${found.map(p => `<li class="got">✓ ${lbl(p)}</li>`).join('')}</ul>
-        <div class="andq"><b>And…?</b> This form has ${plur(left, 'more reading')} in your drill settings. Change the chips to name ${left === 1 ? 'it' : 'one'}, or skip (no penalty).</div>
+        <div class="andq"><b>And…?</b> This form has ${plur(left, 'more reading')} in your drill settings. Change the chips to name ${left === 1 ? 'it' : 'one'}, or skip (no penalty). <span id="andleft">${plur(gl, 'guess')} left.</span></div>
         ${msg ? `<div class="small andmsg">${msg}</div>` : ''}
         <div class="row" style="margin-top:10px"><button class="grow" id="andskip">Skip</button><button class="primary grow" id="chk">Check</button></div>
         <div class="small muted center" id="idhint" style="margin-top:6px;visibility:hidden">Pick one in each row.</div></div>`;
@@ -467,13 +468,14 @@
       if (phase === 'and') {
         const r = Identify.andGrade(sel, ps, found);
         if (r.kind === 'dup') return andStep('You already named that one.');
-        if (r.kind === 'new') { found.push(r.p); return found.length === ps.length ? finish() : andStep('✓ Yes, that’s another one.'); }
-        return andStep('✗ Wrong — that isn’t a reading of this form. Try again, or skip (no penalty).');
+        guesses--;
+        if (r.kind === 'new') { found.push(r.p); return found.length === ps.length || guesses <= 0 ? finish() : andStep('✓ Yes, that’s another one.'); }
+        return guesses <= 0 ? finish() : andStep('✗ Wrong — that isn’t a reading of this form. Try again, or skip (no penalty).');
       }
       done = true;
       const g = Identify.grade(sel, ps); if ($('#pretip')) $('#pretip').remove();
       first = g;
-      if (g.ok && ps.length > 1 && S.set.andMore) { phase = 'and'; found.push(g.best); return andStep(''); }
+      if (g.ok && ps.length > 1 && S.set.andMore) { phase = 'and'; found.push(g.best); guesses = ps.length - 1; return andStep(''); }
       finish();
     };
     const finish = () => {
@@ -968,6 +970,7 @@
     document.querySelectorAll('#ul li[data-id]').forEach(li => li.onclick = e => {
       if (e.target.closest('.det')) return;
       const d = li.querySelector('.det'); d.innerHTML = d.innerHTML ? '' : detail(BY[li.dataset.id]);
+      const tb = d.querySelector('.tbtn'); if (tb) tb.onclick = ev => { ev.stopPropagation(); enterTest(+tb.dataset.t); };
     });
   }
   function status(k) { const c = S.cards[k]; if (!c) return 'not started'; const n = c.due - today(); return n <= 0 ? 'due now' : 'next in ' + n + (n === 1 ? ' day' : ' days'); }
@@ -983,7 +986,34 @@
     return `<div class="answer small"><div>Diederich section ${w.s || '–'}.${w.ss || ''} · frequency ${w.f != null ? w.f : '–'} · ${POS_SHORT[w.pos]}</div>
       <div>Latin→English: ${status('r:' + w.id)} · English→Latin: ${status('p:' + w.id)}${a.skip ? '' : ' · drills: ' + (S.ds.w[w.id] ? 'seen ' + S.ds.w[w.id] + '×' : 'not yet')}</div>
       ${a.skip ? `<div class="muted">Not in form drills: ${esc(a.skip)}</div>` : `<div class="forms">${forms}</div>`}
-      ${a.flag ? `<div class="muted">Note: ${esc(a.flag)}</div>` : ''}</div>`;
+      ${a.flag ? `<div class="muted">Note: ${esc(a.flag)}</div>` : ''}
+      <button class="link small tbtn" data-t="${w.id}" style="margin-top:6px">Test this word ›</button></div>`;
+  }
+
+  // ---------- Test mode (debugging): every feature on one chosen word, progress untouched ----------
+  function enterTest(id) { if (!TEST) TEST = { id, snap: JSON.stringify(S) }; else TEST.id = id; Q = null; renderTest(); window.scrollTo(0, 0); }
+  function exitTest() { if (!TEST) return; S = fix(JSON.parse(TEST.snap)); TEST = null; UNITS = buildUnits(); }
+  function testUnits(id) { const u = new Map(), all = buildUnits(); for (const [c, ids] of all) if (ids.includes(id)) u.set(c, [id]); return u; }
+  function renderTest(fin) {
+    const w = BY[TEST.id], a = an(w);
+    S = fix(JSON.parse(TEST.snap)); UNITS = testUnits(w.id);   // every test run starts from the real progress
+    $('#sub').textContent = 'Test mode';
+    const why = a.skip ? 'Not in form drills: ' + a.skip : UNITS.size ? '' : 'No forms of this word match your drill settings (Drills › What to drill).';
+    V().innerHTML = `<div class="card"><div class="prompt-kind">Test mode · nothing is saved</div>
+      <div class="latin" style="margin-top:6px">${esc(w.la)}</div><div class="small muted">${esc(w.en.slice(0, 120))}</div>
+      ${fin ? `<div class="small" id="tfin" style="margin-top:8px">Last set: ${fin.ok} of ${fin.n} right</div>` : ''}</div>
+      <div class="card"><div class="small muted chiph" style="margin-top:0">Flashcard</div>
+        <div class="row wrap"><button class="grow" id="tf-r">Latin → English</button><button class="grow" id="tf-p">English → Latin</button></div>
+        <div class="small muted chiph">Form drills${UNITS.size ? ` (${UNITS.size} forms)` : ''}</div>
+        ${why ? `<p class="small muted" id="tnod">${esc(why)}</p>` : `<div class="row wrap">${MODES.map(([m, l]) => `<button class="grow" data-tm="${m}">${l.replace(' the form', '')}</button>`).join('')}</div>
+        <p class="small muted" style="margin:6px 0 0">Uses your drill settings and the “And…?” setting on the About tab.</p>`}
+        ${window.Capacitor ? '' : `<div class="small muted chiph">Sentences</div><a class="btn" id="tsent" href="sentences.html?word=${w.id}" style="display:block;text-align:center;text-decoration:none">Sentences with this word ›</a>`}</div>
+      <div class="center"><button class="link" id="texit">Exit test mode</button></div>`;
+    $('#tf-r').onclick = () => { Q = { kind: 'vocab', items: [{ k: 'r:' + w.id }], done: 0, total: 1 }; next(); };
+    $('#tf-p').onclick = () => { Q = { kind: 'vocab', items: [{ k: 'p:' + w.id }], done: 0, total: 1 }; next(); };
+    document.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { S.set.dmode = b.dataset.tm; startDrills(); });
+    $('#texit').onclick = () => setTab('list');
+    window.__test = TEST;   // for automated UI tests
   }
 
   // ---------- about / settings ----------
@@ -995,7 +1025,7 @@
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
       <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p>
       <div class="small muted" style="margin-top:14px">Identify drills: forms with more than one reading</div><div class="seg" id="sand"><button data-m="1" class="${S.set.andMore ? 'on' : ''}" aria-pressed="${!!S.set.andMore}">Ask “And…?”</button><button data-m="0" class="${S.set.andMore ? '' : 'on'}" aria-pressed="${!S.set.andMore}">Just show them</button></div>
-      <p class="small muted">Some forms have several valid parses (puellae: genitive or dative singular, or nominative plural). Any one counts as right. With <b>Ask “And…?”</b> on, a right answer is followed by an optional prompt to name the other readings; skipping costs nothing, and the score uses only your first answer.</p>
+      <p class="small muted">Some forms have several valid parses (puellae: genitive or dative singular, or nominative plural). Any one counts as right. With <b>Ask “And…?”</b> on, a right answer is followed by an optional prompt to name the other readings, with one guess per reading left; skipping costs nothing, and the score uses only your first answer.</p>
       <p class="small muted">Drill settings (which forms, questions per set) are on the Drills tab.</p>
       <div class="row wrap" style="margin-top:14px"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
       <input type="file" id="impf" accept="application/json" hidden></div>

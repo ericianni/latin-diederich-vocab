@@ -149,7 +149,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
       const pg = await br.newPage(); await pg.goto(URL + 'manifest.webmanifest');
       await pg.evaluate((df, on) => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, set: { dmode: 'id', dlen: 20, df, andMore: on } })); }, sc.df, style !== 'off');
       await pg.goto(URL + '#drills'); await pg.waitForSelector('#dgo'); await pg.evaluate(() => document.querySelector('#dgo').click());
-      const issues = []; let amb = 0, n = 0, multi = 0;
+      const issues = []; let amb = 0, n = 0, multi = 0, capped = 0;
       for (let i = 0; i < 20; i++) {
         if (await pg.$('#dgo')) break;
         await pg.waitForSelector('#idrows .idrow'); n++;
@@ -166,18 +166,8 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
             if (j === 0 && ps.length >= 3) {
               multi++;
               if (!await pg.$('#andskip')) throw Error('ended after one extra reading: ' + form);
-              // A non-reading must not end the step, even after a successful extra reading.
-              const wrong = await pg.evaluate(ps => {
-                for (const r of document.querySelectorAll('#idrows .idrow:not(.locked)')) for (const b of r.querySelectorAll('button')) {
-                  const sel = Object.fromEntries([...document.querySelectorAll('#idrows .idrow')].map(r => [r.dataset.a, r.querySelector('.on')?.dataset.v]));
-                  sel[r.dataset.a] = b.dataset.v;
-                  if (!ps.some(p => Object.entries(p.at).every(([k,v]) => Array.isArray(v) ? v.includes(sel[k]) : v === sel[k]))) { b.click(); return true; }
-                } return false;
-              }, ps);
-              if (wrong) {
-                await pg.evaluate(() => document.querySelector('#chk').click());
-                if (!await pg.$('#andskip') || await pg.$('#ans [data-r]')) throw Error('wrong guess ended 3+ reading follow-up: ' + form);
-              }
+              const gl = await pg.$eval('#andleft', x => x.textContent);   // guesses are capped at the readings left
+              if (!gl.startsWith((ps.length - 2) + ' guess')) issues.push(`guesses left "${gl}" after one extra reading, expected ${ps.length - 2} (${form})`);
             }
           }
           if (!await pg.$('.andall')) issues.push('naming all ' + ps.length + ' readings of ' + form + ' gave no “All readings” note');
@@ -188,9 +178,14 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
           // a non-reading: change the case / mood to a value no reading has
           const bad = await pg.evaluate(ps => { for (const r of document.querySelectorAll('#idrows .idrow:not(.locked)')) for (const b of r.querySelectorAll('button')) { const a = r.dataset.a, v = b.dataset.v;
             if (ps.every(p => p.at[a] != null && p.at[a] !== v && !(Array.isArray(p.at[a]) && p.at[a].includes(v)))) return { a, v }; } return null; }, ps);
-          if (bad) { await pg.evaluate(b => document.querySelector(`#idrows .idrow[data-a="${b.a}"] button[data-v="${b.v}"]`).click(), bad); await pg.evaluate(() => document.querySelector('#chk').click());
-            if (!await pg.$('#andskip') || !await pg.$('.andmsg')) issues.push('wrong guess ended follow-up: ' + form);
-            await pg.evaluate(() => document.querySelector('#andskip').click()); }
+          const gl0 = await pg.$eval('#andleft', x => x.textContent); if (!gl0.startsWith((ps.length - 1) + ' guess')) issues.push(`a repeat used a guess or wrong cap "${gl0}" (${form})`);
+          if (bad) {   // wrong guesses: each uses one; the step ends (missed readings revealed) when they run out
+            for (let k = 1; k <= ps.length - 1; k++) {
+              await pg.evaluate(b => document.querySelector(`#idrows .idrow[data-a="${b.a}"] button[data-v="${b.v}"]`).click(), bad); await pg.evaluate(() => document.querySelector('#chk').click());
+              if (k < ps.length - 1) { if (!await pg.$('#andskip') || !await pg.$('.andmsg')) { issues.push('wrong guess ended follow-up early: ' + form); break; }
+                const gl = await pg.$eval('#andleft', x => x.textContent); if (!gl.startsWith((ps.length - 1 - k) + ' guess')) issues.push(`guesses left "${gl}" after ${k} wrong (${form})`); }
+              else { capped++; if (await pg.$('#andskip') || !await pg.$('#ans [data-r]')) issues.push('guesses ran out but follow-up still open: ' + form); }
+            } }
           else await pg.evaluate(() => document.querySelector('#andskip').click());     // every chip fits some reading: skip instead
           const miss = await pg.$$eval('.parses li.missed', x => x.length); if (miss !== ps.length - 1) issues.push(`${bad ? 'wrong And…? guess' : 'skip'}: ${miss} missed shown, expected ${ps.length - 1} (${form})`);
         }
@@ -201,6 +196,7 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
       const st = await pg.evaluate(() => JSON.parse(localStorage.getItem('latin1400.v1')).dst || {});
       if (Object.values(st).some(x => x.ok !== x.a)) issues.push('a drill stat recorded a miss although every first answer was right');
       if (!amb) issues.push('no ambiguous form came up');
+      if (style === 'dup+wrong' && sc === SC2[0] && !capped) issues.push('guess cap never exercised');
       if (style === 'all' && sc === SC2[0] && !multi) issues.push('no 3+ reading regression exercised');
       if (style === 'all') console.log('[and regression] ' + multi + ' forms with 3+ readings');
       console.log(`[and…?/${style}] ${sc.name}: ${n} questions, ${amb} ambiguous, ${issues.length} issue(s)`); for (const x of issues.slice(0, 12)) console.log('   - ' + x);
