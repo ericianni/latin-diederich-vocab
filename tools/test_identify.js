@@ -211,7 +211,7 @@ eq('cornū', 'cornū', ALL, ['nom.sg', 'voc.sg', 'dat.sg', 'acc.sg', 'abl.sg']);
 eq('agō', 'ēgerit', ALL, ['ind.act.fperf.3s', 'sub.act.perf.3s']);
 // generator fixes that removed false readings
 eq('celer', 'celeris', DEF, ['m.gen.sg', 'f.nom.sg', 'f.gen.sg', 'n.gen.sg']);
-eq('celer', 'celerum', DEF, ['m.gen.pl', 'f.gen.pl', 'n.gen.pl']);
+eq('celer', 'celerium', DEF, ['m.gen.pl', 'f.gen.pl', 'n.gen.pl']); eq('celer', 'celerum', DEF, []);
 eq('celer', 'celereris', ALL, []);
 eq('tenebrae', 'tenebrae', ALL, ['nom.pl', 'voc.pl']);                 // plural only: no gen. / dat. sg.
 eq('tenebrae', 'tenebrā', ALL, []);
@@ -220,7 +220,7 @@ eq('tenebrae', 'tenebrā', ALL, []);
 eq('quaerō', 'quaesīvī', ALL, ['ind.act.perf.1s']); eq('quaerō', 'quaersīvī', ALL, []);
 eq('contemnō', 'contempsit', ALL, ['ind.act.perf.3s']); eq('contemnō', 'contemnpsit', ALL, []);
 eq('dea', 'deābus', ALL, ['dat.pl', 'abl.pl']); eq('dea', 'deīs', ALL, ['dat.pl', 'abl.pl']);
-eq('alter', 'alterius', ALL, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('alter', 'alterīus', ALL, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']);
+eq('alter', 'alterīus', ALL, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('alter', 'alterius', ALL, []);
 eq('vīs', 'vīs', ALL, ['nom.sg', 'voc.sg']);                              // rare gen. sg. vīs not drilled
 eq('dēsum', 'deest', ALL, ['ind.act.pres.3s']); eq('dēsum', 'dēest', ALL, []);
 // sweep: in every ambiguous form, each reading can be named by chips, and no two readings share one answer

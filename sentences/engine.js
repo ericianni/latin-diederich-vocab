@@ -82,7 +82,7 @@
     const lx = LEX.adjs[key]; const r = Morph.analyze(WORDS()[lx.id]);
     const tbl = OVERRIDES['adj_' + key] ? OVERRIDES['adj_' + key] : r.tbl;
     const info = Object.assign({ key, tbl }, lx);
-    info.form = (g, c, n) => tbl[g + '.' + c + '.' + n];
+    info.form = (g, c, n) => tbl[g + '.' + c + '.' + n] || [];   // a defective cell (dīves has no neuter plural) is no forms, not a missing array
     return (cache['a:' + key] = info);
   }
   function verbInfo(key) {
@@ -303,7 +303,7 @@
     const r = []; for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of NUMS) { const f = n.form(c, nu); if (f && f.some(x => norm(x) === norm(tok))) r.push(c + '.' + nu); } return r;
   }
   function adjReadings(a, tok) {
-    const r = []; for (const g of ['m', 'f', 'n']) for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of NUMS) if (a.form(g, c, nu).some(x => norm(x) === norm(tok))) r.push(g + '.' + c + '.' + nu); return r;
+    const r = []; for (const g of ['m', 'f', 'n']) for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of NUMS) { const f = a.form(g, c, nu); if (f.some(x => norm(x) === norm(tok))) r.push(g + '.' + c + '.' + nu); } return r;
   }
   // nps: [{np, role}] roles: S (needs nom + verb number), O (acc), IO (dat), MEANS (abl). Returns problem string or null.
   function ambiguity(nps, verbNum, hasExplicitSubject) {
@@ -352,7 +352,8 @@
   // forPred: predicate adjective after 'sum' — attributive-only adjectives (proximus, propinquus, ultimus: *"The city is nearest") are left out
   const predOK = k => !LEX.adjs[k].kind && !LEX.adjs[k].attr;
   function chooseAdj(rng, n, used, num, kase, forPred) {
-    const c = Object.keys(LEX.adjs).filter(k => !LEX.adjs[k].kind && inPool(LEX.adjs[k].id) && (!forPred || predOK(k)) && !used.has('adj:' + k) && !used.has(k) && adjFits(adjInfo(k), n));
+    const c = Object.keys(LEX.adjs).filter(k => !LEX.adjs[k].kind && inPool(LEX.adjs[k].id) && (!forPred || predOK(k)) && !used.has('adj:' + k) && !used.has(k) && adjFits(adjInfo(k), n)
+      && (!num || !kase || n.genders.some(g => adjInfo(k).form(g, kase, num).length)));
     if (!c.length) return null; const k = pick(rng, c); used.add('adj:' + k); return k;
   }
   function frameList(pred) { const out = []; for (const k of Object.keys(LEX.verbs)) if (k === 'sum' || inPool(LEX.verbs[k].id)) LEX.verbs[k].frames.forEach((f, i) => { if (pred(f, k)) out.push({ k, f, i }); }); return out; }
@@ -373,7 +374,7 @@
     if (template === 'ADV') tpl = pick(rng, ['SV', 'SV', 'SV_PP', 'SOV', 'SOV', 'PASSIVE', 'COPULA', 'DAT_VERB', 'DAT_IO', 'PRONOUN', 'MEANS']);
     if (template === 'DET') { forceDet = true; tpl = pick(rng, ['SV', 'SOV', 'SOV', 'PASSIVE', 'COPULA', 'SV_PP', 'DAT_IO']); }
     const pP = forcePron ? 0 : tpl === 'PRONOUN' ? 0.3 : 0.08;
-    const addAdj = (np, p) => { if (np && !np.adj && !np.noun.pron && rng() < p) { const a = chooseAdj(rng, np.noun, used); if (a) np.adj = a; } return np; };
+    const addAdj = (np, p) => { if (np && !np.adj && !np.noun.pron && rng() < p) { const a = chooseAdj(rng, np.noun, used, np.num, np.case); if (a) np.adj = a; } return np; };
     // one determiner or adjective per NP; with a subject pronoun, no clash like *"We love my father" / *"You (sg.) love your (pl.) father"
     const detOK = k => { const a = LEX.adjs[k]; if (a.kind !== 'poss' || !pron) return true; return a.person === pron || a.person[0] !== pron[0]; };
     const addDet = (np, p) => { if (!np || np.adj || np.noun.pron || rng() >= p) return false;
@@ -407,7 +408,7 @@
       subj = mkNP(n, 'nom');
       // a person 'is small/huge/big' is odd as a statement: human predicates are character/state adjectives only
       if (n.cls === 'human') for (const k of ['parvus', 'ingens', 'magnus']) used.add('adj:' + k);
-      pred = chooseAdj(rng, n, used, null, null, true); if (!pred) return null;
+      pred = chooseAdj(rng, n, used, subj.num, 'nom', true); if (!pred) return null;
       if (!addDet(subj, forceDet ? 1 : 0.2) && forceDet) return null;
     } else if (tpl === 'PASSIVE') {
       voice = 'pas';
@@ -724,7 +725,7 @@
     const accepted = new Set(); for (const set of sent.enLaConsSets) for (const c of set) for (const v of c.variants) for (const t of v) for (const x of Morph.variants(t)) accepted.add(normM(x));
     const S = sent.spec; const cands = [];
     const addNoun = np => { const n = np.noun; for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of n.nums) { const f = n.form(c, nu); if (f) cands.push(f[0]); } };
-    const addAdj = (k, np) => { const a = adjInfo(k); for (const g of ['m', 'f', 'n']) for (const c of ['nom', 'acc', 'abl', 'dat']) cands.push(a.form(g, c, np.num)[0]); };
+    const addAdj = (k, np) => { const a = adjInfo(k); for (const g of ['m', 'f', 'n']) for (const c of ['nom', 'acc', 'abl', 'dat']) { const f = a.form(g, c, np.num)[0]; if (f) cands.push(f); } };
     if (S.coord) for (const f of shuffle(rng, ['et', 'aut', 'vel', 'nec', 'neque', 'atque', 'sed'])) cands.push(f); // other conjunctions (accepted ones are filtered below)
     for (const np of [S.subj, S.coord && S.coord.np2, S.obj, S.io, S.means, S.pp && S.pp.np].filter(Boolean)) {
       if (np.noun.pron) { for (const d of Object.values(PRON_NP)) cands.push(d[np.case] || d.acc); cands.push(np.noun.form('acc', np.num) ? np.noun.form('acc', np.num)[0] : np.noun.form('dat', np.num)[0], 'cum', 'mēcum', 'tēcum'); continue; }

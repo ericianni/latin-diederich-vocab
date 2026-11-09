@@ -557,19 +557,45 @@
   const GEN = ['m', 'f', 'n'];
   const GEN_N = { m: 'masculine', f: 'feminine', n: 'neuter' };
   const IUS = ['ūnus', 'sōlus', 'tōtus', 'nūllus', 'ūllus', 'alius', 'alter', 'uter', 'neuter', 'uterque'];
-  const CONS_ADJ = ['vetus', 'dīves', 'pauper', 'prīnceps', 'particeps', 'compos', 'sōspes', 'superstes', 'pūbēs', 'memor', 'dēgener'];
+  // Consonant-stem adjectives (A&G §119, §121): abl. -e, gen. pl. -um, neut. pl. -a, acc. pl. -ēs.
+  // memor is not one of them: abl. memorī, gen. pl. memorium (A&G §121.a.3, §121.b; L&S: memore is ancient).
+  const CONS_ADJ = ['vetus', 'dīves', 'pauper', 'prīnceps', 'particeps', 'compos', 'sōspes', 'superstes', 'pūbēs'];
   function adjTbl(m, f, n) { const o = {}; for (const [gk, a] of [['m', m], ['f', f], ['n', n]]) { if (!a) continue; CASES.forEach((c, i) => { o[gk + '.' + c + '.sg'] = [].concat(a[0][i]); o[gk + '.' + c + '.pl'] = [].concat(a[1][i]); }); } return o; }
   function adjVoc(T, mv) {   // vocative = nominative, except masc. sg. of -us adjectives (bone, ēgregie, mī)
     for (const g of GEN) for (const n of ['sg', 'pl']) if (T[`${g}.nom.${n}`]) T[`${g}.voc.${n}`] = T[`${g}.nom.${n}`].slice();
     if (mv && T['m.nom.sg']) T['m.voc.sg'] = mv;
     return T;
   }
+  function numeral(nom) {
+    const T = {};
+    const put = (g, c, n, f) => { T[g + '.' + c + '.' + n] = [].concat(f); };
+    if (nom === 'duo') {                         // A&G §134.b. Acc. duo is the parenthetical alternate of duōs.
+      const row = (g, nomf, gen, dat, acc) => { put(g, 'nom', 'pl', nomf); put(g, 'voc', 'pl', nomf); put(g, 'gen', 'pl', gen); put(g, 'dat', 'pl', dat); put(g, 'acc', 'pl', acc); put(g, 'abl', 'pl', dat); };
+      row('m', 'duo', 'duōrum', 'duōbus', ['duōs', 'duo']);
+      row('f', 'duae', 'duārum', 'duābus', 'duās');
+      row('n', 'duo', 'duōrum', 'duōbus', 'duo');
+      return { kind: 'adj', decl: '1/2', tbl: T };
+    }
+    if (nom === 'trēs') {                        // A&G §134.b. Acc. trīs is the parenthetical alternate.
+      for (const g of ['m', 'f']) { put(g, 'nom', 'pl', 'trēs'); put(g, 'voc', 'pl', 'trēs'); put(g, 'gen', 'pl', 'trium'); put(g, 'dat', 'pl', 'tribus'); put(g, 'acc', 'pl', ['trēs', 'trīs']); put(g, 'abl', 'pl', 'tribus'); }
+      put('n', 'nom', 'pl', 'tria'); put('n', 'voc', 'pl', 'tria'); put('n', 'gen', 'pl', 'trium'); put('n', 'dat', 'pl', 'tribus'); put('n', 'acc', 'pl', 'tria'); put('n', 'abl', 'pl', 'tribus');
+      return { kind: 'adj', decl: 3, tbl: T };
+    }
+    // plūs (A&G §120). Neuter singular only; no dative singular. Abl. plūre is rare (value) and is not generated.
+    // plūra is the classical neuter plural; plūria is ante-classical (L&S).
+    put('n', 'nom', 'sg', 'plūs'); put('n', 'voc', 'sg', 'plūs'); put('n', 'acc', 'sg', 'plūs'); put('n', 'gen', 'sg', 'plūris');
+    for (const g of ['m', 'f']) { put(g, 'nom', 'pl', 'plūrēs'); put(g, 'voc', 'pl', 'plūrēs'); put(g, 'gen', 'pl', 'plūrium'); put(g, 'dat', 'pl', 'plūribus'); put(g, 'acc', 'pl', ['plūrēs', 'plūrīs']); put(g, 'abl', 'pl', 'plūribus'); }
+    put('n', 'nom', 'pl', 'plūra'); put('n', 'voc', 'pl', 'plūra'); put('n', 'gen', 'pl', 'plūrium'); put('n', 'dat', 'pl', 'plūribus'); put('n', 'acc', 'pl', 'plūra'); put('n', 'abl', 'pl', 'plūribus');
+    return { kind: 'adj', decl: 3, tbl: T };
+  }
   function adj(e) {
     const { parts, notes } = clean(e.la);
     const nom = parts[0];
     if (/indecl/.test(e.la) || parts.length < 2) return { skip: 'indeclinable / defective' };
-    if (/only|class\. only/.test(notes) && !/comp\./.test(notes)) return { skip: 'defective adjective (' + notes + ')' };
-    if (['duo', 'trēs', 'mīlle', 'plūs', 'necesse', 'potis'].includes(nom)) return { skip: 'irregular adjective' };
+    const plOnly = /only pl\./.test(notes);       // paucus: singular is very rare (L&S); the plural is the classical paradigm
+    if (/only|class\. only/.test(notes) && !/comp\./.test(notes) && !plOnly) return { skip: 'defective adjective (' + notes + ')' };
+    if (nom === 'duo' || nom === 'trēs' || nom === 'plūs') return numeral(nom);
+    if (['mīlle', 'necesse', 'potis'].includes(nom)) return { skip: 'irregular adjective' };
     const p2 = parts[1], p3 = parts[2];
     // 1st/2nd declension
     if (p3 && /(um|um)$/.test(p3) && /a$/.test(p2)) {
@@ -578,13 +604,33 @@
       if (/er$/.test(nom) && p2 === '-a') st = nom;      // e.g. līber, -a, -um
       if (/er$/.test(nom) && p2 === '-era') st = nom;
       const ius = IUS.includes(nom);
-      const g2 = ius ? (nom === 'alter' ? [st + 'īus', st + 'ius'] : st + 'īus') : null, d2 = ius ? st + 'ī' : null;   // alterius (short i) is the usual form
+      // A&G §113, §603.a.1: the i of -īus is long. Shortening is a verse license, often in alterius, and is not a second form.
+      const g2 = ius ? st + 'īus' : null, d2 = ius ? st + 'ī' : null;
       const m = [[nom, g2 || st + 'ī', d2 || st + 'ō', st + 'um', st + 'ō'], [st + 'ī', st + 'ōrum', st + 'īs', st + 'ōs', st + 'īs']];
       const f = [[st + 'a', g2 || st + 'ae', d2 || st + 'ae', st + 'am', st + 'ā'], [st + 'ae', st + 'ārum', st + 'īs', st + 'ās', st + 'īs']];
       const n = [[st + 'um', g2 || st + 'ī', d2 || st + 'ō', st + 'um', st + 'ō'], [st + 'a', st + 'ōrum', st + 'īs', st + 'a', st + 'īs']];
       const T = adjTbl(m, f, n);
-      const mv = nom === 'meus' ? ['mī'] : /ius$/.test(nom) && !ius ? [cut(nom, 3) + 'ie', cut(nom, 3) + 'ī'] : /us$/.test(nom) ? [cut(nom, 2) + 'e'] : [nom];
-      return { kind: 'adj', decl: '1/2', tbl: adjVoc(T, mv) };
+      // A&G §49.c, §110.a: adjectives in -ius have vocative -ie, not the noun-style -ī. meus is mī (§145); rarely meus, not generated.
+      const mv = nom === 'meus' ? ['mī'] : /ius$/.test(nom) && !ius ? [cut(nom, 3) + 'ie'] : /us$/.test(nom) ? [cut(nom, 2) + 'e'] : [nom];
+      adjVoc(T, mv);
+      if (plOnly) for (const k of Object.keys(T)) if (k.endsWith('.sg')) delete T[k];
+      // L&S: dexter, -tera, -terum, and more frequently -tra, -trum. dextra stays the form shown.
+      if (nom === 'dexter') for (const k of Object.keys(T)) for (const f0 of T[k].slice()) if (f0.startsWith('dextr')) { const alt = 'dexter' + f0.slice(5); if (alt !== f0 && !T[k].includes(alt)) T[k].push(alt); }
+      // L&S: prosperus is more frequent than prosper (A&G §111.a: also prosperus). Other cases do not differ.
+      if (nom === 'prosper' && T['m.nom.sg']) { T['m.nom.sg'] = ['prosperus', 'prosper']; T['m.voc.sg'] = ['prosperus', 'prosper']; }
+      // A&G §111.b: no nominative singular masculine in classical use. Oblique singular is cited (L&S: Cicero, Livy).
+      if (['cēterus', 'īnferus', 'posterus'].includes(nom)) { delete T['m.nom.sg']; delete T['m.voc.sg']; }
+      return { kind: 'adj', decl: '1/2', tbl: T };
+    }
+    // singulī, -ae, -a: distributive, plural only (singular is Gellius). Same endings as bonus in the plural.
+    if (/ī$/.test(nom) && p2 === '-ae' && p3 === '-a') {
+      const st = cut(nom, 1);
+      const T = adjVoc(adjTbl(
+        [[nom, st + 'ī', st + 'ō', st + 'um', st + 'ō'], [st + 'ī', st + 'ōrum', st + 'īs', st + 'ōs', st + 'īs']],
+        [[st + 'a', st + 'ae', st + 'ae', st + 'am', st + 'ā'], [st + 'ae', st + 'ārum', st + 'īs', st + 'ās', st + 'īs']],
+        [[st + 'um', st + 'ī', st + 'ō', st + 'um', st + 'ō'], [st + 'a', st + 'ōrum', st + 'īs', st + 'a', st + 'īs']]), [nom]);
+      for (const k of Object.keys(T)) if (k.endsWith('.sg')) delete T[k];
+      return { kind: 'adj', decl: '1/2', tbl: T };
     }
     // 3rd declension
     let mNom, fNom, nNom, st, cons = CONS_ADJ.includes(nom), comp = false;
@@ -598,19 +644,36 @@
       st = cut(gen, 2); mNom = fNom = nNom = nom;
     } else return { skip: 'adjective pattern not recognized' };
     if (/gen\. pl\. -um/.test(notes)) cons = true;
-    const memor = nom === 'memor';
-    const abl = comp || (cons && !memor) ? st + 'e' : st + 'ī';
-    const gpl = comp || cons || nom === 'celer' ? st + 'um' : st + 'ium';   // celer: gen. pl. celerum (A&G 115a)
+    const abl = comp || cons ? st + 'e' : st + 'ī';
+    const gpl = comp || cons ? st + 'um' : st + 'ium';
     const npl = comp || cons ? st + 'a' : st + 'ia';
-    const mf = nn => [[nn, st + 'is', st + 'ī', st + 'em', abl], [st + 'ēs', gpl, st + 'ibus', comp || cons ? st + 'ēs' : [st + 'ēs', st + 'īs'], st + 'ibus']];
+    // A&G §114.a and the paradigms of §115–119: acc. pl. of i-stems is regularly -īs (-ēs).
+    // Comparatives commonly have -ēs, with -īs in parentheses (§120, §121.c). vetus and ūber have -ēs only (§119).
+    const accPl = comp ? [st + 'ēs', st + 'īs']
+      : (nom === 'vetus' || nom === 'ūber') ? st + 'ēs'
+      : (cons && nom !== 'dīves') ? st + 'ēs'
+      : [st + 'īs', st + 'ēs'];
+    const mf = nn => [[nn, st + 'is', st + 'ī', st + 'em', abl], [st + 'ēs', gpl, st + 'ibus', accPl, st + 'ibus']];
     const n = [[nNom, st + 'is', st + 'ī', nNom, abl], [npl, gpl, st + 'ibus', npl, st + 'ibus']];
-    return { kind: 'adj', decl: 3, tbl: adjVoc(adjTbl(mf(mNom), mf(fNom), memor ? null : n)) };
+    const T = adjVoc(adjTbl(mf(mNom), mf(fNom), n));
+    // L&S: the nom. and acc. of the neuter plural of dīves do not occur. A&G §119 prints acc. dīvītīs (-ēs).
+    if (nom === 'dīves') for (const c of ['nom', 'acc', 'voc']) delete T['n.' + c + '.pl'];
+    // A&G §119: ūber has abl. ūberī, gen. pl. ūberum, neut. pl. ūbera, acc. pl. ūberēs. Abl. ūbere is very rare (one Columella).
+    if (nom === 'ūber') {
+      for (const g of GEN) { T[g + '.gen.pl'] = [st + 'um']; T[g + '.abl.sg'] = [st + 'ī']; }
+      T['n.nom.pl'] = T['n.acc.pl'] = T['n.voc.pl'] = [st + 'a'];
+      T['m.acc.pl'] = T['f.acc.pl'] = [st + 'ēs'];
+    }
+    // L&S headword dīs, dīte. The genitive in the entry is dītis, so the rest follows the i-stem except the ablative.
+    if (nom === 'dīs') for (const g of GEN) T[g + '.abl.sg'] = ['dīte'];
+    return { kind: 'adj', decl: 3, tbl: T };
   }
   // ---------- pronouns ----------
   // Personal pronouns (A&G 143) take case.num keys like nouns; hic and ille (A&G 146) take g.case.num keys like
   // adjectives. No vocatives: A&G gives none. Diederich lists ego/nōs and tū/vōs as separate words, so each has one number.
   const PRON = {
-    'ego': { pron: 'pers', person: 1, tbl: () => cells([['ego', 'egō'], 'meī', ['mihi', 'mī'], 'mē', 'mē'], null) },
+    // L&S: ĕgŏ in the poets of the best age; final ō is ante-classical and post-Augustan. mī for mihi is classical prose (Cicero) as well as verse.
+    'ego': { pron: 'pers', person: 1, tbl: () => cells(['ego', 'meī', ['mihi', 'mī'], 'mē', 'mē'], null) },
     'nōs': { pron: 'pers', person: 1, tbl: () => cells(null, ['nōs', ['nostrum', 'nostrī'], 'nōbīs', 'nōs', 'nōbīs']) },
     'tū': { pron: 'pers', person: 2, tbl: () => cells(['tū', 'tuī', 'tibi', 'tē', 'tē'], null) },
     'vōs': { pron: 'pers', person: 2, tbl: () => cells(null, ['vōs', ['vestrum', 'vestrī'], 'vōbīs', 'vōs', 'vōbīs']) },

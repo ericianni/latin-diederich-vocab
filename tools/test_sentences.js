@@ -19,7 +19,7 @@ const golden = [
   [N('mare').form('abl', 'sg')[0], 'marī'], [N('castra').form('abl', 'pl')[0], 'castrīs'], [N('filia').form('dat', 'pl')[0], 'fīliābus'],
   [N('deus').form('nom', 'pl')[0], 'dī'], [N('turris').form('acc', 'sg')[0], 'turrim'], [N('liber').form('acc', 'sg')[0], 'librum'],
   [A('celer').form('m', 'nom', 'pl')[0], 'celerēs'], [A('celer').form('f', 'nom', 'sg')[0], 'celeris'], [A('celer').form('n', 'nom', 'sg')[0], 'celere'],
-  [A('celer').form('n', 'acc', 'pl')[0], 'celeria'], [A('celer').form('m', 'abl', 'sg')[0], 'celerī'], [A('celer').form('m', 'gen', 'pl')[0], 'celerum'],
+  [A('celer').form('n', 'acc', 'pl')[0], 'celeria'], [A('celer').form('m', 'abl', 'sg')[0], 'celerī'], [A('celer').form('m', 'gen', 'pl')[0], 'celerium'],
   [A('fortis').form('n', 'nom', 'pl')[0], 'fortia'], [A('ingens').form('n', 'acc', 'sg')[0], 'ingēns'], [A('pulcher').form('f', 'abl', 'sg')[0], 'pulchrā'],
   [A('miser').form('m', 'acc', 'pl')[0], 'miserōs'], [A('sacer').form('n', 'nom', 'sg')[0], 'sacrum'],
   [V('quaero').tbl['ind.act.perf.3s'][0], 'quaesīvit'], [V('quaero').ptc['m.nom.sg'][0], 'quaesītus'], [V('capio').tbl['ind.act.fut.3s'][0], 'capiet'],
@@ -30,7 +30,7 @@ const golden = [
 for (const [got, want] of golden) ok(got === want, `golden form: got ${got}, want ${want}`);
 // forms the POC used to patch and that now come straight from the synced app morph.js (2026-11-02)
 const synced = [[N('senex').form('acc', 'sg')[0], 'senem'], [N('senex').form('gen', 'pl')[0], 'senum'], [N('arcus').form('dat', 'pl')[0], 'arcubus'], [N('castellum').form('nom', 'pl')[0], 'castella'],
-  [N('castellum').g, 'n'], [V('quiesco').tbl['ind.act.perf.3s'][0], 'quiēvit'], [V('adsum').tbl['ind.act.perf.3s'].join(), 'adfuit,affuit'], [A('celer').form('m', 'acc', 'pl').join(), 'celerēs,celerīs'],
+  [N('castellum').g, 'n'], [V('quiesco').tbl['ind.act.perf.3s'][0], 'quiēvit'], [V('adsum').tbl['ind.act.perf.3s'].join(), 'adfuit,affuit'], [A('celer').form('m', 'acc', 'pl').join(), 'celerīs,celerēs'],
   [A('hic').form('m', 'acc', 'sg')[0], 'hunc'], [A('ille').form('f', 'abl', 'pl')[0], 'illīs'],
   // app commit 7803df1 (2026-11-02 20:30 ET): edō athematic forms, ex(s)tinguō, ārdeō active only, pāscō 3rd conj., trānseō passive, lavātus
   [V('edo').tbl['ind.act.pres.3s'].join(), 'edit,ēst'], [V('edo').tbl['ind.pas.pres.3s'].join(), 'editur,ēstur'], [V('exstinguo').tbl['ind.act.perf.3s'].join(), 'exstīnxit'],

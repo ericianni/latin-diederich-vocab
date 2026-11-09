@@ -146,7 +146,7 @@ const NONE3 = [
   ['morior', 'gdv.m'], ['morior', 'sup.um'], ['orior', 'gdv.m'], ['nāscor', 'gdv.m'], ['īrāscor', 'gdv.m'], ['hortor', 'inf.pas.fut'], ['hortor', 'imp.dep.fut.2p'],
   ['timeō', 'sup.um'], ['dominus', 'loc.sg'], ['rēx', 'loc.sg'], ['amō', 'imp.pas.fut.2p'],
 ];
-const ALT3 = [['ēgregius', 'm.voc.sg', 'ēgregī'], ['deus', 'voc.pl', 'deī'], ['rūs', 'loc.sg', 'rūre'], ['amō', 'inf.pas.fut', 'amatum iri']];
+const ALT3 = [['deus', 'voc.pl', 'deī'], ['rūs', 'loc.sg', 'rūre'], ['amō', 'inf.pas.fut', 'amatum iri']];
 for (const x of V3) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
 for (const [h, key] of NONE3) { const [e, a] = find(h); const ok = !(a.tbl && a.tbl[key]); ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
 for (const [h, key, inp] of ALT3) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key])); ok ? pass++ : fail++; if (!ok) console.log('FAIL alt not accepted', e.la, key, inp, a.tbl && a.tbl[key]); }
@@ -185,7 +185,7 @@ t('adsum', 'perf.1s', 'adfuī'); t('adsum', 'ptc.act.fut', 'adfutūrus'); t('ads
 t('dēsum', 'pres.3s', 'deest'); t('dēsum', 'impf.1s', 'deeram'); t('dēsum', 'inf.act.pres', 'deesse'); t('dēsum', 'pres.1s', 'dēsum'); t('dēsum', 'perf.1s', 'dēfuī');
 t('dea', 'dat.pl', 'deābus'); t('dea', 'abl.pl', 'deābus');
 { const [, a] = find('dea'); const ok = a.tbl['dat.pl'].includes('deīs') && a.tbl['abl.pl'].includes('deīs'); ok ? pass++ : fail++; if (!ok) console.log('FAIL dea keeps deīs', a.tbl['dat.pl']); }
-{ const [, a] = find('alter'); const ok = ['m', 'f', 'n'].every(g => a.tbl[g + '.gen.sg'].join() === 'alterīus,alterius'); ok ? pass++ : fail++; if (!ok) console.log('FAIL alter gen.sg', a.tbl['m.gen.sg']); }
+{ const [, a] = find('alter'); const ok = ['m', 'f', 'n'].every(g => a.tbl[g + '.gen.sg'].join() === 'alterīus'); ok ? pass++ : fail++; if (!ok) console.log('FAIL alter gen.sg', a.tbl['m.gen.sg']); }
 { const [, a] = find('vīs'); const ok = !a.tbl['gen.sg'] && a.tbl['nom.sg'][0] === 'vīs' && a.tbl['acc.sg'][0] === 'vim'; ok ? pass++ : fail++; if (!ok) console.log('FAIL vīs gen.sg hidden', a.tbl['gen.sg']); }
 // v16: personal pronouns (A&G 143), hic / ille (A&G 146), and the senex / arcus / castellum fixes
 const PR = [
@@ -203,7 +203,7 @@ const DEM = {
 };
 for (const h in DEM) for (const g of ['m', 'f', 'n']) DEM[h][g].forEach((row, i) => row.forEach((f, j) => PR.push([h, `${g}.${M.CASES[j]}.${i ? 'pl' : 'sg'}`, f])));
 for (const x of PR) { try { t(...x); } catch (err) { fail++; console.log('ERR', x, err.message); } }
-for (const [h, key, inp] of [['nōs', 'gen.pl', 'nostrī'], ['vōs', 'gen.pl', 'vestrī'], ['egō', 'dat.sg', 'mī'], ['egō', 'nom.sg', 'egō']]) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key], true)); ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun alt', e.la, key, inp); }
+for (const [h, key, inp] of [['nōs', 'gen.pl', 'nostrī'], ['vōs', 'gen.pl', 'vestrī'], ['ego', 'dat.sg', 'mī']]) { const [e, a] = find(h); const ok = !!(a.tbl && a.tbl[key] && M.check(inp, a.tbl[key], true)); ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun alt', e.la, key, inp); }
 // what must not exist: other numbers of the personal pronouns, vocatives, arcibus, a masculine castellī plural, senexēs
 for (const [h, key] of [['egō', 'nom.pl'], ['nōs', 'nom.sg'], ['tū', 'voc.sg'], ['vōs', 'voc.pl'], ['egō', 'voc.sg'], ['hic', 'm.voc.sg'], ['ille', 'n.voc.pl'], ['tū', 'loc.sg']]) { const [e, a] = find(h); const ok = !a.tbl[key]; ok ? pass++ : fail++; if (!ok) console.log('FAIL should not exist', e.la, key, a.tbl[key]); }
 { const [, a] = find('arcus'); const ok = !a.tbl['dat.pl'].includes('arcibus') && !a.tbl['abl.pl'].includes('arcibus'); ok ? pass++ : fail++; if (!ok) console.log('FAIL arcibus', a.tbl['dat.pl']); }
@@ -469,5 +469,75 @@ ok19(!tb('diēs')['loc.sg'] && !M.check('diē', tb('diēs')['gen.sg'], true), 'd
 // Kept on purpose: dat. sg. -uī (not the parenthetical -ū) for ordinary 4th-declension nouns; senātūs not senātī.
 t('manus', 'dat.sg', 'manuī'); t('senātus', 'gen.sg', 'senātūs'); t('exercitus', 'dat.pl', 'exercitibus');
 ok19(!M.check('manū', tb('manus')['dat.sg'], true) && !M.check('senātī', tb('senātus')['gen.sg'], true) && !M.check('currum', tb('currus')['gen.pl'], true), 'no dat -u, senati, or syncopated currum', tb('manus')['dat.sg'], tb('senātus')['gen.sg']);
+// v29: adjectives and pronouns (Wiktionary tables, confirmed in A&G §§49, 110–122, 134, 143, 145 and L&S).
+{ let n = 0; for (const e of W) if (e.pos === 'adjective' || e.pos === 'pronoun') n++; ok19(n === 307, 'adjectives and pronouns audited', n); }
+// Acc. pl. of i-stems is -īs, with -ēs accepted (A&G §114.a, §§115–119). Comparatives lead with -ēs (§121.c).
+for (const [h, acc] of [['omnis', 'omnīs'], ['ācer', 'ācrīs'], ['celer', 'celerīs'], ['ingēns', 'ingentīs'], ['fēlīx', 'fēlīcīs'], ['pār', 'parīs'], ['memor', 'memorīs'], ['potēns', 'potentīs']]) {
+  t(h, 'm.acc.pl', acc); ok19(M.check(acc.replace(/īs$/, 'ēs'), tb(h)['m.acc.pl'], true) && tb(h)['f.acc.pl'][0] === acc, h + ' acc. pl.', tb(h)['m.acc.pl']);
+}
+t('melior', 'm.acc.pl', 'meliōrēs'); t('māior', 'm.acc.pl', 'māiōrēs'); t('vetus', 'm.acc.pl', 'veterēs'); t('ūber', 'm.acc.pl', 'ūberēs');
+ok19(M.check('meliōrīs', tb('melior')['m.acc.pl'], true) && !tb('vetus')['m.acc.pl'].includes('veterīs') && !tb('ūber')['m.acc.pl'].includes('ūberīs'), 'comparative -is; vetus and uber -es only');
+// celer: gen. pl. celerium. celerum is the noun for the military rank (A&G §115 Note 2).
+t('celer', 'm.gen.pl', 'celerium'); t('celer', 'n.nom.pl', 'celeria'); t('celer', 'm.abl.sg', 'celerī');
+ok19(!M.check('celerum', tb('celer')['m.gen.pl'], true), 'no celerum on the adjective', tb('celer')['m.gen.pl']);
+// memor is an i-stem with a neuter (A&G §121). memore is ancient (L&S, Priscian).
+t('memor', 'm.abl.sg', 'memorī'); t('memor', 'm.gen.pl', 'memorium'); t('memor', 'n.nom.sg', 'memor'); t('memor', 'n.acc.sg', 'memor'); t('memor', 'n.nom.pl', 'memoria');
+ok19(!M.check('memore', tb('memor')['m.abl.sg'], true) && !M.check('memorum', tb('memor')['m.gen.pl'], true), 'memor', tb('memor')['m.abl.sg'], tb('memor')['m.gen.pl']);
+// ūber (A&G §119): abl. -ī, gen. pl. -um, neut. pl. -a.
+t('ūber', 'm.abl.sg', 'ūberī'); t('ūber', 'm.gen.pl', 'ūberum'); t('ūber', 'n.nom.pl', 'ūbera'); t('ūber', 'n.acc.sg', 'ūber');
+ok19(!M.check('ūberium', tb('ūber')['m.gen.pl'], true) && !M.check('ūberia', tb('ūber')['n.nom.pl'], true) && !M.check('ūbere', tb('ūber')['m.abl.sg'], true), 'uber', tb('ūber')['m.gen.pl'], tb('ūber')['n.nom.pl']);
+// dīves: no neuter plural (L&S). Acc. dīvītīs (-ēs). Abl. dīvite, not the Pliny dīvitī.
+t('dīves', 'm.abl.sg', 'dīvite'); t('dīves', 'm.gen.pl', 'dīvitum'); t('dīves', 'm.acc.pl', 'dīvitīs'); t('dīves', 'n.nom.sg', 'dīves'); t('dīves', 'n.acc.sg', 'dīves');
+ok19(M.check('dīvitēs', tb('dīves')['m.acc.pl'], true) && !tb('dīves')['n.nom.pl'] && !tb('dīves')['n.acc.pl'] && !tb('dīves')['n.voc.pl'], 'dives neuter plural', tb('dīves')['n.nom.pl'], tb('dīves')['m.acc.pl']);
+ok19(!M.check('dīvitī', tb('dīves')['m.abl.sg'], true) && !M.check('dīvita', [].concat(tb('dīves')['n.nom.pl'], tb('dīves')['n.acc.pl']).filter(Boolean), true), 'no diviti or divita');
+// dīs, dīte (L&S). Genitive dītis; the plural otherwise follows the i-stem.
+t('dīs', 'm.abl.sg', 'dīte'); t('dīs', 'm.gen.sg', 'dītis'); t('dīs', 'm.gen.pl', 'dītium'); t('dīs', 'n.nom.pl', 'dītia'); t('dīs', 'm.acc.pl', 'dītīs');
+ok19(!M.check('dītī', tb('dīs')['m.abl.sg'], true) && M.check('dītēs', tb('dīs')['m.acc.pl'], true), 'dis', tb('dīs')['m.abl.sg'], tb('dīs')['m.acc.pl']);
+// -ius adjectives: vocative -ie only, genitive -iī not contracted -ī (A&G §110.a).
+t('ēgregius', 'm.voc.sg', 'ēgregie'); t('ēgregius', 'm.gen.sg', 'ēgregiī'); t('pius', 'm.voc.sg', 'pie');
+ok19(tb('ēgregius')['m.voc.sg'].join() === 'ēgregie' && !M.check('ēgregī', tb('ēgregius')['m.voc.sg'], true) && !M.check('ēgregī', tb('ēgregius')['m.gen.sg'], true), 'egregius vocative and genitive', tb('ēgregius')['m.voc.sg'], tb('ēgregius')['m.gen.sg']);
+t('meus', 'm.voc.sg', 'mī');
+ok19(tb('meus')['m.voc.sg'].join() === 'mī' && !M.check('mee', tb('meus')['m.voc.sg'], true) && !M.check('meus', tb('meus')['m.voc.sg'], true), 'meus vocative', tb('meus')['m.voc.sg']);
+// -īus / -ī (A&G §113). The vowel is long, including alterīus.
+for (const [h, gen, dat] of [['tōtus', 'tōtīus', 'tōtī'], ['ūnus', 'ūnīus', 'ūnī'], ['sōlus', 'sōlīus', 'sōlī'], ['nūllus', 'nūllīus', 'nūllī'], ['ūllus', 'ūllīus', 'ūllī'], ['alter', 'alterīus', 'alterī']]) {
+  t(h, 'm.gen.sg', gen); t(h, 'f.gen.sg', gen); t(h, 'n.dat.sg', dat);
+  ok19(tb(h)['m.gen.sg'].join() === gen && !M.check(gen.replace('ī', 'i'), tb(h)['m.gen.sg'], true), h + ' genitive quantity', tb(h)['m.gen.sg']);
+}
+// dexter: dextra is the more frequent form (L&S); dextera is accepted (A&G §111.a).
+t('dexter', 'f.nom.sg', 'dextra'); t('dexter', 'm.gen.sg', 'dextrī'); t('dexter', 'n.nom.sg', 'dextrum');
+ok19(M.check('dextera', tb('dexter')['f.nom.sg'], true) && M.check('dexterī', tb('dexter')['m.gen.sg'], true) && M.check('dexterum', tb('dexter')['n.nom.sg'], true) && tb('dexter')['m.nom.sg'].join() === 'dexter', 'dexter', tb('dexter')['f.nom.sg']);
+// prosperus is the more frequent nominative (L&S); prosper stays accepted.
+{ const e = W.find(x => x.id === 1287); ok19(e.la === 'prosper(us), -era, -erum', 'prosper headword', e.la);
+  const a = M.analyze(e); ok19(a.tbl['m.nom.sg'].join() === 'prosperus,prosper' && a.tbl['m.voc.sg'].join() === 'prosperus,prosper' && a.tbl['f.nom.sg'].join() === 'prospera' && a.tbl['n.nom.sg'].join() === 'prosperum', 'prosperus', a.tbl['m.nom.sg'], a.tbl['f.nom.sg']); }
+// No classical nominative singular masculine (A&G §111.b).
+for (const h of ['cēterus', 'īnferus', 'posterus']) ok19(!tb(h)['m.nom.sg'] && !tb(h)['m.voc.sg'] && tb(h)['f.nom.sg'][0] === h.replace(/us$/, 'a') && tb(h)['m.acc.sg'][0] === h.replace(/us$/, 'um'), h + ' no nom. sg. m.', tb(h)['m.nom.sg'], tb(h)['m.acc.sg']);
+// paucus and singulī are plural only.
+ok19(!tb('paucus')['m.nom.sg'] && tb('paucus')['m.nom.pl'][0] === 'paucī' && tb('paucus')['f.nom.pl'][0] === 'paucae' && tb('paucus')['n.nom.pl'][0] === 'pauca' && !tb('paucus')['f.abl.sg'], 'paucus plural only', tb('paucus')['m.nom.pl']);
+t('singulī', 'm.nom.pl', 'singulī'); t('singulī', 'f.nom.pl', 'singulae'); t('singulī', 'n.nom.pl', 'singula'); t('singulī', 'm.gen.pl', 'singulōrum');
+ok19(!tb('singulī')['m.nom.sg'] && !tb('singulī')['f.abl.sg'], 'singuli plural only');
+// duo, trēs (A&G §134.b), plūs (§120).
+t('duo', 'm.nom.pl', 'duo'); t('duo', 'f.nom.pl', 'duae'); t('duo', 'm.gen.pl', 'duōrum'); t('duo', 'f.dat.pl', 'duābus'); t('duo', 'm.acc.pl', 'duōs'); t('duo', 'n.acc.pl', 'duo');
+ok19(M.check('duo', tb('duo')['m.acc.pl'], true) && !tb('duo')['m.nom.sg'] && !M.check('duum', tb('duo')['m.gen.pl'], true), 'duo', tb('duo')['m.acc.pl']);
+t('trēs', 'm.nom.pl', 'trēs'); t('trēs', 'n.nom.pl', 'tria'); t('trēs', 'm.gen.pl', 'trium'); t('trēs', 'm.acc.pl', 'trēs'); t('trēs', 'f.dat.pl', 'tribus');
+ok19(M.check('trīs', tb('trēs')['m.acc.pl'], true) && !tb('trēs')['m.nom.sg'], 'tres', tb('trēs')['m.acc.pl']);
+t('plūs', 'n.nom.sg', 'plūs'); t('plūs', 'n.gen.sg', 'plūris'); t('plūs', 'n.acc.sg', 'plūs'); t('plūs', 'm.nom.pl', 'plūrēs'); t('plūs', 'n.nom.pl', 'plūra'); t('plūs', 'm.gen.pl', 'plūrium'); t('plūs', 'm.acc.pl', 'plūrēs');
+ok19(!tb('plūs')['n.dat.sg'] && !tb('plūs')['n.abl.sg'] && !tb('plūs')['m.nom.sg'] && M.check('plūrīs', tb('plūs')['m.acc.pl'], true) && !M.check('plūria', tb('plūs')['n.nom.pl'], true), 'plus', tb('plūs'));
+// Headword quantities (L&S).
+{ const e = W.find(x => x.id === 1275); ok19(e.la === 'dignus, -a, -um', 'dignus headword', e.la); t('dignus', 'm.nom.sg', 'dignus'); t('dignus', 'm.gen.sg', 'dignī'); }
+{ const e = W.find(x => x.id === 1278); ok19(e.la === 'indignus, -a, -um', 'indignus headword', e.la); t('indignus', 'f.nom.sg', 'indigna'); }
+{ const e = W.find(x => x.id === 1252); ok19(e.la === 'benignus, -a, -um', 'benignus headword', e.la); t('benignus', 'n.nom.sg', 'benignum'); }
+{ const e = W.find(x => x.id === 1271); ok19(e.la === 'ignōtus, -a, -um', 'ignotus headword', e.la); t('ignōtus', 'm.nom.sg', 'ignōtus'); t('ignōtus', 'm.abl.sg', 'ignōtō'); }
+{ const e = W.find(x => x.id === 1274); ok19(e.la === 'īnsignis, -e', 'insignis headword', e.la); t('īnsignis', 'm.nom.sg', 'īnsignis'); t('īnsignis', 'm.abl.sg', 'īnsignī'); t('īnsignis', 'm.gen.pl', 'īnsignium'); }
+{ const e = W.find(x => x.id === 789); ok19(e.la === 'vīvus, -a, -um', 'vivus headword', e.la); t('vīvus', 'm.nom.sg', 'vīvus'); t('vīvus', 'f.abl.sg', 'vīvā'); }
+ok19(!M.check('dīgnus', tb('dignus')['m.nom.sg'], true) && !M.check('benīgnus', tb('benignus')['m.nom.sg'], true) && !M.check('īgnōtus', tb('ignōtus')['m.nom.sg'], true) && !M.check('īnsīgnis', tb('īnsignis')['m.nom.sg'], true) && !M.check('vivus', tb('vīvus')['m.nom.sg'], true), 'rejected macron spellings');
+// ego: short o. mī stays accepted. egō does not.
+{ const e = W.find(x => x.id === 479); ok19(e.la === 'ego', 'ego headword', e.la); t('ego', 'nom.sg', 'ego'); t('ego', 'dat.sg', 'mihi');
+  ok19(tb('ego')['nom.sg'].join() === 'ego' && M.check('mī', tb('ego')['dat.sg'], true) && !M.check('egō', tb('ego')['nom.sg'], true), 'ego', tb('ego')['nom.sg']); }
+{ const e = W.find(x => x.id === 499); ok19(e.la === 'alius, -a, -ud (gen. alterīus, dat. aliī)', 'alius headword', e.la); ok19(!!find('alius')[1].skip, 'alius stays undrilled'); }
+// Kept on purpose.
+ok19(tb('hic')['n.nom.sg'][0] === 'hoc' && tb('hic')['m.abl.sg'][0] === 'hōc' && tb('hic')['m.dat.pl'].join() === 'hīs' && !M.check('hibus', tb('hic')['m.dat.pl'], true), 'hic: no old hibus');
+ok19(tb('ille')['m.gen.sg'].join() === 'illīus' && tb('ille')['n.nom.sg'].join() === 'illud' && !M.check('illius', tb('ille')['m.gen.sg'], true), 'ille genitive stays long');
+ok19(tb('līber')['f.nom.sg'].join() === 'lībera' && tb('pulcher')['f.nom.sg'].join() === 'pulchra' && tb('miser')['m.gen.sg'].join() === 'miserī', 'liber keeps e, pulcher drops it');
+ok19(!find('potis')[1].tbl && !find('mīlle')[1].tbl, 'potis and mille stay outside the paradigm');
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
