@@ -360,5 +360,70 @@ ok19(!tb('humus')['abl.sg'].includes('humū'), 'Varro humu not accepted');
 ok19(tb('bellum')['loc.sg'].join() === 'bellī' && !tb('focus')['loc.sg'] && !tb('animus')['loc.sg'] && !tb('lūcus')['loc.sg'], 'locatives stay the curated set');
 ok19(tb('sīgnum')['nom.sg'][0] === 'sīgnum' && tb('sīgnum')['gen.sg'][0] === 'sīgnī', 'signum keeps the long i (A&G §603.d)');
 ok19(!M.check('fīlibus', tb('fīlius')['dat.pl'], true), 'filibus is inscriptional', tb('fīlius')['dat.pl']);
+// v27: 3rd-declension audit (Wiktionary tables, confirmed in A&G §§71–79, §103, §105.e).
+{ let n3 = 0;
+  for (const e of W) {
+    if (e.pos !== 'noun') continue;
+    const a = M.analyze(e);
+    const nom = e.la.split(/[ ,(]/)[0];
+    if (a.decl === 3 || ['vīs', 'bōs', 'iter'].includes(nom)) n3++;
+  }
+  ok19(n3 === 235, '3rd-declension nouns audited', n3); }
+// Abbreviated genitives that the expander glued onto the nominative.
+for (const [h, gen, acc, gpl] of [['plēbs', 'plēbis', 'plēbem', null], ['merx', 'mercis', 'mercem', 'mercium'], ['cohors', 'cohortis', 'cohortem', 'cohortium'],
+  ['laus', 'laudis', 'laudem', 'laudum'], ['fraus', 'fraudis', 'fraudem', 'fraudium'], ['mors', 'mortis', 'mortem', 'mortium'], ['coniūnx', 'coniugis', 'coniugem', 'coniugum']]) {
+  t(h, 'gen.sg', gen); t(h, 'acc.sg', acc); if (gpl) t(h, 'gen.pl', gpl);
+}
+ok19(!tb('plēbs')['gen.pl'] && !tb('plēbs')['dat.pl'] && !tb('plēbs')['abl.pl'] && tb('plēbs')['nom.pl'][0] === 'plēbēs' && tb('plēbs')['acc.pl'].join() === 'plēbēs', 'plebs plural obliques are late', tb('plēbs'));
+ok19(!M.check('plēbsis', tb('plēbs')['gen.sg'], true) && !M.check('plēbum', Object.values(tb('plēbs')).flat(), true), 'no plebsis or plebum');
+ok19(M.check('fraudum', tb('fraus')['gen.pl'], true) && M.check('fraudīs', tb('fraus')['acc.pl'], true) && tb('fraus')['acc.pl'][0] === 'fraudēs', 'fraus', tb('fraus')['gen.pl']);
+ok19(!M.check('laudium', tb('laus')['gen.pl'], true) && !M.check('laudīs', tb('laus')['acc.pl'], true), 'laus is not an i-stem', tb('laus'));
+ok19(M.check('coniux', tb('coniūnx')['nom.sg'], true) && M.check('coniux', tb('coniūnx')['voc.sg'], true) && !M.check('coniiugis', tb('coniūnx')['gen.sg'], true), 'coniux', tb('coniūnx')['nom.sg']);
+// famēs: ablative is always famē (A&G §76 Note 1). The 5th-declension genitive famī is not the regular form (§105.e).
+t('famēs', 'abl.sg', 'famē'); t('famēs', 'gen.sg', 'famis');
+ok19(!M.check('fame', tb('famēs')['abl.sg'], true) && !M.check('famī', tb('famēs')['gen.sg'], true) && M.check('famīs', tb('famēs')['acc.pl'], true), 'fames', tb('famēs')['abl.sg']);
+{ const e = W.find(x => x.id === 1126); ok19(e.la === 'magnitūdō, -inis, f.', 'magnitudo headword', e.la);
+  ok19(tb('magnitūdō')['gen.sg'][0] === 'magnitūdinis' && tb('magnitūdō')['acc.sg'][0] === 'magnitūdinem', 'magnitudo short i', tb('magnitūdō')['gen.sg']); }
+{ const e = W.find(x => x.id === 1026); ok19(e.la === 'volucris, -is, f. (gen. pl. -um)', 'volucris headword', e.la);
+  t('volucris', 'nom.sg', 'volucris'); t('volucris', 'abl.sg', 'volucre'); t('volucris', 'gen.pl', 'volucrum');
+  ok19(!M.check('volucer', tb('volucris')['nom.sg'], true) && !M.check('volucrium', tb('volucris')['gen.pl'], true) && tb('volucris')['acc.pl'].join() === 'volucrēs', 'volucris', tb('volucris')); }
+// A&G §103 defective nouns.
+ok19(!tb('ops')['nom.sg'] && !tb('ops')['voc.sg'] && !tb('ops')['dat.sg'] && tb('ops')['gen.sg'][0] === 'opis' && tb('ops')['acc.sg'][0] === 'opem' && tb('ops')['nom.pl'][0] === 'opēs', 'ops', tb('ops'));
+ok19(!tb('prex')['nom.sg'] && !tb('prex')['gen.sg'] && !tb('prex')['voc.sg'] && tb('prex')['dat.sg'][0] === 'precī' && tb('prex')['acc.sg'][0] === 'precem' && tb('prex')['nom.pl'][0] === 'precēs' && tb('prex')['gen.pl'][0] === 'precum', 'prex', tb('prex'));
+ok19(!tb('frūx')['nom.sg'] && !tb('frūx')['voc.sg'] && tb('frūx')['gen.sg'][0] === 'frūgis' && tb('frūx')['acc.sg'][0] === 'frūgem' && tb('frūx')['nom.pl'][0] === 'frūgēs' && tb('frūx')['gen.pl'][0] === 'frūgum', 'frux', tb('frūx'));
+ok19(!!find('sponte')[1].skip && !find('sponte')[1].tbl, 'sponte stays outside the paradigm');
+ok19(!tb('cor')['gen.pl'] && tb('cor')['nom.pl'][0] === 'corda' && tb('cor')['abl.sg'][0] === 'corde' && tb('cor')['dat.pl'][0] === 'cordibus', 'cor', tb('cor'));
+{ const a = M.analyze(W.find(x => x.id === 239)); ok19(a.tbl['nom.sg'][0] === 'os' && !a.tbl['gen.pl'] && a.tbl['nom.pl'][0] === 'ossa' && a.tbl['dat.pl'][0] === 'ossibus' && !Object.values(a.tbl).flat().some(f => f === 'ossium' || f === 'ossua'), 'os bone', a.tbl); }
+ok19(tb('ōs')['gen.pl'][0] === 'ōrum' && tb('ōs')['nom.pl'][0] === 'ōra', 'os mouth', tb('ōs')['gen.pl']);
+for (const [h, pl] of [['mel', 'mella'], ['murmur', 'murmura'], ['rūs', 'rūra'], ['iūs', 'iūra']])
+  ok19(tb(h)['nom.pl'][0] === pl && tb(h)['acc.pl'][0] === pl && tb(h)['voc.pl'][0] === pl && !tb(h)['gen.pl'] && !tb(h)['dat.pl'] && !tb(h)['abl.pl'], h + ' plural nom/acc only', tb(h)['gen.pl'], tb(h)['dat.pl']);
+ok19(tb('rūs')['loc.sg'][0] === 'rūrī' && M.check('rūre', tb('rūs')['loc.sg'], true), 'rus locative kept', tb('rūs')['loc.sg']);
+// Acc. pl. -īs is accepted, never shown first (A&G §71, §74.c, §77). Gen. pl. -um where §78 says so.
+t('mēnsis', 'gen.pl', 'mēnsium'); t('mēnsis', 'acc.pl', 'mēnsēs');
+ok19(M.check('mēnsum', tb('mēnsis')['gen.pl'], true) && M.check('mēnsīs', tb('mēnsis')['acc.pl'], true), 'mensis', tb('mēnsis')['gen.pl'], tb('mēnsis')['acc.pl']);
+t('parēns', 'gen.pl', 'parentium'); t('parēns', 'acc.pl', 'parentēs');
+ok19(M.check('parentum', tb('parēns')['gen.pl'], true) && M.check('parentīs', tb('parēns')['acc.pl'], true), 'parens', tb('parēns')['gen.pl']);
+t('sēdēs', 'gen.pl', 'sēdum'); t('sēdēs', 'acc.pl', 'sēdēs');
+ok19(M.check('sēdīs', tb('sēdēs')['acc.pl'], true) && !M.check('sēdium', tb('sēdēs')['gen.pl'], true), 'sedes', tb('sēdēs'));
+t('vātēs', 'gen.pl', 'vātum');
+ok19(M.check('vātium', tb('vātēs')['gen.pl'], true) && M.check('vātīs', tb('vātēs')['acc.pl'], true) && !M.check('vātis', tb('vātēs')['nom.sg'], true), 'vates', tb('vātēs'));
+ok19(tb('caedēs')['gen.pl'][0] === 'caedium' && M.check('caedum', tb('caedēs')['gen.pl'], true), 'caedes', tb('caedēs')['gen.pl']);
+ok19(tb('clādēs')['gen.pl'][0] === 'clādium' && M.check('clādum', tb('clādēs')['gen.pl'], true), 'clades', tb('clādēs')['gen.pl']);
+t('aetās', 'gen.pl', 'aetātum'); t('aetās', 'acc.pl', 'aetātēs');
+ok19(M.check('aetātium', tb('aetās')['gen.pl'], true) && M.check('aetātīs', tb('aetās')['acc.pl'], true), 'aetas', tb('aetās'));
+ok19(tb('aestās')['gen.pl'].join() === 'aestātum' && tb('aestās')['acc.pl'][0] === 'aestātēs' && M.check('aestātīs', tb('aestās')['acc.pl'], true), 'aestas', tb('aestās')['acc.pl']);
+ok19(tb('cīvitās')['acc.pl'][0] === 'cīvitātēs' && M.check('cīvitātīs', tb('cīvitās')['acc.pl'], true) && tb('cīvitās')['gen.pl'][0] === 'cīvitātum', 'civitas', tb('cīvitās'));
+// Abl. -ī sometimes (A&G §76.b.1), not as the form shown. -im only where the entry and §75 name it.
+t('ignis', 'abl.sg', 'igne'); t('nāvis', 'acc.sg', 'nāvem'); t('nāvis', 'abl.sg', 'nāve'); t('mare', 'abl.sg', 'marī');
+t('turris', 'acc.sg', 'turrim'); t('turris', 'abl.sg', 'turrī'); t('turris', 'acc.pl', 'turrēs');
+ok19(M.check('ignī', tb('ignis')['abl.sg'], true) && M.check('nāvī', tb('nāvis')['abl.sg'], true) && !M.check('nāvim', tb('nāvis')['acc.sg'], true), 'ignis navis', tb('ignis')['abl.sg'], tb('nāvis'));
+ok19(M.check('imbrī', tb('imber')['abl.sg'], true) && tb('imber')['abl.sg'][0] === 'imbre' && M.check('mare', tb('mare')['abl.sg'], true) && !M.check('marum', tb('mare')['gen.pl'], true), 'imber mare', tb('imber')['abl.sg'], tb('mare')['abl.sg']);
+ok19(M.check('turrem', tb('turris')['acc.sg'], true) && M.check('turre', tb('turris')['abl.sg'], true) && M.check('turrīs', tb('turris')['acc.pl'], true), 'turris alternates', tb('turris'));
+ok19(!M.check('partim', tb('pars')['acc.sg'], true) && !M.check('noctū', tb('nox')['abl.sg'], true), 'partim and noctu not added');
+ok19(tb('iter')['gen.sg'].join() === 'itineris' && !M.check('iteris', tb('iter')['gen.sg'], true), 'iter', tb('iter')['gen.sg']);
+ok19(tb('bōs')['gen.pl'].join() === 'boum' && tb('bōs')['dat.pl'].join() === 'bōbus,būbus' && !M.check('bovum', tb('bōs')['gen.pl'], true), 'bos', tb('bōs'));
+ok19(!tb('vīs')['gen.sg'] && tb('vīs')['acc.pl'][0] === 'vīrēs' && M.check('vīrīs', tb('vīs')['acc.pl'], true), 'vis', tb('vīs'));
+{ const a = M.analyze(W.find(x => x.id === 24)); ok19(!a.istem && a.tbl['nom.sg'][0] === 'hiems' && a.tbl['gen.pl'][0] === 'hiemum' && a.tbl['acc.pl'].join() === 'hiemēs', 'hiems', a.tbl['gen.pl'], a.tbl['acc.pl']); }
+ok19(tb('cīvis')['acc.pl'][0] === 'cīvēs' && M.check('cīvīs', tb('cīvis')['acc.pl'], true) && !tb('cīvis')['nom.pl'].includes('cīvīs'), 'civis acc -is not nominative', tb('cīvis'));
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

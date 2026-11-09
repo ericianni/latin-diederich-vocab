@@ -543,7 +543,7 @@
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
     const g = (a.tbl['gen.sg'] || a.tbl['gen.pl'])[0];
     const stem = a.decl === 'irr' ? null : [g.replace(/(ae|ī|is|ūs|ēī|eī)$/, '')];
-    const nums = ['sg', 'pl'].filter(n => a.tbl['nom.' + n]);
+    const nums = ['sg', 'pl'].filter(n => Morph.CASES_X.some(c => a.tbl[c + '.' + n]));
     return `<div class="cst"><div class="csh">${esc(w.la.split(',').slice(0, 2).join(','))} <span class="muted">${esc(note || '')}</span></div><table><tr><th></th>${nums.map(n => `<th>${n === 'sg' ? 'singular' : 'plural'}</th>`).join('')}</tr>
       ${Morph.CASES_X.filter(c => nums.some(n => a.tbl[c + '.' + n])).map(c => `<tr><th>${c}.</th>${nums.map(n => `<td>${cell(a, c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table></div>`;
   }
@@ -980,7 +980,7 @@
     if (!a.skip) {
       const T = (cols, rows, get) => `<table><tr><th></th>${cols.map(c => `<th>${c}</th>`).join('')}</tr>${rows.map(r => `<tr><th>${r}</th>${cols.map(c => `<td>${esc((get(r, c) || ['–']).join(' / '))}</td>`).join('')}</tr>`).join('')}</table>`;
       if (a.kind === 'verb') forms = verbGroups(a, null, null) + (a.noPassiveWhy ? `<div class="small muted">No passive: ${esc(a.noPassiveWhy)}.</div>` : '') + (a.note ? `<div class="small muted">${esc(a.note)}</div>` : '');
-      else if (a.kind === 'noun' || a.pron === 'pers') forms = T(['sg', 'pl'].filter(n => a.tbl['nom.' + n] || a.tbl['gen.' + n]), Morph.CASES_X.filter(r => a.tbl[r + '.sg'] || a.tbl[r + '.pl']), (r, c) => a.tbl[r + '.' + c]);
+      else if (a.kind === 'noun' || a.pron === 'pers') forms = T(['sg', 'pl'].filter(n => Morph.CASES_X.some(c => a.tbl[c + '.' + n])), Morph.CASES_X.filter(r => a.tbl[r + '.sg'] || a.tbl[r + '.pl']), (r, c) => a.tbl[r + '.' + c]);
       else forms = ['sg', 'pl'].map(n => T(['m', 'f', 'n'].filter(g => a.tbl[g + '.nom.' + n]), Morph.CASES_X.filter(r => a.tbl['m.' + r + '.' + n] || a.tbl['f.' + r + '.' + n]), (r, g) => a.tbl[g + '.' + r + '.' + n])).join('<div style="height:6px"></div>');
     }
     return `<div class="answer small"><div>Diederich section ${w.s || '–'}.${w.ss || ''} · frequency ${w.f != null ? w.f : '–'} · ${POS_SHORT[w.pos]}</div>

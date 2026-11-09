@@ -393,11 +393,23 @@
     'Iuppiter': cells(['Iuppiter', 'Iovis', 'Iovī', 'Iovem', 'Iove'], null),
     'iter': cells(['iter', 'itineris', 'itinerī', 'iter', 'itinere'], ['itinera', 'itinerum', 'itineribus', 'itinera', 'itineribus']),
   };
-  const GPL_UM = ['pater', 'māter', 'frāter', 'canis', 'iuvenis', 'senex', 'sēdēs', 'vātēs', 'parēns', 'mēnsis', 'apis', 'volucris'];
-  const GPL_BOTH = ['parēns', 'mēnsis', 'vātēs', 'apis', 'volucris', 'mūs', 'fraus', 'laus', 'cliēns', 'sapiēns', 'adulēscēns', 'cīvitās', 'aetās'];
-  const GPL_IUM_X = ['os', 'cor', 'carō', 'imber', 'linter', 'venter', 'ūter', 'nix', 'līs', 'mās', 'glīs', 'faux', 'fauces'];
+  // gen. pl. -um, not the i-stem -ium (A&G §78). parēns and mēnsis are mixed i-stems (§71, §78 "sometimes").
+  const GPL_UM = ['pater', 'māter', 'frāter', 'canis', 'iuvenis', 'senex', 'sēdēs', 'vātēs', 'apis', 'volucris'];
+  // both gen. pl. endings. i-stems lead with -ium; the others lead with -um (A&G §71, §78).
+  const GPL_BOTH = ['parēns', 'mēnsis', 'vātēs', 'mūs', 'fraus', 'cliēns', 'sapiēns', 'adulēscēns', 'cīvitās', 'aetās'];
+  const GPL_IUM_X = ['carō', 'imber', 'linter', 'venter', 'ūter', 'nix', 'līs', 'mās', 'glīs', 'faux', 'fauces']; // cor, os: no classical gen. pl. (A&G §103.g)
+  const GPL_UM_SOMETIMES = ['caedēs', 'clādēs'];   // A&G §78: sometimes -um beside -ium
+  // A&G §71.6: mixed i-stems even though the oblique stem ends in one consonant.
+  const FORCE_ISTEM = ['fraus'];
+  // A&G §76.b.1: abl. sg. -ī is found sometimes. -e stays the form shown.
+  const ABL_I_SOMETIMES = ['avis', 'fīnis', 'ignis', 'imber', 'lūx', 'nāvis', 'ovis'];
   // source corrections: the list's entry is wrong or too short to decline from
-  const GEN_FIX = { 'senex': 'senis' };              // senex, senis (A&G 79): stem sen-, pl. senēs, gen. pl. senum
+  const GEN_FIX = {
+    'senex': 'senis',     // senex, senis (A&G §79.c): stem sen-, pl. senēs, gen. pl. senum
+    'plēbs': 'plēbis',    // abbreviated -is does not append to plēbs
+    'merx': 'mercis', 'cohors': 'cohortis', 'laus': 'laudis', 'fraus': 'fraudis', 'mors': 'mortis',
+    'coniūnx': 'coniugis',
+  };
   const GENDER_FIX = { 'castellum': 'n' };           // castellum, -ī is neuter (L&S; pl. castella)
   const UBUS = ['arcus'];                            // dat./abl. pl. arcubus (L&S; cf. A&G 68)
   const syl = s => (plain(s).match(/[aeiouy]+/g) || []).length;
@@ -413,7 +425,8 @@
     const neut = gender === 'n';
     let gRaw = parts[1];
     const plOnly = /(^|; )pl\.($|;)/.test(notes) || /^(ārum|ōrum|um|ium|uum|ērum)$/.test(gRaw.replace(/^-/, '')) && /(ae|ī|a|ēs)$/.test(nom);
-    if (/mostly|only/.test(notes) && !/gen\. pl/.test(notes)) return { skip: 'defective forms (' + notes + ')' };
+    // prex and frūx are defective, not undrillable (A&G §103.f): the missing cases are dropped below.
+    if (/mostly|only/.test(notes) && !/gen\. pl/.test(notes) && nom !== 'prex' && nom !== 'frūx') return { skip: 'defective forms (' + notes + ')' };
     let g = gRaw.replace(/^-/, '');
     let gen, decl, stem, nomFix = null, istemOut = false;
     const lastVowelStem = () => { // tempus,-oris -> temp
@@ -475,16 +488,26 @@
       if (/gen\. pl\. -um|gen\. pl\. \w+um\b/.test(notes) && !/-ium/.test(notes)) istem = false;
       if (/gen\. pl\. -ium/.test(notes)) istem = true;
       if (plOnly && /ium$/.test(g)) istem = true;
+      if (FORCE_ISTEM.includes(nom)) istem = true;
+      if (nom === 'cor' || nom === 'os') istem = false;   // gen. pl. is not classical (A&G §103.g); do not teach them as i-stems
       istemOut = istem;
       let gpl = istem ? stem + 'ium' : stem + 'um';
-      if (GPL_BOTH.includes(nom)) gpl = [stem + 'um', stem + 'ium'];
+      if (GPL_BOTH.includes(nom)) gpl = istem ? [stem + 'ium', stem + 'um'] : [stem + 'um', stem + 'ium'];
+      if (GPL_UM_SOMETIMES.includes(nom)) { const um = stem + 'um', both = [].concat(gpl); if (!both.includes(um)) both.push(um); gpl = both; }
       const acc = neut ? nom : stem + 'em';
       let abl = neutI ? stem + 'ī' : stem + 'e';
-      if (/abl\. sg\. -i/.test(notes)) abl = [stem + 'ī', stem + 'e'];
+      if (nom === 'famēs') abl = stem + 'ē';                       // always famē, never fame or famī (A&G §76 Note 1, §105.e)
+      else if (nom === 'mare') abl = [stem + 'ī', stem + 'e'];     // marī; mare sometimes (§76.a.3)
+      else if (/abl\. sg\. -i/.test(notes)) abl = [stem + 'ī', stem + 'e'];
+      else if (ABL_I_SOMETIMES.includes(nom)) abl = [abl, stem + 'ī'];
       const accS = /acc\. sg\. -im/.test(notes) ? [stem + 'im', stem + 'em'] : acc;
       sg = [nom, gen || stem + 'is', stem + 'ī', accS, abl];
       if (neut) pl = [stem + (neutI ? 'ia' : 'a'), gpl, stem + 'ibus', stem + (neutI ? 'ia' : 'a'), stem + 'ibus'];
       else pl = [stem + 'ēs', gpl, stem + 'ibus', istem ? [stem + 'ēs', stem + 'īs'] : stem + 'ēs', stem + 'ibus'];
+      // A&G §71: nouns in -tās, and sēdēs / vātēs, take acc. pl. -īs or -ēs. -ēs stays the form shown (§77).
+      if (!neut && (/tās$/.test(nom) || nom === 'sēdēs' || nom === 'vātēs')) { const is = stem + 'īs', both = [].concat(pl[3]); if (!both.includes(is)) both.push(is); pl[3] = both; }
+      // plēbs: nom/acc pl. plēbēs is attested; gen/dat/abl pl. are Late Latin, and plēbum is medieval.
+      if (nom === 'plēbs') { pl[1] = null; pl[2] = null; pl[4] = null; pl[3] = stem + 'ēs'; }
       if (plOnly) { sg = null; pl[0] = nom; pl[3] = neut ? nom : [nom].concat(pl[3]).filter((v, i, a) => a.indexOf(v) === i); }
     }
     if (decl === 4) {
@@ -501,6 +524,16 @@
         const alt = f.replace(/^ch/, 'c');
         if (alt !== f && !tbl[k].includes(alt)) tbl[k].push(alt);
       }
+    }
+    if (decl === 3 || ['ops', 'prex', 'frūx', 'cor', 'os', 'mel', 'murmur', 'rūs', 'iūs', 'coniūnx'].includes(nom)) {
+      const drop = keys => { for (const k of keys) delete tbl[k]; };
+      // A&G §103.f: ops has no nom. sg. as a common noun (Ops is the goddess); dat. opī once only.
+      if (nom === 'ops') drop(['nom.sg', 'voc.sg', 'dat.sg']);
+      if (nom === 'prex') drop(['nom.sg', 'gen.sg', 'voc.sg']);   // §103.f: sg. precī, precem, prece
+      if (nom === 'frūx') drop(['nom.sg', 'voc.sg']);             // §103.f: sg. frūgis, frūgī, frūgem, frūge
+      if (nom === 'cor' || nom === 'os') drop(['gen.pl']);        // §103.g: cordium is late (Vulgate); ossium is late
+      if (['mel', 'murmur', 'rūs', 'iūs'].includes(nom)) drop(['gen.pl', 'dat.pl', 'abl.pl']); // §103.g: plural nom/acc only (iūrum is Old Latin)
+      if (nom === 'coniūnx') for (const k of ['nom.sg', 'voc.sg']) if (tbl[k] && !tbl[k].includes('coniux')) tbl[k].push('coniux');
     }
     return { kind: 'noun', decl, g: gender, istem: decl === 3 ? istemOut : false, plOnly, flag: nomFix ? 'nominative -ā shortened to -a (A&G §40)' : null, tbl };
   }
