@@ -211,7 +211,7 @@ for (const [h, key] of [['egō', 'nom.pl'], ['nōs', 'nom.sg'], ['tū', 'voc.sg'
 { const [, a] = find('senex'); const ok = !Object.values(a.tbl).flat().some(f => /^senex./.test(f)); ok ? pass++ : fail++; if (!ok) console.log('FAIL senex stem', a.tbl); }
 { const [, a] = find('hic'); const ok = a.kind === 'pron' && a.pron === 'dem' && a.headKey === 'm.nom.sg'; ok ? pass++ : fail++; if (!ok) console.log('FAIL hic analysis', a); }
 for (const [h, p, n] of [['egō', 1, 'sg'], ['tū', 2, 'sg'], ['nōs', 1, 'pl'], ['vōs', 2, 'pl']]) { const [, a] = find(h); const ok = a.kind === 'pron' && a.pron === 'pers' && a.person === p && a.num === n && a.headKey === 'nom.' + n; ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun analysis', h, a); }
-for (const h of ['mē', 'is', 'quī', 'ipse', 'sē']) { const [, a] = find(h); const ok = !!a.skip; ok ? pass++ : fail++; if (!ok) console.log('FAIL other pronouns stay undrilled', h); }
+for (const h of ['mē', 'mihi', 'mēcum', 'tē', 'tēcum', 'tibi', 'nōbīs', 'vōbīs', 'sibi', 'sēcum', 'cui']) { const [, a] = find(h); const ok = !!a.skip && /^case form of /.test(a.skip); ok ? pass++ : fail++; if (!ok) console.log('FAIL case-form pronoun', h, a.skip); }
 for (const [k, exp] of [['dat.sg', 'dative singular'], ['n.abl.sg', 'neuter ablative singular']]) { const l = M.label('pron', k); const ok = l === exp; ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun label', k, l); }
 // v19 accuracy release (A&G §201, §203.a; Lewis & Short)
 const ok19 = (cond, ...msg) => { cond ? pass++ : fail++; if (!cond) console.log('FAIL v19', ...msg); };
@@ -533,7 +533,8 @@ ok19(!M.check('dīgnus', tb('dignus')['m.nom.sg'], true) && !M.check('benīgnus'
 // ego: short o. mī stays accepted. egō does not.
 { const e = W.find(x => x.id === 479); ok19(e.la === 'ego', 'ego headword', e.la); t('ego', 'nom.sg', 'ego'); t('ego', 'dat.sg', 'mihi');
   ok19(tb('ego')['nom.sg'].join() === 'ego' && M.check('mī', tb('ego')['dat.sg'], true) && !M.check('egō', tb('ego')['nom.sg'], true), 'ego', tb('ego')['nom.sg']); }
-{ const e = W.find(x => x.id === 499); ok19(e.la === 'alius, -a, -ud (gen. alterīus, dat. aliī)', 'alius headword', e.la); ok19(!!find('alius')[1].skip, 'alius stays undrilled'); }
+{ const e = W.find(x => x.id === 499); ok19(e.la === 'alius, -a, -ud (gen. alterīus, dat. aliī)', 'alius headword', e.la);
+  ok19(tb('alius')['m.gen.sg'].join() === 'alterīus' && tb('alius')['n.nom.sg'].join() === 'aliud' && tb('alius')['m.dat.sg'].join() === 'aliī' && !tb('alius')['m.voc.sg'], 'alius genitive and neuter', tb('alius')['m.gen.sg'], tb('alius')['n.nom.sg']); }
 // Kept on purpose.
 ok19(tb('hic')['n.nom.sg'][0] === 'hoc' && tb('hic')['m.abl.sg'][0] === 'hōc' && tb('hic')['m.dat.pl'].join() === 'hīs' && !M.check('hibus', tb('hic')['m.dat.pl'], true), 'hic: no old hibus');
 ok19(tb('ille')['m.gen.sg'].join() === 'illīus' && tb('ille')['n.nom.sg'].join() === 'illud' && !M.check('illius', tb('ille')['m.gen.sg'], true), 'ille genitive stays long');
@@ -621,6 +622,62 @@ t('edō', 'pres.3s', 'edit'); ok19(M.check('ēst', tb('edō')['ind.act.pres.3s']
   }
   ok19(leadIs === 0 && leadEs >= 120, 'every adjective acc. pl. that has both endings shows -ēs', leadIs, leadEs);
   console.log(`${multi} multi-form cells; ${leadEs} adjective accusative plurals show -ēs beside -īs`);
+}
+// v33: the remaining pronouns (A&G §§144, 146–151, §113). Every cell, standard first.
+{
+  const CS = M.CASES;
+  const cellOk = (h, key, exp) => {
+    const a = find(h)[1], got = a.tbl[key];
+    const ok = exp == null ? !got : !!got && got.join(',') === [].concat(exp).join(',');
+    ok ? pass++ : fail++; if (!ok) console.log('FAIL pronoun cell', h, key, 'expected', exp, 'got', got);
+  };
+  const grid = (h, g, rows) => { if (!g) return; rows.forEach((row, ni) => row.forEach((exp, ci) => cellOk(h, `${g}.${CS[ci]}.${ni ? 'pl' : 'sg'}`, exp))); };
+  const both = (sg, pl) => { for (const g of ['m', 'f', 'n']) grid(null, g, [sg, pl]); };
+  const eis = ['eīs', 'iīs', 'īs'], eiPl = ['eī', 'iī', 'ī'], eidem = ['eīsdem', 'īsdem', 'iīsdem'], qbus = ['quibus', 'quīs'];
+  const tables = {
+    is: { m: [['is', 'eius', ['eī', 'ēī'], 'eum', 'eō'], [eiPl, 'eōrum', eis, 'eōs', eis]], f: [['ea', 'eius', ['eī', 'ēī'], 'eam', 'eā'], ['eae', 'eārum', eis, 'eās', eis]], n: [['id', 'eius', ['eī', 'ēī'], 'id', 'eō'], ['ea', 'eōrum', eis, 'ea', eis]] },
+    'īdem': { m: [['īdem', 'eiusdem', 'eīdem', 'eundem', 'eōdem'], [['īdem', 'eīdem', 'iīdem'], 'eōrundem', eidem, 'eōsdem', eidem]], f: [['eadem', 'eiusdem', 'eīdem', 'eandem', 'eādem'], ['eaedem', 'eārundem', eidem, 'eāsdem', eidem]], n: [['idem', 'eiusdem', 'eīdem', 'idem', 'eōdem'], ['eadem', 'eōrundem', eidem, 'eadem', eidem]] },
+    iste: { m: [['iste', 'istīus', 'istī', 'istum', 'istō'], ['istī', 'istōrum', 'istīs', 'istōs', 'istīs']], f: [['ista', 'istīus', 'istī', 'istam', 'istā'], ['istae', 'istārum', 'istīs', 'istās', 'istīs']], n: [['istud', 'istīus', 'istī', 'istud', 'istō'], ['ista', 'istōrum', 'istīs', 'ista', 'istīs']] },
+    ipse: { m: [['ipse', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsī', 'ipsōrum', 'ipsīs', 'ipsōs', 'ipsīs']], f: [['ipsa', 'ipsīus', 'ipsī', 'ipsam', 'ipsā'], ['ipsae', 'ipsārum', 'ipsīs', 'ipsās', 'ipsīs']], n: [['ipsum', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsa', 'ipsōrum', 'ipsīs', 'ipsa', 'ipsīs']] },
+    'quī': { m: [[['quī', 'quis'], 'cuius', 'cui', 'quem', 'quō'], ['quī', 'quōrum', qbus, 'quōs', qbus]], f: [['quae', 'cuius', 'cui', 'quam', 'quā'], ['quae', 'quārum', qbus, 'quās', qbus]], n: [[['quod', 'quid'], 'cuius', 'cui', ['quod', 'quid'], 'quō'], ['quae', 'quōrum', qbus, 'quae', qbus]] },
+  };
+  for (const h of Object.keys(tables)) for (const g of ['m', 'f', 'n']) grid(h, g, tables[h][g]);
+  const qui = (h, suf, o) => {
+    o = o || {}; const A = s => s + suf, bus = A('quibus');
+    grid(h, 'm', [[o.msg || A('quī'), A('cuius'), A('cui'), o.accM || A('quem'), A('quō')], [A('quī'), o.genM || A('quōrum'), bus, A('quōs'), bus]]);
+    grid(h, 'f', [[A('quae'), A('cuius'), A('cui'), o.accF || A('quam'), A('quā')], [A('quae'), o.genF || A('quārum'), bus, A('quās'), bus]]);
+    grid(h, 'n', [[o.nsg || A('quod'), A('cuius'), A('cui'), o.nsg || A('quod'), A('quō')], [A('quae'), o.genN || A('quōrum'), bus, A('quae'), bus]]);
+  };
+  grid('aliquis', 'm', [[['aliquis', 'aliquī'], 'alicuius', 'alicui', 'aliquem', 'aliquō'], ['aliquī', 'aliquōrum', 'aliquibus', 'aliquōs', 'aliquibus']]);
+  grid('aliquis', 'f', [['aliqua', 'alicuius', 'alicui', 'aliquam', 'aliquā'], ['aliquae', 'aliquārum', 'aliquibus', 'aliquās', 'aliquibus']]);
+  grid('aliquis', 'n', [[['aliquid', 'aliquod'], 'alicuius', 'alicui', ['aliquid', 'aliquod'], 'aliquō'], ['aliqua', 'aliquōrum', 'aliquibus', 'aliqua', 'aliquibus']]);
+  qui('quīdam', 'dam', { nsg: ['quiddam', 'quoddam'], accM: 'quendam', accF: 'quandam', genM: 'quōrundam', genF: 'quārundam', genN: 'quōrundam' });
+  qui('quīlibet', 'libet', { nsg: ['quidlibet', 'quodlibet'] });
+  qui('quisque', 'que', { msg: ['quisque', 'quīque'], nsg: ['quidque', 'quodque'] });
+  qui('quisnam', 'nam', { msg: ['quisnam', 'quīnam'], nsg: ['quidnam', 'quodnam'] });
+  qui('quīcumque', 'cumque');
+  grid('quisquam', 'm', [['quisquam', 'cuiusquam', 'cuiquam', 'quemquam', 'quōquam'], [null, null, null, null, null]]);
+  grid('quisquam', 'f', [['quisquam', 'cuiusquam', 'cuiquam', 'quemquam', 'quōquam'], [null, null, null, null, null]]);
+  grid('quisquam', 'n', [[['quidquam', 'quicquam'], 'cuiusquam', 'cuiquam', ['quidquam', 'quicquam'], 'quōquam'], [null, null, null, null, null]]);
+  grid('quisquis', 'm', [['quisquis', null, null, null, 'quōquō'], [null, null, null, null, null]]);
+  grid('quisquis', 'f', [[null, null, null, null, 'quōquō'], [null, null, null, null, null]]);
+  grid('quisquis', 'n', [[['quidquid', 'quicquid'], null, null, ['quidquid', 'quicquid'], 'quōquō'], [null, null, null, null, null]]);
+  grid('alius', 'm', [['alius', 'alterīus', 'aliī', 'alium', 'aliō'], ['aliī', 'aliōrum', 'aliīs', 'aliōs', 'aliīs']]);
+  grid('alius', 'f', [['alia', 'alterīus', 'aliī', 'aliam', 'aliā'], ['aliae', 'aliārum', 'aliīs', 'aliās', 'aliīs']]);
+  grid('alius', 'n', [['aliud', 'alterīus', 'aliī', 'aliud', 'aliō'], ['alia', 'aliōrum', 'aliīs', 'alia', 'aliīs']]);
+  grid('uter', 'm', [['uter', 'utrīus', 'utrī', 'utrum', 'utrō'], ['utrī', 'utrōrum', 'utrīs', 'utrōs', 'utrīs']]);
+  grid('uter', 'f', [['utra', 'utrīus', 'utrī', 'utram', 'utrā'], ['utrae', 'utrārum', 'utrīs', 'utrās', 'utrīs']]);
+  grid('uter', 'n', [['utrum', 'utrīus', 'utrī', 'utrum', 'utrō'], ['utra', 'utrōrum', 'utrīs', 'utra', 'utrīs']]);
+  grid('uterque', 'm', [['uterque', 'utrīusque', 'utrīque', 'utrumque', 'utrōque'], ['utrīque', 'utrōrumque', 'utrīsque', 'utrōsque', 'utrīsque']]);
+  grid('uterque', 'f', [['utraque', 'utrīusque', 'utrīque', 'utramque', 'utrāque'], ['utraeque', 'utrārumque', 'utrīsque', 'utrāsque', 'utrīsque']]);
+  grid('uterque', 'n', [['utrumque', 'utrīusque', 'utrīque', 'utrumque', 'utrōque'], ['utraque', 'utrōrumque', 'utrīsque', 'utraque', 'utrīsque']]);
+  for (const [key, exp] of [['gen.sg', 'suī'], ['dat.sg', 'sibi'], ['acc.sg', ['sē', 'sēsē']], ['abl.sg', ['sē', 'sēsē']], ['gen.pl', 'suī'], ['dat.pl', 'sibi'], ['acc.pl', ['sē', 'sēsē']], ['abl.pl', ['sē', 'sēsē']], ['nom.sg', null], ['nom.pl', null]]) cellOk('sē', key, exp);
+  for (const [key, exp] of [['nom.sg', 'nēmō'], ['gen.sg', 'nūllīus'], ['dat.sg', 'nēminī'], ['acc.sg', 'nēminem'], ['abl.sg', 'nūllō'], ['nom.pl', null]]) cellOk('nēmō', key, exp);
+  for (const h of ['is', 'īdem', 'iste', 'ipse', 'quī', 'aliquis', 'quīdam', 'quisque', 'quisquam', 'quīlibet', 'quisnam', 'quīcumque', 'quisquis', 'alius', 'uter', 'uterque']) {
+    const keys = Object.keys(find(h)[1].tbl), bad = keys.filter(k => /voc|loc/.test(k));
+    bad.length ? fail++ : pass++; if (bad.length) console.log('FAIL vocative on', h, bad);
+  }
+  ok19(find('is')[1].par === 'pi' && find('sē')[1].par === 'pr' && find('quī')[1].par === 'pq' && find('nēmō')[1].par === 'pn' && !find('sē')[1].gcase && find('is')[1].gcase, 'pronoun paradigm keys');
 }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

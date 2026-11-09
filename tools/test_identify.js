@@ -143,6 +143,10 @@ eq('hic', 'huius', DEF, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('hic', 'hīs',
 eq('hic', 'haec', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('hic', 'hoc', DEF, ['n.nom.sg', 'n.acc.sg']); eq('hic', 'hōc', DEF, ['m.abl.sg', 'n.abl.sg']);
 eq('ille', 'illī', DEF, ['m.dat.sg', 'f.dat.sg', 'n.dat.sg', 'm.nom.pl']); eq('ille', 'illa', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('ille', 'illud', DEF, ['n.nom.sg', 'n.acc.sg']);
 eq('ille', 'illā', DEF, ['f.abl.sg']); eq('ille', 'illīs', Object.assign({}, DEF, { cases: ['dat'] }), ['m.dat.pl', 'f.dat.pl', 'n.dat.pl']);
+eq('is', 'eī', DEF, ['m.dat.sg', 'f.dat.sg', 'n.dat.sg', 'm.nom.pl']); eq('is', 'iī', DEF, []); eq('is', 'eīs', DEF, ['m.dat.pl', 'f.dat.pl', 'n.dat.pl', 'm.abl.pl', 'f.abl.pl', 'n.abl.pl']);
+eq('sē', 'sē', DEF, ['acc.sg', 'abl.sg', 'acc.pl', 'abl.pl']); eq('sē', 'suī', DEF, ['gen.sg', 'gen.pl']); eq('nēmō', 'nūllīus', DEF, ['gen.sg']);
+{ const [, a] = find('is'); const rs = Object.fromEntries(I.rows(a, ALL)); ok(Object.keys(rs).join() === 'case,num,gender', 'is rows are case / number / gender', Object.keys(rs)); }
+{ const [, a] = find('sē'); const rs = Object.fromEntries(I.rows(a, ALL)); ok(Object.keys(rs).join() === 'case,num' && !a.tbl['nom.sg'], 'sē rows have no gender and no nominative', Object.keys(rs)); }
 { const [w, a] = find('egō'); const rs = Object.fromEntries(I.rows(a, ALL)); ok(Object.keys(rs).join() === 'case,num', 'personal pronoun rows are case / number', Object.keys(rs));
   ok(I.attrs(a, w, 'gen.sg').gender === undefined, 'personal pronoun has no gender attribute'); }
 { const [, a] = find('ille'); const rs = Object.fromEntries(I.rows(a, ALL)); ok(Object.keys(rs).join() === 'case,num,gender', 'hic / ille rows are case / number / gender', Object.keys(rs)); }

@@ -120,7 +120,7 @@
     if (!a || a.skip || !a.kind) return null;
     if (a.kind === 'verb') return 'v' + (a.conj === 'irr' ? (IRR_PAR[a.irr] || 'irr') : String(a.conj));
     if (a.kind === 'noun') return 'n' + (a.decl === 3 && a.istem ? '3i' : a.decl);
-    if (a.kind === 'pron') return a.pron === 'pers' ? 'pp' : 'pd';
+    if (a.kind === 'pron') return a.par || (a.pron === 'pers' ? 'pp' : 'pd');
     return 'a' + (a.decl === 3 ? '3' : '12');
   }
   function splitCombo(c) { const i = c.indexOf('|'); return [c.slice(0, i), c.slice(i + 1)]; }
@@ -155,11 +155,11 @@
       const parts = key.split('.');
       return dfHas(df, 'cases', parts[1]) && dfHas(df, 'nums', parts[2]);
     }
-    if (par === 'pp' || par === 'pd') {
+    if (par[0] === 'p') {
       if (!dfHas(df, 'types', 'pron')) return false;
       const parts = key.split('.');
-      const kase = par === 'pp' ? parts[0] : parts[1];
-      const num = par === 'pp' ? parts[1] : parts[2];
+      const kase = parts.length === 2 ? parts[0] : parts[1];
+      const num = parts.length === 2 ? parts[1] : parts[2];
       return dfHas(df, 'cases', kase) && dfHas(df, 'nums', num);
     }
     return false;
@@ -171,11 +171,11 @@
       const [mood, voice, tense, pn] = key.split('.');
       return mood === 'ind' && (voice === 'act' || voice === 'pas' || voice === 'dep') && !!T[tense] && /^[123][sp]$/.test(pn || '');
     }
-    if (par[0] === 'n' || par === 'pp') {
+    if (par[0] === 'n' || (par[0] === 'p' && key.split('.').length === 2)) {
       const [kase, num] = key.split('.');
       return (kase === 'nom' || kase === 'acc' || kase === 'dat' || kase === 'abl') && (num === 'sg' || num === 'pl');
     }
-    if (par[0] === 'a' || par === 'pd') {
+    if (par[0] === 'a' || (par[0] === 'p' && key.split('.').length === 3)) {
       const p = key.split('.');
       return p.length === 3 && (p[0] === 'm' || p[0] === 'f' || p[0] === 'n') && (p[1] === 'nom' || p[1] === 'acc' || p[1] === 'dat' || p[1] === 'abl') && (p[2] === 'sg' || p[2] === 'pl');
     }

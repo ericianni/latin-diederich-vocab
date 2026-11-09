@@ -61,7 +61,7 @@
   function attrs(a, w, key) {
     if (a.kind === 'noun') { const [c, n] = key.split('.'); return { case: c, num: n, gender: genders(w, a), decl: String(a.decl) }; }
     if (a.kind === 'adj') { const [g, c, n] = key.split('.'); return { case: c, num: n, gender: [g], decl: a.decl === 3 ? '3' : '1/2' }; }
-    if (a.kind === 'pron') { const k = key.split('.'); return a.pron === 'pers' ? { case: k[0], num: k[1] } : { case: k[1], num: k[2], gender: [k[0]] }; }   // no declension row
+    if (a.kind === 'pron') { const k = key.split('.'); return a.gcase ? { case: k[1], num: k[2], gender: [k[0]] } : { case: k[0], num: k[1] }; }   // no declension row
     const [base, sub] = key.split(':'), p = base.split('.'), mood = p[0];
     const decl = sub ? (([g, c, n]) => ({ case: c, num: n, gender: [g] }))(sub.split('.')) : {};
     if (mood === 'ger') return { mood, case: p[1] };
@@ -151,7 +151,7 @@
     if (a.kind === 'adj') return [['case', opts('case', CX.filter(c => df.cases.includes(c)))], ['num', opts('num', ['sg', 'pl'].filter(n => df.nums.includes(n)))],
       ['gender', opts('gender', ['m', 'f', 'n'])], ['decl', opts('decl', [df.decl.includes('1') || df.decl.includes('2') ? '1/2' : null, df.decl.includes('3') ? '3' : null].filter(Boolean))]];
     if (a.kind === 'pron') return [['case', opts('case', CX.filter(c => df.cases.includes(c)))], ['num', opts('num', ['sg', 'pl'].filter(n => df.nums.includes(n)))]]
-      .concat(a.pron === 'dem' ? [['gender', opts('gender', ['m', 'f', 'n'])]] : []);
+      .concat(a.gcase ? [['gender', opts('gender', ['m', 'f', 'n'])]] : []);
     const on = ORDER.mood.filter(m => df.moods.includes(m)), moods = or(on.filter(m => moodPossible(m, df)), on), r = [['mood', opts('mood', moods)]];
     const m = mood || (moods.length === 1 ? moods[0] : null);
     if (!m) return r;

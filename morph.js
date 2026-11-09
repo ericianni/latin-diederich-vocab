@@ -728,28 +728,121 @@
     return { kind: 'adj', decl: 3, tbl: T };
   }
   // ---------- pronouns ----------
-  // Personal pronouns (A&G 143) take case.num keys like nouns; hic and ille (A&G 146) take g.case.num keys like
-  // adjectives. No vocatives: A&G gives none. Diederich lists ego/nōs and tū/vōs as separate words, so each has one number.
+  // Personal pronouns (A&G §143) use case.num keys. Demonstratives, relatives, and indefinites use g.case.num
+  // keys, like hic / ille. No vocative: A&G gives none for these. A cell's first form is the one A&G prints first.
+  // Diederich lists ego/nōs and tū/vōs as separate words, so each personal pronoun has one number.
+  // A null slot is omitted (sē has no nominative; quisquis keeps only the forms A&G calls common).
+  function pronTbl(m, f, n) {
+    const o = {};
+    for (const [gk, a] of [['m', m], ['f', f], ['n', n]]) {
+      if (!a) continue;
+      CASES.forEach((c, i) => {
+        if (a[0] && a[0][i] != null) o[gk + '.' + c + '.sg'] = [].concat(a[0][i]);
+        if (a[1] && a[1][i] != null) o[gk + '.' + c + '.pl'] = [].concat(a[1][i]);
+      });
+    }
+    return o;
+  }
+  // quī + an indeclinable tail (A&G §151). nsg/msg may be [standard, alternate].
+  function qComp(suf, o) {
+    o = o || {};
+    const A = s => s + suf, bus = A('quibus');
+    return pronTbl(
+      [[o.msg || A('quī'), A('cuius'), A('cui'), o.accM || A('quem'), A('quō')], [A('quī'), o.genM || A('quōrum'), bus, A('quōs'), bus]],
+      [[A('quae'), A('cuius'), A('cui'), o.accF || A('quam'), A('quā')], [A('quae'), o.genF || A('quārum'), bus, A('quās'), bus]],
+      [[o.nsg || A('quod'), A('cuius'), A('cui'), o.nsg || A('quod'), A('quō')], [A('quae'), o.genN || A('quōrum'), bus, A('quae'), bus]]);
+  }
+  const eiPl = ['eī', 'iī', 'ī'], eis = ['eīs', 'iīs', 'īs'];   // A&G §146: eī, iī (ī); eīs, iīs (īs)
+  const eisdem = ['eīsdem', 'īsdem', 'iīsdem'];
   const PRON = {
     // L&S: ĕgŏ in the poets of the best age; final ō is ante-classical and post-Augustan. mī for mihi is classical prose (Cicero) as well as verse.
-    'ego': { pron: 'pers', person: 1, tbl: () => cells(['ego', 'meī', ['mihi', 'mī'], 'mē', 'mē'], null) },
-    'nōs': { pron: 'pers', person: 1, tbl: () => cells(null, ['nōs', ['nostrum', 'nostrī'], 'nōbīs', 'nōs', 'nōbīs']) },
-    'tū': { pron: 'pers', person: 2, tbl: () => cells(['tū', 'tuī', 'tibi', 'tē', 'tē'], null) },
-    'vōs': { pron: 'pers', person: 2, tbl: () => cells(null, ['vōs', ['vestrum', 'vestrī'], 'vōbīs', 'vōs', 'vōbīs']) },
-    'hic': { pron: 'dem', tbl: () => adjTbl(
+    'ego': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 1, blurb: '1st-person personal pronoun, singular', tbl: () => cells(['ego', 'meī', ['mihi', 'mī'], 'mē', 'mē'], null) },
+    'nōs': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 1, blurb: '1st-person personal pronoun, plural', tbl: () => cells(null, ['nōs', ['nostrum', 'nostrī'], 'nōbīs', 'nōs', 'nōbīs']) },
+    'tū': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 2, blurb: '2nd-person personal pronoun, singular', tbl: () => cells(['tū', 'tuī', 'tibi', 'tē', 'tē'], null) },
+    'vōs': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 2, blurb: '2nd-person personal pronoun, plural', tbl: () => cells(null, ['vōs', ['vestrum', 'vestrī'], 'vōbīs', 'vōs', 'vōbīs']) },
+    // A&G §144. Same forms in both numbers. sēsē is the reduplicated accusative/ablative. No nominative.
+    'sē': { pron: 'refl', par: 'pr', sheet: 'cs-p-refl', gcase: false, headKey: null, blurb: 'reflexive pronoun (no nominative; singular and plural are the same)', tbl: () => cells([null, 'suī', 'sibi', ['sē', 'sēsē'], ['sē', 'sēsē']], [null, 'suī', 'sibi', ['sē', 'sēsē'], ['sē', 'sēsē']]) },
+    'hic': { pron: 'dem', par: 'pd', sheet: 'cs-p-dem', blurb: 'demonstrative pronoun', tbl: () => pronTbl(
       [['hic', 'huius', 'huic', 'hunc', 'hōc'], ['hī', 'hōrum', 'hīs', 'hōs', 'hīs']],
       [['haec', 'huius', 'huic', 'hanc', 'hāc'], ['hae', 'hārum', 'hīs', 'hās', 'hīs']],
       [['hoc', 'huius', 'huic', 'hoc', 'hōc'], ['haec', 'hōrum', 'hīs', 'haec', 'hīs']]) },
-    'ille': { pron: 'dem', tbl: () => adjTbl(
+    'ille': { pron: 'dem', par: 'pd', sheet: 'cs-p-dem', blurb: 'demonstrative pronoun', tbl: () => pronTbl(
       [['ille', 'illīus', 'illī', 'illum', 'illō'], ['illī', 'illōrum', 'illīs', 'illōs', 'illīs']],
       [['illa', 'illīus', 'illī', 'illam', 'illā'], ['illae', 'illārum', 'illīs', 'illās', 'illīs']],
       [['illud', 'illīus', 'illī', 'illud', 'illō'], ['illa', 'illōrum', 'illīs', 'illa', 'illīs']]) },
+    // A&G §146. Dat. sg. ēī is the note's alternate of eī. Nom. pl. m. eī, then iī (ī). Dat./abl. pl. eīs, then iīs (īs).
+    'is': { pron: 'dem', par: 'pi', sheet: 'cs-p-is', blurb: 'demonstrative pronoun is, ea, id', tbl: () => pronTbl(
+      [['is', 'eius', ['eī', 'ēī'], 'eum', 'eō'], [eiPl, 'eōrum', eis, 'eōs', eis]],
+      [['ea', 'eius', ['eī', 'ēī'], 'eam', 'eā'], ['eae', 'eārum', eis, 'eās', eis]],
+      [['id', 'eius', ['eī', 'ēī'], 'id', 'eō'], ['ea', 'eōrum', eis, 'ea', eis]]) },
+    // A&G §146 note 9. Nom. pl. m. is īdem, often written iīdem; eīdem is the eī- spelling in the paradigm. m becomes n before -dem.
+    'īdem': { pron: 'dem', par: 'pm', sheet: 'cs-p-is', blurb: 'demonstrative pronoun īdem, eadem, idem', tbl: () => pronTbl(
+      [['īdem', 'eiusdem', 'eīdem', 'eundem', 'eōdem'], [['īdem', 'eīdem', 'iīdem'], 'eōrundem', eisdem, 'eōsdem', eisdem]],
+      [['eadem', 'eiusdem', 'eīdem', 'eandem', 'eādem'], ['eaedem', 'eārundem', eisdem, 'eāsdem', eisdem]],
+      [['idem', 'eiusdem', 'eīdem', 'idem', 'eōdem'], ['eadem', 'eōrundem', eisdem, 'eadem', eisdem]]) },
+    'iste': { pron: 'dem', par: 'pt', sheet: 'cs-p-iste', blurb: 'demonstrative pronoun iste', tbl: () => pronTbl(
+      [['iste', 'istīus', 'istī', 'istum', 'istō'], ['istī', 'istōrum', 'istīs', 'istōs', 'istīs']],
+      [['ista', 'istīus', 'istī', 'istam', 'istā'], ['istae', 'istārum', 'istīs', 'istās', 'istīs']],
+      [['istud', 'istīus', 'istī', 'istud', 'istō'], ['ista', 'istōrum', 'istīs', 'ista', 'istīs']]) },
+    'ipse': { pron: 'dem', par: 'px', sheet: 'cs-p-iste', blurb: 'intensive pronoun ipse', tbl: () => pronTbl(
+      [['ipse', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsī', 'ipsōrum', 'ipsīs', 'ipsōs', 'ipsīs']],
+      [['ipsa', 'ipsīus', 'ipsī', 'ipsam', 'ipsā'], ['ipsae', 'ipsārum', 'ipsīs', 'ipsās', 'ipsīs']],
+      [['ipsum', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsa', 'ipsōrum', 'ipsīs', 'ipsa', 'ipsīs']]) },
+    // A&G §147. The list line is "quī, quis": the table is the relative (and the interrogative adjective).
+    // quis / quid are the substantive interrogative (A&G §148) and are accepted on those cells. Dat./abl. pl. quīs is classical (A&G §150.c).
+    'quī': { pron: 'rel', par: 'pq', sheet: 'cs-p-qui', blurb: 'relative pronoun quī, quae, quod', tbl: () => pronTbl(
+      [[['quī', 'quis'], 'cuius', 'cui', 'quem', 'quō'], ['quī', 'quōrum', ['quibus', 'quīs'], 'quōs', ['quibus', 'quīs']]],
+      [['quae', 'cuius', 'cui', 'quam', 'quā'], ['quae', 'quārum', ['quibus', 'quīs'], 'quās', ['quibus', 'quīs']]],
+      [[['quod', 'quid'], 'cuius', 'cui', ['quod', 'quid'], 'quō'], ['quae', 'quōrum', ['quibus', 'quīs'], 'quae', ['quibus', 'quīs']]]) },
+    // A&G §151.e. aliqua stands where aliquae would, except nom. pl. f. Substantive aliquid / aliquis shown; adjective aliquod / aliquī accepted.
+    'aliquis': { pron: 'indef', par: 'pa', sheet: 'cs-p-indef', blurb: 'indefinite pronoun aliquis', tbl: () => pronTbl(
+      [[['aliquis', 'aliquī'], 'alicuius', 'alicui', 'aliquem', 'aliquō'], ['aliquī', 'aliquōrum', 'aliquibus', 'aliquōs', 'aliquibus']],
+      [['aliqua', 'alicuius', 'alicui', 'aliquam', 'aliquā'], ['aliquae', 'aliquārum', 'aliquibus', 'aliquās', 'aliquibus']],
+      [[['aliquid', 'aliquod'], 'alicuius', 'alicui', ['aliquid', 'aliquod'], 'aliquō'], ['aliqua', 'aliquōrum', 'aliquibus', 'aliqua', 'aliquibus']]) },
+    'quīdam': { pron: 'indef', par: 'pdm', sheet: 'cs-p-indef', blurb: 'indefinite pronoun quīdam', tbl: () => qComp('dam', { nsg: ['quiddam', 'quoddam'], accM: 'quendam', accF: 'quandam', genM: 'quōrundam', genF: 'quārundam', genN: 'quōrundam' }) },
+    'quīlibet': { pron: 'indef', par: 'pl', sheet: 'cs-p-indef', blurb: 'indefinite pronoun quīlibet', tbl: () => qComp('libet', { nsg: ['quidlibet', 'quodlibet'] }) },
+    'quisque': { pron: 'indef', par: 'pqe', sheet: 'cs-p-indef', blurb: 'indefinite pronoun quisque', tbl: () => qComp('que', { msg: ['quisque', 'quīque'], nsg: ['quidque', 'quodque'] }) },
+    // A&G §148.c: both the substantive (quisnam, quidnam) and the adjective (quīnam, quodnam).
+    'quisnam': { pron: 'indef', par: 'pqn', sheet: 'cs-p-indef', blurb: 'interrogative pronoun quisnam', tbl: () => qComp('nam', { msg: ['quisnam', 'quīnam'], nsg: ['quidnam', 'quodnam'] }) },
+    // A&G §151.d. Masculine and feminine share quisquam. Neuter quidquam (quicquam). No plural.
+    'quisquam': { pron: 'indef', par: 'pqh', sheet: 'cs-p-indef', blurb: 'indefinite pronoun quisquam (no plural)', tbl: () => pronTbl(
+      [['quisquam', 'cuiusquam', 'cuiquam', 'quemquam', 'quōquam'], null],
+      [['quisquam', 'cuiusquam', 'cuiquam', 'quemquam', 'quōquam'], null],
+      [[['quidquam', 'quicquam'], 'cuiusquam', 'cuiquam', ['quidquam', 'quicquam'], 'quōquam'], null]) },
+    'quīcumque': { pron: 'indef', par: 'pc', sheet: 'cs-p-indef', blurb: 'indefinite relative quīcumque', tbl: () => qComp('cumque') },
+    // A&G §151.b: only quisquis, quidquid (quicquid), and quōquō are in common use. quodquod is not one of them.
+    'quisquis': { pron: 'indef', par: 'pqq', sheet: 'cs-p-indef', blurb: 'indefinite relative quisquis (only the common forms)', tbl: () => pronTbl(
+      [['quisquis', null, null, null, 'quōquō'], null],
+      [[null, null, null, null, 'quōquō'], null],
+      [[['quidquid', 'quicquid'], null, null, ['quidquid', 'quicquid'], 'quōquō'], null]) },
+    // A&G §113. Genitive is alterīus, not alīus. Neuter aliud. Dative aliī.
+    'alius': { pron: 'adj', par: 'pal', sheet: 'cs-p-alius', blurb: 'pronominal adjective alius', tbl: () => pronTbl(
+      [['alius', 'alterīus', 'aliī', 'alium', 'aliō'], ['aliī', 'aliōrum', 'aliīs', 'aliōs', 'aliīs']],
+      [['alia', 'alterīus', 'aliī', 'aliam', 'aliā'], ['aliae', 'aliārum', 'aliīs', 'aliās', 'aliīs']],
+      [['aliud', 'alterīus', 'aliī', 'aliud', 'aliō'], ['alia', 'aliōrum', 'aliīs', 'alia', 'aliīs']]) },
+    'uter': { pron: 'adj', par: 'pu', sheet: 'cs-p-alius', blurb: 'pronominal adjective uter', tbl: () => pronTbl(
+      [['uter', 'utrīus', 'utrī', 'utrum', 'utrō'], ['utrī', 'utrōrum', 'utrīs', 'utrōs', 'utrīs']],
+      [['utra', 'utrīus', 'utrī', 'utram', 'utrā'], ['utrae', 'utrārum', 'utrīs', 'utrās', 'utrīs']],
+      [['utrum', 'utrīus', 'utrī', 'utrum', 'utrō'], ['utra', 'utrōrum', 'utrīs', 'utra', 'utrīs']]) },
+    'uterque': { pron: 'adj', par: 'puq', sheet: 'cs-p-alius', blurb: 'pronominal adjective uterque', tbl: () => pronTbl(
+      [['uterque', 'utrīusque', 'utrīque', 'utrumque', 'utrōque'], ['utrīque', 'utrōrumque', 'utrīsque', 'utrōsque', 'utrīsque']],
+      [['utraque', 'utrīusque', 'utrīque', 'utramque', 'utrāque'], ['utraeque', 'utrārumque', 'utrīsque', 'utrāsque', 'utrīsque']],
+      [['utrumque', 'utrīusque', 'utrīque', 'utrumque', 'utrōque'], ['utraque', 'utrōrumque', 'utrīsque', 'utraque', 'utrīsque']]) },
+    // The list gives the classical defective singular: nēmō, nūllīus, nēminī, nēminem, nūllō. No plural.
+    'nēmō': { pron: 'ndef', par: 'pn', sheet: 'cs-p-nemo', gcase: false, decl: 'irr', blurb: 'defective pronoun nēmō (singular only)', tbl: () => cells(['nēmō', 'nūllīus', 'nēminī', 'nēminem', 'nūllō'], null) },
   };
+  // Separate list lines that are one case of a pronoun drilled under its headword.
+  const CASEFORM = { 'mē': 'ego', 'mēcum': 'ego', 'mihi': 'ego', 'nōbīs': 'nōs', 'tē': 'tū', 'tēcum': 'tū', 'tibi': 'tū', 'vōbīs': 'vōs', 'sibi': 'sē', 'sēcum': 'sē', 'cui': 'quī' };
   function pronoun(e) {
-    const h = plain(e.la.split(/[ ,(]/)[0]) === 'ego' ? 'ego' : e.la.split(/[ ,(]/)[0], P0 = PRON[h];
+    const raw = e.la.split(/[ ,(]/)[0];
+    const h = plain(raw) === 'ego' ? 'ego' : raw;
+    if (CASEFORM[h]) return { skip: 'case form of ' + CASEFORM[h] };
+    const P0 = PRON[h];
     if (!P0) return { skip: 'pronoun (not drilled)' };
-    const tbl = P0.tbl(), head = P0.pron === 'dem' ? 'm.nom.sg' : tbl['nom.sg'] ? 'nom.sg' : 'nom.pl';
-    return { kind: 'pron', pron: P0.pron, person: P0.person || null, head: h, headKey: head, num: P0.pron === 'pers' ? (tbl['nom.sg'] ? 'sg' : 'pl') : null, tbl };
+    const tbl = P0.tbl();
+    const gcase = P0.gcase != null ? P0.gcase : !(P0.pron === 'pers' || P0.pron === 'refl' || P0.pron === 'ndef');
+    const head = P0.headKey !== undefined ? P0.headKey : (gcase ? 'm.nom.sg' : (tbl['nom.sg'] ? 'nom.sg' : (tbl['nom.pl'] ? 'nom.pl' : null)));
+    return { kind: 'pron', pron: P0.pron, par: P0.par, person: P0.person || null, head: h, headKey: head, gcase, sheet: P0.sheet, blurb: P0.blurb || '', decl: P0.decl || null, num: P0.pron === 'pers' ? (tbl['nom.sg'] ? 'sg' : 'pl') : null, tbl };
   }
   function analyze(e) {
     try {

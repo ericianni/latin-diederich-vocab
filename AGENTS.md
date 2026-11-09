@@ -93,7 +93,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v32`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v33`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug` (signed with `~/.android/debug.keystore`).
@@ -118,10 +118,33 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 - Edit **root** web files, not `www/` (Capacitor mirror; currently lags root).
 - Display path: always `Morph.standard`; never join/`[0]` ad hoc in UI.
 - `Morph.norm` folds j/i, v/u and strips macrons; `normM` keeps macrons (`S.set.strictMac`, default off).
-- Pronouns not in `PRON` table return `{skip:'pronoun (not drilled)'}` (`is`, `īdem`, `iste`, `ipse`, `quī`/`quis`, `sē`, indefinites).
+- A pronoun that is only one case of a drilled headword (`mē`, `mihi`, `sibi`, `cui`, `mēcum`, `sēcum`, …) returns `{skip:'case form of …'}`. Every other pronoun on the list has a hand-written paradigm in `PRON` (A&G §§144, 146–151, §113). See Pronouns below.
 - Sentences page is separate (`sentences.html`); main app About links to it on web.
 - Drills can also mix sentences. That path is `DrillPick.pickDrillSentence` + the Drills UI, not `sentences.js`.
 - Homographs across **different** dictionary words are not And…? readings (question names its headword).
+
+## Pronouns
+
+`Morph` `PRON` (in `morph.js`). Personal pronouns and `sē` / `nēmō` use `case.number` keys (`gcase: false`). The others use `gender.case.number`, like `hic` / `ille`, and have no vocative. `DrillPick.paradigmOf` reads `a.par`. `sē` and `nēmō` share the noun side of drill weighting (`pr`, `pn`); the rest share the adjective side. The first form in a cell is the one A&G prints first.
+
+| Headword | `par` | Standard vs alternate |
+|----------|-------|------------------------|
+| ego, tū, nōs, vōs | `pp` | unchanged |
+| sē | `pr` | acc/abl `sē`, alternate `sēsē`. No nominative. Same in both numbers |
+| hic, ille | `pd` | unchanged |
+| is, ea, id | `pi` | nom. pl. m. `eī` (`iī`, `ī`); dat./abl. pl. `eīs` (`iīs`, `īs`); dat. sg. `eī` (`ēī`) |
+| īdem | `pm` | nom. pl. m. `īdem` (`eīdem`, `iīdem`); dat./abl. pl. `eīsdem` (`īsdem`, `iīsdem`). `eundem`, `eōrundem` (m → n before -dem) |
+| iste, ipse | `pt`, `px` | iste like ille (`istīus`, `istud`). ipse neuter `ipsum`, gen. `ipsīus` |
+| quī, quis | `pq` | relative / interrogative adjective. `quis` and `quid` accepted for `quī` and `quod`. Dat./abl. pl. `quibus`, alternate `quīs` |
+| aliquis | `pa` | substantive `aliquis`, `aliquid` shown; `aliquī`, `aliquod` accepted. `aliqua` except nom. pl. f. `aliquae` |
+| quīdam, quisque, quīlibet, quisnam | `pdm`, `pqe`, `pl`, `pqn` | neuter substantive `quid-` shown, adjective `quod-` accepted. quīdam: `quendam`, `quōrundam` |
+| quisquam | `pqh` | singular only. m. = f. `quisquam`. Neuter `quidquam` (`quicquam`) |
+| quīcumque | `pc` | quī + cumque, neuter `quodcumque` |
+| quisquis | `pqq` | only `quisquis`, `quidquid` (`quicquid`), `quōquō` |
+| alius, uter, uterque | `pal`, `pu`, `puq` | gen. `-īus`, dat. `-ī`. alius gen. `alterīus`, neuter `aliud` |
+| nēmō | `pn` | singular only: `nēmō`, `nūllīus`, `nēminī`, `nēminem`, `nūllō` |
+
+`is` and `sē` are not in the sentence engine’s helper list. That pool is the closed class the templates already know (prepositions, ego/tū/nōs/vōs, sum). Adding `is` or `sē` would mean new sentence patterns, so they stay out.
 
 ## Sentences in Drills
 
