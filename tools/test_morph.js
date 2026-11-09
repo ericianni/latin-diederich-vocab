@@ -401,8 +401,8 @@ ok19(tb('rūs')['loc.sg'][0] === 'rūrī' && M.check('rūre', tb('rūs')['loc.sg
 // Acc. pl. -īs is accepted, never shown first (A&G §71, §74.c, §77). Gen. pl. -um where §78 says so.
 t('mēnsis', 'gen.pl', 'mēnsium'); t('mēnsis', 'acc.pl', 'mēnsēs');
 ok19(M.check('mēnsum', tb('mēnsis')['gen.pl'], true) && M.check('mēnsīs', tb('mēnsis')['acc.pl'], true), 'mensis', tb('mēnsis')['gen.pl'], tb('mēnsis')['acc.pl']);
-t('parēns', 'gen.pl', 'parentium'); t('parēns', 'acc.pl', 'parentēs');
-ok19(M.check('parentum', tb('parēns')['gen.pl'], true) && M.check('parentīs', tb('parēns')['acc.pl'], true), 'parens', tb('parēns')['gen.pl']);
+t('parēns', 'gen.pl', 'parentum'); t('parēns', 'acc.pl', 'parentēs');
+ok19(M.check('parentium', tb('parēns')['gen.pl'], true) && M.check('parentīs', tb('parēns')['acc.pl'], true), 'parens', tb('parēns')['gen.pl']);
 t('sēdēs', 'gen.pl', 'sēdum'); t('sēdēs', 'acc.pl', 'sēdēs');
 ok19(M.check('sēdīs', tb('sēdēs')['acc.pl'], true) && !M.check('sēdium', tb('sēdēs')['gen.pl'], true), 'sedes', tb('sēdēs'));
 t('vātēs', 'gen.pl', 'vātum');
@@ -425,5 +425,49 @@ ok19(tb('bōs')['gen.pl'].join() === 'boum' && tb('bōs')['dat.pl'].join() === '
 ok19(!tb('vīs')['gen.sg'] && tb('vīs')['acc.pl'][0] === 'vīrēs' && M.check('vīrīs', tb('vīs')['acc.pl'], true), 'vis', tb('vīs'));
 { const a = M.analyze(W.find(x => x.id === 24)); ok19(!a.istem && a.tbl['nom.sg'][0] === 'hiems' && a.tbl['gen.pl'][0] === 'hiemum' && a.tbl['acc.pl'].join() === 'hiemēs', 'hiems', a.tbl['gen.pl'], a.tbl['acc.pl']); }
 ok19(tb('cīvis')['acc.pl'][0] === 'cīvēs' && M.check('cīvīs', tb('cīvis')['acc.pl'], true) && !tb('cīvis')['nom.pl'].includes('cīvīs'), 'civis acc -is not nominative', tb('cīvis'));
+// v28: 4th- and 5th-declension audit (Wiktionary tables, confirmed in A&G §§89–93, §98 and L&S).
+{ let n45 = 0;
+  for (const e of W) {
+    if (e.pos !== 'noun') continue;
+    const a = M.analyze(e);
+    const nom = e.la.split(/[ ,(]/)[0];
+    if (a.decl === 4 || a.decl === 5 || nom === 'domus') n45++;
+  }
+  ok19(n45 === 45, '4th- and 5th-declension nouns audited', n45); }
+// lacus: -ubus is the regular dat./abl. pl. (A&G §89, §92.c; L&S usually lacubus). lacibus is one Pliny citation.
+{ const e = W.find(x => x.id === 85); ok19(e.la === 'lacus, -ūs, m. (dat./abl. pl. -ubus)', 'lacus headword', e.la);
+  t('lacus', 'dat.pl', 'lacubus'); t('lacus', 'abl.pl', 'lacubus'); t('lacus', 'dat.sg', 'lacuī'); t('lacus', 'gen.sg', 'lacūs');
+  ok19(!M.check('lacibus', tb('lacus')['dat.pl'], true) && !M.check('lacibus', tb('lacus')['abl.pl'], true), 'no lacibus', tb('lacus')['dat.pl']); }
+// portus: portibus is the form shown (L&S: better); portubus is accepted (A&G §92.c). arcus stays arcubus only.
+t('portus', 'dat.pl', 'portibus'); t('portus', 'abl.pl', 'portibus');
+ok19(M.check('portubus', tb('portus')['dat.pl'], true) && M.check('portubus', tb('portus')['abl.pl'], true), 'portubus', tb('portus')['dat.pl']);
+ok19(tb('arcus')['dat.pl'].join() === 'arcubus' && !M.check('arcibus', tb('arcus')['dat.pl'], true), 'arcus ubus only', tb('arcus')['dat.pl']);
+// cornū like genū (A&G §89): dat. -ū, not -uī; gen. -ūs. No 2nd-declension cornum.
+t('cornū', 'nom.sg', 'cornū'); t('cornū', 'gen.sg', 'cornūs'); t('cornū', 'dat.sg', 'cornū'); t('cornū', 'nom.pl', 'cornua'); t('cornū', 'dat.pl', 'cornibus');
+ok19(tb('cornū')['gen.sg'].join() === 'cornūs' && !M.check('cornuī', tb('cornū')['dat.sg'], true) && !M.check('cornum', tb('cornū')['nom.sg'], true), 'cornu', tb('cornū'));
+// domus (A&G §93). domōrum is poetic; gen. sg. domī is Plautine. Locative domī stays.
+t('domus', 'dat.sg', 'domuī'); t('domus', 'abl.sg', 'domō'); t('domus', 'gen.pl', 'domuum'); t('domus', 'acc.pl', 'domōs'); t('domus', 'loc.sg', 'domī');
+ok19(M.check('domō', tb('domus')['dat.sg'], true) && M.check('domū', tb('domus')['abl.sg'], true) && M.check('domūs', tb('domus')['acc.pl'], true), 'domus alternates', tb('domus'));
+ok19(!M.check('domōrum', tb('domus')['gen.pl'], true) && !M.check('domī', tb('domus')['gen.sg'], true) && !tb('domus')['loc.pl'], 'domus: no poetic genitive', tb('domus')['gen.pl'], tb('domus')['gen.sg']);
+// A&G §98.a. fidēs: no plural. The others keep nom./acc. plural only.
+{ const a = find('fidēs')[1]; ok19(!a.tbl['nom.pl'] && !a.tbl['gen.pl'] && !a.tbl['dat.pl'] && !a.tbl['acc.pl'] && !a.tbl['abl.pl'] && !a.tbl['voc.pl'] && a.tbl['gen.sg'][0] === 'fideī' && a.tbl['abl.sg'][0] === 'fidē', 'fides singular only', a.tbl); }
+ok19(!M.check('fidē', tb('fidēs')['gen.sg'], true) && !M.check('fidī', tb('fidēs')['dat.sg'], true), 'fide and fidi are not the regular genitive');
+for (const [h, acc] of [['spēs', 'spem'], ['faciēs', 'faciem'], ['speciēs', 'speciem'], ['aciēs', 'aciem']]) {
+  t(h, 'acc.sg', acc); t(h, 'nom.pl', h); t(h, 'acc.pl', h);
+  ok19(!tb(h)['gen.pl'] && !tb(h)['dat.pl'] && !tb(h)['abl.pl'] && tb(h)['voc.pl'][0] === h, h + ' plural nom/acc only', tb(h)['gen.pl'], tb(h)['dat.pl']);
+}
+ok19(!M.check('spērum', [].concat(tb('spēs')['gen.pl']).filter(Boolean), true) && !M.check('spēbus', [].concat(tb('spēs')['dat.pl']).filter(Boolean), true), 'no late spes obliques');
+ok19(!M.check('faciērum', [].concat(tb('faciēs')['gen.pl']).filter(Boolean), true) && !M.check('speciēbus', [].concat(tb('speciēs')['dat.pl']).filter(Boolean), true) && !M.check('fōrmārum', [].concat(tb('speciēs')['gen.pl']).filter(Boolean), true), 'no facies/species obliques');
+t('diēs', 'gen.sg', 'diēī'); t('diēs', 'gen.pl', 'diērum'); t('diēs', 'dat.pl', 'diēbus'); t('rēs', 'gen.sg', 'reī'); t('rēs', 'gen.pl', 'rērum'); t('rēs', 'dat.pl', 'rēbus');
+ok19(!tb('diēs')['loc.sg'] && !M.check('diē', tb('diēs')['gen.sg'], true), 'dies: no locative, contracted die not the genitive shown', tb('diēs')['gen.sg']);
+// rēs pūblica agrees through both words.
+{ const a = M.analyze(W.find(x => x.id === 1230));
+  ok19(a.decl === 5 && a.g === 'f' && !a.skip, 'res publica analyzed', a.decl, a.g, a.skip);
+  for (const [k, f] of [['nom.sg', 'rēs pūblica'], ['gen.sg', 'reī pūblicae'], ['dat.sg', 'reī pūblicae'], ['acc.sg', 'rem pūblicam'], ['abl.sg', 'rē pūblicā'], ['voc.sg', 'rēs pūblica'],
+    ['nom.pl', 'rēs pūblicae'], ['gen.pl', 'rērum pūblicārum'], ['dat.pl', 'rēbus pūblicīs'], ['acc.pl', 'rēs pūblicās'], ['abl.pl', 'rēbus pūblicīs'], ['voc.pl', 'rēs pūblicae']])
+    ok19(a.tbl[k] && a.tbl[k][0] === f, 'res publica', k, f, a.tbl[k]); }
+// Kept on purpose: dat. sg. -uī (not the parenthetical -ū) for ordinary 4th-declension nouns; senātūs not senātī.
+t('manus', 'dat.sg', 'manuī'); t('senātus', 'gen.sg', 'senātūs'); t('exercitus', 'dat.pl', 'exercitibus');
+ok19(!M.check('manū', tb('manus')['dat.sg'], true) && !M.check('senātī', tb('senātus')['gen.sg'], true) && !M.check('currum', tb('currus')['gen.pl'], true), 'no dat -u, senati, or syncopated currum', tb('manus')['dat.sg'], tb('senātus')['gen.sg']);
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

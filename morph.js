@@ -387,13 +387,14 @@
   const NOUN_IRR = {
     'vīs': cells(['vīs', null, 'vī', 'vim', 'vī'],   // gen. sg. vīs is rare (A&G 79): not drilled
                   ['vīrēs', 'vīrium', 'vīribus', ['vīrēs', 'vīrīs'], 'vīribus']),
-    'domus': cells(['domus', 'domūs', ['domuī', 'domō'], 'domum', ['domō', 'domū']], ['domūs', ['domuum', 'domōrum'], 'domibus', ['domōs', 'domūs'], 'domibus']),
+    // A&G §93: domuī (domō), domō (domū), domōs (domūs), gen. pl. domuum. domōrum is poetic (Note 2; L&S). Gen. sg. domī is Plautine, not the locative.
+    'domus': cells(['domus', 'domūs', ['domuī', 'domō'], 'domum', ['domō', 'domū']], ['domūs', 'domuum', 'domibus', ['domōs', 'domūs'], 'domibus']),
     'deus': cells(['deus', 'deī', 'deō', 'deum', 'deō'], [['dī', 'deī', 'diī'], ['deōrum', 'deum'], ['dīs', 'deīs', 'diīs'], 'deōs', ['dīs', 'deīs', 'diīs']]),
     'bōs': cells(['bōs', 'bovis', 'bovī', 'bovem', 'bove'], ['bovēs', 'boum', ['bōbus', 'būbus'], 'bovēs', ['bōbus', 'būbus']]),
     'Iuppiter': cells(['Iuppiter', 'Iovis', 'Iovī', 'Iovem', 'Iove'], null),
     'iter': cells(['iter', 'itineris', 'itinerī', 'iter', 'itinere'], ['itinera', 'itinerum', 'itineribus', 'itinera', 'itineribus']),
   };
-  // gen. pl. -um, not the i-stem -ium (A&G §78). parēns and mēnsis are mixed i-stems (§71, §78 "sometimes").
+  // gen. pl. -um, not the i-stem -ium (A&G §78). mēnsis is a mixed i-stem (§71, §78 "sometimes"). parēns leads with parentum.
   const GPL_UM = ['pater', 'māter', 'frāter', 'canis', 'iuvenis', 'senex', 'sēdēs', 'vātēs', 'apis', 'volucris'];
   // both gen. pl. endings. i-stems lead with -ium; the others lead with -um (A&G §71, §78).
   const GPL_BOTH = ['parēns', 'mēnsis', 'vātēs', 'mūs', 'fraus', 'cliēns', 'sapiēns', 'adulēscēns', 'cīvitās', 'aetās'];
@@ -411,11 +412,19 @@
     'coniūnx': 'coniugis',
   };
   const GENDER_FIX = { 'castellum': 'n' };           // castellum, -ī is neuter (L&S; pl. castella)
-  const UBUS = ['arcus'];                            // dat./abl. pl. arcubus (L&S; cf. A&G 68)
+  // A&G §89 paradigm and §92.c: lacus regularly -ubus (L&S: usually lacubus; lacibus once in Pliny). arcus: grammarians' arcubus (L&S), not arcibus.
+  const UBUS = ['arcus', 'lacus'];
+  const UBUS_ALSO = ['portus'];                     // portibus is the better form (L&S); portubus also (A&G §92.c)
   const syl = s => (plain(s).match(/[aeiouy]+/g) || []).length;
   function noun(e) {
     const { parts, notes } = clean(e.la);
     const nom = parts[0];
+    if (nom === 'rēs pūblica') {
+      // rēs (5th, complete) + pūblica (1st/2nd feminine). Wiktionary: rēs pūblica, reī pūblicae, f.
+      const sg = ['rēs pūblica', 'reī pūblicae', 'reī pūblicae', 'rem pūblicam', 'rē pūblicā'];
+      const pl = ['rēs pūblicae', 'rērum pūblicārum', 'rēbus pūblicīs', 'rēs pūblicās', 'rēbus pūblicīs'];
+      return { kind: 'noun', decl: 5, g: 'f', istem: false, plOnly: false, flag: null, tbl: addVoc(cells(sg, pl), nom, 5, 'f') };
+    }
     if (NOUN_IRR[nom]) return { kind: 'noun', decl: 'irr', irr: nom, g: 'irr', tbl: addVoc(Object.assign({}, NOUN_IRR[nom]), nom, 'irr', 'irr') };
     if (/indecl/.test(notes) || /indecl/.test(e.la)) return { skip: 'indeclinable' };
     if (parts.length === 2) { const mm = parts[1].match(/^(\S+)\s+(m|f|n|mf|c)\.$/); if (mm) parts.splice(1, 1, mm[1], mm[2] + '.'); }
@@ -493,6 +502,7 @@
       istemOut = istem;
       let gpl = istem ? stem + 'ium' : stem + 'um';
       if (GPL_BOTH.includes(nom)) gpl = istem ? [stem + 'ium', stem + 'um'] : [stem + 'um', stem + 'ium'];
+      if (nom === 'parēns') gpl = [stem + 'um', stem + 'ium'];   // parentum is the usual prose form (L&S lists it first; Cic. Planc. 28). A&G §78 does not name parēns; parentium stays accepted.
       if (GPL_UM_SOMETIMES.includes(nom)) { const um = stem + 'um', both = [].concat(gpl); if (!both.includes(um)) both.push(um); gpl = both; }
       const acc = neut ? nom : stem + 'em';
       let abl = neutI ? stem + 'ī' : stem + 'e';
@@ -512,11 +522,17 @@
     }
     if (decl === 4) {
       const n = /ū$/.test(nom);
-      const dp = UBUS.includes(nom) ? stem + 'ubus' : /-ubus/.test(notes) ? [stem + 'ibus', stem + 'ubus'] : stem + 'ibus';
+      const dp = UBUS.includes(nom) ? stem + 'ubus' : UBUS_ALSO.includes(nom) || /-ubus/.test(notes) ? [stem + 'ibus', stem + 'ubus'] : stem + 'ibus';
       sg = n ? [nom, stem + 'ūs', stem + 'ū', nom, stem + 'ū'] : [nom, stem + 'ūs', stem + 'uī', stem + 'um', stem + 'ū'];
       pl = n ? [stem + 'ua', stem + 'uum', dp, stem + 'ua', dp] : [stem + 'ūs', stem + 'uum', dp, stem + 'ūs', dp];
     }
-    if (decl === 5) { sg = [nom, gen, gen, stem + 'em', stem + 'ē']; pl = [stem + 'ēs', stem + 'ērum', stem + 'ēbus', stem + 'ēs', stem + 'ēbus']; }
+    if (decl === 5) {
+      sg = [nom, gen, gen, stem + 'em', stem + 'ē']; pl = [stem + 'ēs', stem + 'ērum', stem + 'ēbus', stem + 'ēs', stem + 'ēbus'];
+      // A&G §98.a: only diēs and rēs are complete. fidēs has no plural (L&S gives none).
+      // aciēs, faciēs, speciēs, spēs: nominative and accusative plural only. faciērum, speciērum, speciēbus, spērum, spēbus are grammarians' or late (footnote; L&S).
+      if (nom === 'fidēs') pl = null;
+      else if (['aciēs', 'faciēs', 'speciēs', 'spēs'].includes(nom)) pl = [pl[0], null, null, pl[3], null];
+    }
     const tbl = addVoc(cells(sg, pl), nom, decl, gender);
     // c(h)arta: primary forms follow L&S charta; the spelling carta is the other reading of the entry (Wiktionary: alternative form)
     if (decl === 1 && /^c\(h\)arta\b/.test(e.la)) {
