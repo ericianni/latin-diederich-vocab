@@ -97,7 +97,13 @@
   const SUM = () => verbInfo('sum');
   // Latin verb: returns list of alternative token arrays. Perfect passive returns {ptc:[...], aux:[...]} pieces.
   function latinVerb(v, voice, tense, pn, g) {
-    if (voice === 'act') return v.tbl['ind.act.' + tense + '.' + pn].map(f => [f]);
+    if (voice === 'act') {
+      // A synthetic perfect (placuī) is the sentence form. A periphrastic alternate (placitus sum) agrees in gender, which this slot does not inflect.
+      let fs = v.tbl['ind.act.' + tense + '.' + pn];
+      const syn = fs.filter(f => !/\s/.test(f));
+      if (syn.length) fs = syn;
+      return fs.map(f => [f]);
+    }
     if (tense !== 'perf') return v.tbl['ind.pas.' + tense + '.' + pn].map(f => [f]);
     const num = pn[1] === 's' ? 'sg' : 'pl';
     return { ptc: g.map(gg => v.ptc[gg + '.nom.' + num][0]), aux: SUM().tbl['ind.act.pres.' + pn] };

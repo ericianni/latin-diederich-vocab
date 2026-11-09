@@ -539,5 +539,54 @@ ok19(tb('hic')['n.nom.sg'][0] === 'hoc' && tb('hic')['m.abl.sg'][0] === 'hōc' &
 ok19(tb('ille')['m.gen.sg'].join() === 'illīus' && tb('ille')['n.nom.sg'].join() === 'illud' && !M.check('illius', tb('ille')['m.gen.sg'], true), 'ille genitive stays long');
 ok19(tb('līber')['f.nom.sg'].join() === 'lībera' && tb('pulcher')['f.nom.sg'].join() === 'pulchra' && tb('miser')['m.gen.sg'].join() === 'miserī', 'liber keeps e, pulcher drops it');
 ok19(!find('potis')[1].tbl && !find('mīlle')[1].tbl, 'potis and mille stay outside the paradigm');
+// v30: verbs (Wiktionary tables, confirmed in A&G §§163, 184, 201 and L&S).
+{ let n = 0; for (const e of W) if (e.pos === 'verb') n++; ok19(n === 500, 'verbs audited', n); }
+// 1st-person -ō (A&G §163). 3rd-conj. infinitive -ere, not -ēre.
+{ const e = W.find(x => x.id === 641); ok19(e.la.startsWith('dūcō,'), 'duco headword', e.la); t('dūcō', 'imp.act.pres.2s', 'dūc'); }
+for (const h of ['dēdūcō', 'ēdūcō', 'redūcō', 'repetō']) ok19(find(h)[0].la.split(',')[0] === h, h + ' headword', find(h)[0].la);
+for (const h of ['accēdō', 'concēdō', 'dēcēdō', 'discēdō', 'excēdō', 'incēdō', 'prōcēdō', 'recēdō']) {
+  ok19(/, -ere,/.test(find(h)[0].la) && !find(h)[1].flag, h + ' infinitive -ere', find(h)[0].la, find(h)[1].flag);
+  t(h, 'inf.act.pres', h.replace(/ō$/, 'ere'));
+}
+// comitor is 1st conjugation (L&S cŏmĭtor, ātus, 1). The short -arī had made it 3rd.
+t('comitor', 'pres.3s', 'comitātur'); t('comitor', 'inf.dep.pres', 'comitārī'); t('comitor', 'imp.dep.pres.2s', 'comitāre');
+ok19(find('comitor')[1].conj === 1 && find('moror')[0].la.includes('-ārī') && find('hortor')[0].la.includes('-ārī') && find('veneror')[0].la.includes('-ārī'), 'deponent infinitive -ārī');
+// exorior follows the 3rd in the present, imperative, and imperfect subjunctive; infinitive exorīrī (L&S).
+t('exorior', 'pres.3s', 'exoritur'); t('exorior', 'ind.dep.pres.2s', 'exoreris'); t('exorior', 'inf.dep.pres', 'exorīrī');
+t('exorior', 'imp.dep.pres.2s', 'exorere'); t('exorior', 'sub.dep.impf.3s', 'exorerētur'); t('exorior', 'ptc.dep.fut', 'exoritūrus');
+ok19(!M.check('exorītur', tb('exorior')['ind.dep.pres.3s'], true) && !M.check('exorīrētur', tb('exorior')['sub.dep.impf.3s'], true) && !tb('exorior')['gdv.m'], 'exorior: no 4th-conj. present or impf. subj.');
+// L&S quantities: signĭfĭco, ignōro, dignor, pugno (short u). āctum stays (hidden long a; L&S leaves it unmarked).
+t('significō', 'pres.1s', 'significō'); t('ignōrō', 'pres.3s', 'ignōrat'); t('dignor', 'pres.3s', 'dignātur'); t('pugnō', 'fut.3p', 'pugnābunt');
+ok19(!M.check('sīgnificat', tb('significō')['ind.act.pres.3s'], true) && !M.check('īgnōrat', tb('ignōrō')['ind.act.pres.3s'], true) && !M.check('dīgnātur', tb('dignor')['ind.dep.pres.3s'], true) && !M.check('pūgnat', tb('pugnō')['ind.act.pres.3s'], true), 'rejected long vowels');
+ok19(tb('agō')['sup.um'][0] === 'āctum' && tb('agō')['ind.act.perf.1s'][0] === 'ēgī' && tb('dīcō')['ind.act.perf.1s'][0] === 'dīxī' && tb('legō')['ind.act.perf.1s'][0] === 'lēgī' && tb('veniō')['ind.act.perf.1s'][0] === 'vēnī' && tb('faciō')['ind.act.perf.1s'][0] === 'fēcī', 'principal-part lengths kept');
+// Missing principal parts (L&S). Intransitives keep the supine and take no personal passive.
+t('īrāscor', 'perf.1s', 'īrātus sum'); ok19(!tb('īrāscor')['gdv.m'], 'irascor no gerundive');
+t('vīsō', 'perf.1s', 'vīsī'); t('vīsō', 'sup.um', 'vīsum'); t('vīsō', 'ptc.pas.perf', 'vīsus');
+t('cadō', 'sup.um', 'cāsum'); t('cadō', 'ptc.act.fut', 'cāsūrus'); ok19(!tb('cadō')['ind.pas.pres.3s'], 'cado no passive');
+t('fugiō', 'sup.um', 'fugitum'); t('fugiō', 'ptc.act.fut', 'fugitūrus'); t('fugiō', 'gdv.m', 'fugiendus');
+t('fallō', 'sup.um', 'falsum'); t('fallō', 'ptc.pas.perf', 'falsus'); t('fallō', 'ind.pas.pres.3s', 'fallitur');
+t('parcō', 'sup.um', 'parsum'); t('parcō', 'ptc.act.fut', 'parsūrus'); t('parcō', 'perf.1s', 'pepercī'); ok19(!tb('parcō')['ind.pas.pres.3s'] && !M.check('parsī', tb('parcō')['ind.act.perf.1s'], true), 'parco: no passive, no parsi');
+for (const [h, sup, fut] of [['appāreō', 'appāritum', 'appāritūrus'], ['pāreō', 'pāritum', 'pāritūrus'], ['careō', 'caritum', 'caritūrus'], ['valeō', 'valitum', 'valitūrus'], ['doleō', 'dolitum', 'dolitūrus'], ['haereō', 'haesum', 'haesūrus'], ['abundō', 'abundātum', 'abundātūrus'], ['cōnstō', 'cōnstātum', 'cōnstātūrus'], ['īnstō', 'īnstātum', 'īnstātūrus'], ['obstō', 'obstātum', 'obstātūrus']]) {
+  t(h, 'sup.um', sup); t(h, 'ptc.act.fut', fut); ok19(!tb(h)['ind.pas.pres.3s'] && !tb(h)['ind.pas.pres.1s'], h + ' no personal passive');
+}
+// L&S praesto: ātum or ĭtum. ātum is shown.
+t('praestō', 'sup.um', 'praestātum'); t('praestō', 'ptc.pas.perf', 'praestātus'); t('praestō', 'ptc.act.fut', 'praestātūrus'); t('praestō', 'perf.1s', 'praestitī');
+ok19(M.check('praestitum', tb('praestō')['sup.um'], true) && M.check('praestitus', tb('praestō')['ptc.pas.perf'], true) && tb('praestō')['sup.um'][0] === 'praestātum' && !M.check('praestāvī', tb('praestō')['ind.act.perf.1s'], true), 'praesto alternates');
+// L&S soleo: no future. placeo: placuī and placitus.
+ok19(!tb('soleō')['ind.act.fut.3s'] && !tb('soleō')['ptc.act.fut'] && !tb('soleō')['imp.act.fut.2s'] && tb('soleō')['ind.act.perf.1s'][0] === 'solitus sum' && tb('soleō')['imp.act.pres.2s'][0] === 'solē', 'soleo no future');
+t('placeō', 'perf.1s', 'placuī'); ok19(M.check('placitus sum', tb('placeō')['ind.act.perf.1s'], true) && tb('placeō')['ptc.act.perf'][0] === 'placitus' && !tb('placeō')['ind.pas.pres.3s'], 'placeo placitus');
+// Headword alternates, never shown first. A&G §163 keeps -ēre and -ris/-re.
+t('sciō', 'perf.1s', 'scīvī'); t('petō', 'perf.1s', 'petīvī'); t('repetō', 'perf.1s', 'repetīvī'); t('nectō', 'perf.1s', 'nexī');
+t('tueor', 'perf.1s', 'tuitus sum'); t('fruor', 'perf.1s', 'frūctus sum'); t('fruor', 'ptc.dep.fut', 'fruitūrus');
+t('tendō', 'sup.um', 'tentum'); t('ostendō', 'sup.um', 'ostentum'); t('pandō', 'sup.um', 'passum'); t('amō', 'ind.act.perf.3p', 'amāvērunt'); t('amō', 'ind.pas.pres.2s', 'amāris');
+ok19(M.check('sciī', tb('sciō')['ind.act.perf.1s'], true) && M.check('scīstī', tb('sciō')['ind.act.perf.2s'], true) && M.check('petiī', tb('petō')['ind.act.perf.1s'], true) && M.check('repetiī', tb('repetō')['ind.act.perf.1s'], true), 'ii perfects accepted');
+ok19(M.check('nexuī', tb('nectō')['ind.act.perf.1s'], true) && tb('nectō')['sup.um'][0] === 'nexum' && !M.check('nexuum', tb('nectō')['sup.um'], true), 'necto');
+ok19(M.check('tūtus sum', tb('tueor')['ind.dep.perf.1s'], true) && M.check('fruitus sum', tb('fruor')['ind.dep.perf.1s'], true) && M.check('tēnsum', tb('tendō')['sup.um'], true) && M.check('ostēnsum', tb('ostendō')['sup.um'], true) && M.check('pānsum', tb('pandō')['sup.um'], true), 'supine and participle alternates');
+ok19(M.check('amāvēre', tb('amō')['ind.act.perf.3p'], true) && tb('amō')['ind.act.perf.3p'][0] === 'amāvērunt' && M.check('amāre', tb('amō')['ind.pas.pres.2s'], true) && tb('amō')['ind.pas.pres.2s'][0] === 'amāris', 'A&G 163 -ere and -re, not first');
+ok19(!M.check('amāstī', tb('amō')['ind.act.perf.2s'], true) && !M.check('amārier', tb('amō')['inf.pas.pres'], true), 'no syncopated perfect or -ier');
+// Defectives stay undrilled. ōdī is not on the list. edō keeps the root forms (A&G §201), not first.
+for (const h of ['meminī', 'coepī', 'inquam', 'āiō']) ok19(!!find(h)[1].skip, h + ' not drilled', find(h)[1].skip);
+ok19(!W.some(e => M.plain(e.la.split(/[ ,]/)[0]) === 'odi'), 'odi is not on the list');
+t('edō', 'pres.3s', 'edit'); ok19(M.check('ēst', tb('edō')['ind.act.pres.3s'], true) && tb('edō')['sup.um'][0] === 'ēsum', 'edo');
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

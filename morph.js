@@ -139,7 +139,8 @@
       F.six('ind', 'act', 'impf', impfAct(ACT[conj].impf).map(f => stem + f));
       F.six('ind', 'act', 'fut', ACT[conj].fut.map(f => stem + f));
       F.six('sub', 'act', 'pres', SUB_A[conj].map(f => stem + f));
-      F.six('sub', 'act', 'impf', IMPF_SUB_A.map(f => cut(infA, 1) + f));
+      const impfStem = cut(o.impfInf || infA, 1);   // exorior: infinitive exorīrī, but impf. subj. exorerer (L&S)
+      F.six('sub', 'act', 'impf', IMPF_SUB_A.map(f => impfStem + f));
       let imp = stem + IMP_A[conj][0];
       if (/(dīc|dūc)[ōo]$/.test(o.p1)) imp = cut(o.p1, 1);
       if (o.p1 === 'faciō') imp = 'fac';
@@ -161,8 +162,9 @@
       F.six('ind', v, 'impf', impfPas(PAS[conj].impf).map(f => stem + f));
       F.six('ind', v, 'fut', PAS[conj].fut.map(f => stem + f));
       F.six('sub', v, 'pres', SUB_P[conj].map(f => stem + f));
-      F.six('sub', v, 'impf', IMPF_SUB_P.map(f => cut(infA, 1) + f));
-      F.one(`imp.${v}.pres.2s`, infA); F.one(`imp.${v}.pres.2p`, stem + PAS[conj].pres[4]);
+      const impfStem = cut(o.impfInf || infA, 1);
+      F.six('sub', v, 'impf', IMPF_SUB_P.map(f => impfStem + f));
+      F.one(`imp.${v}.pres.2s`, o.imp || infA); F.one(`imp.${v}.pres.2p`, stem + PAS[conj].pres[4]);
       F.fimp(v, FIMP_P[conj].map(f => stem + f));
       if (v === 'dep') { F.ger(stem + GER[conj], o.gdv); if (o.ppp && /us$/.test(o.ppp) && !/uus$/.test(o.ppp)) F.sup(cut(o.ppp, 2) + 'um', false); }
       F.one(`inf.${v}.pres`, o.infA ? cut(o.infA, 1) + 'ī' : stem + INF_P[conj]);
@@ -172,7 +174,8 @@
     return alt2s(F.T);
   }
   // verbs that take no personal passive (intransitive), even though the source gives a supine
-  const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pūgnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ārdeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō exeō ' +
+  const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pugnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ārdeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō cōnstō exeō ' +
+    'haereō abundō parcō doleō ' +
     'occidō cadō dēsistō resistō cōnsistō īnsistō persistō assurgō cōnsurgō ēnītor nūbō pareō').split(' '));
   const FUT_FIX = { 'adsum': 'adfutūrus', 'orior': 'oritūrus', 'exorior': 'exoritūrus', 'morior': 'moritūrus', 'nāscor': 'nāscitūrus', 'iuvō': 'iuvātūrus', 'pariō': 'paritūrus', 'ruō': 'ruitūrus', 'secō': 'secātūrus', 'sonō': 'sonātūrus', 'fruor': 'fruitūrus', 'adiuvō': 'adiūtūrus' };
   const SUP_FIX = { 'quiēscō': 'quiētum', 'quaerō': 'quaesītum', 'requīrō': 'requīsītum', 'contemnō': 'contemptum', 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
@@ -184,7 +187,32 @@
   // eō compounds used transitively, with a personal passive (A&G §203.a; L&S: "v. n. and a.", e.g. Rhodanus vado transitur, Caes. B. G. 1, 6)
   const EO_PAS = new Set('adeō ineō obeō praetereō subeō trānseō'.split(' '));
   // extra accepted forms, appended after the regular ones
-  const addAlt = (T, k, ...fs) => { if (T[k]) for (const f of fs) if (!T[k].includes(f)) T[k].push(f); };
+  const addAlt = (T, k, ...fs) => { if (T[k]) for (const f of fs) if (f && !T[k].includes(f)) T[k].push(f); };
+  // push a whole parallel table behind the forms already there
+  const mergeAlt = (T, U) => { for (const k in U) { if (!T[k]) T[k] = [].concat(U[k]); else for (const f of U[k]) if (!T[k].includes(f)) T[k].push(f); } };
+  // -ī perfect beside -īvī (sciī, petiī): contracted 2s/2p/inf/plup. subj., and the uncontracted spellings (A&G 4th-conj. pattern; L&S "īvi or ii")
+  const addIiPerfect = (T, pre) => {
+    const s = pre + 'i', F = Forms();
+    F.six('ind', 'act', 'perf', [s + 'ī', [pre + 'īstī', s + 'istī'], s + 'it', s + 'imus', [pre + 'īstis', s + 'istis'], s + 'ērunt']);
+    F.six('ind', 'act', 'plup', map6(s, PLUP)); F.six('ind', 'act', 'fperf', map6(s, FPERF));
+    F.six('sub', 'act', 'perf', map6(s, PERF_SUB));
+    F.six('sub', 'act', 'plup', PLUP_SUB.map((f, i) => [pre + 'ī' + f.slice(1), s + f]));
+    F.one('inf.act.perf', [pre + 'īsse', s + 'isse']);
+    mergeAlt(T, F.T);
+  };
+  // second supine stem, only on the participle / supine / future-participle forms (not the present stem)
+  const addSupAlt = (T, pairs) => {
+    for (const k in T) {
+      if (!/^(sup\.|ptc\.(act|pas|dep)\.(perf|fut)|inf\.(act|pas|dep)\.(perf|fut))/.test(k) && !/\.(perf|plup|fperf)\./.test(k)) continue;
+      const extra = [];
+      for (const f of T[k]) {
+        let g = f;
+        for (const [a, b] of pairs) if (g.includes(a)) g = g.split(a).join(b);
+        if (g !== f) extra.push(g);
+      }
+      for (const g of extra) if (!T[k].includes(g)) T[k].push(g);
+    }
+  };
   const ALT_FORMS = {
     // A&G §201: edō also has root forms without the thematic vowel (ēs, ēst, ēstis, ēsse, ēssem ...; pass. ēstur, ēssētur)
     'edō': T => {
@@ -205,8 +233,34 @@
       for (const k in T) T[k] = T[k].concat(T[k].filter(f => /^laut/.test(f)).map(f => f.replace(/^laut/, 'lavāt')).filter(f => !T[k].includes(f)));
       for (const k of ['sup.um', 'sup.u', 'inf.pas.fut']) if (T[k]) T[k].reverse();   // supine: lavātum first
     },
+    // L&S: placeō, placuī and placitus. placuī stays first; no present passive (intransitive)
+    'placeō': T => {
+      const F = Forms();
+      for (const m of ['ind', 'sub']) for (const t in PERI[m]) F.six(m, 'act', t, peri('placitus', PERI[m][t]));
+      F.one('inf.act.perf', 'placitus esse'); F.one('ptc.act.perf', 'placitus');
+      mergeAlt(T, F.T);
+    },
+    // L&S scio: scīvī or sciī. sciīvī stays first
+    'sciō': T => addIiPerfect(T, 'sc'),
+    'petō': T => addIiPerfect(T, 'pet'),
+    'repetō': T => addIiPerfect(T, 'repet'),
+    // headword nex(u)ī: nexī is what the spelling leaves, nexuī is the other classical perfect (L&S nexuī / nexī)
+    'nectō': T => {
+      for (const k in T) if (/^(ind|sub)\.act\.(perf|plup|fperf)\./.test(k) || k === 'inf.act.perf')
+        for (const f of T[k].slice()) if (/^nex(?!u)/.test(f)) addAlt(T, k, 'nexu' + f.slice(3));
+    },
+    // L&S prae-sto: supine ātum or ĭtum. ātum (praestātus, praestātūrus) stays first
+    'praestō': T => addSupAlt(T, [['praestātūrus', 'praestitūrus'], ['praestātū', 'praestitū'], ['praestātum', 'praestitum'], ['praestātus', 'praestitus']]),
+    // L&S tendo: tentum, and tēnsum. ostendō the same. pandō: passum, less often pānsum
+    'tendō': T => addSupAlt(T, [['tentūrus', 'tēnsūrus'], ['tentū', 'tēnsū'], ['tentum', 'tēnsum'], ['tentus', 'tēnsus']]),
+    'ostendō': T => addSupAlt(T, [['ostentūrus', 'ostēnsūrus'], ['ostentū', 'ostēnsū'], ['ostentum', 'ostēnsum'], ['ostentus', 'ostēnsus']]),
+    'pandō': T => addSupAlt(T, [['passūrus', 'pānsūrus'], ['passū', 'pānsū'], ['passum', 'pānsum'], ['passus', 'pānsus']]),
+    // L&S tueor: tuitus, also tūtus. tuitus stays first
+    'tueor': T => addSupAlt(T, [['tuitus', 'tūtus']]),
+    // L&S fruor: frūctus and fruitus. The future participle stays fruitūrus
+    'fruor': T => addSupAlt(T, [['frūctus', 'fruitus']]),
   };
-  const DEFECTIVE = ['meminī', 'ōdī', 'coepī', 'inquam', 'aiō', 'salvē', 'quaesō', 'apage', 'ave', 'avē'];
+  const DEFECTIVE = ['meminī', 'ōdī', 'coepī', 'inquam', 'aiō', 'āiō', 'salvē', 'quaesō', 'apage', 'ave', 'avē'];
   const pppFrom = x => x && /um$/.test(x) ? cut(x, 2) + 'us' : null;
   const futFrom = (p1, x) => FUT_FIX[p1] || (x && /ūrus$/.test(x) ? x : x && /ūrum$/.test(x) ? cut(x, 2) + 'us' : x && /(um|us)$/.test(x) ? cut(x, 2) + 'ūrus' : null);
   function verb(e) {
@@ -338,8 +392,10 @@
     if (dep) {
       if (/ār[iī]$/.test(inf)) conj = 1; else if (/ēr[iī]$/.test(inf)) conj = 2; else if (/īr[iī]$/.test(inf)) conj = 4;
       else if (/[iī]$/.test(inf)) conj = ends(p1, 'ior') ? '3io' : 3;
-      if (p1 === 'orior') conj = '3io';
-      if (/rī$/.test(inf) && conj !== 3 && conj !== '3io' || p1 === 'orior') o_inf = cut(inf, 1) + 'e';   // orior: orīrī -> orīre-r
+      if (p1 === 'orior' || p1 === 'exorior') conj = '3io';   // L&S: both are 3rd and 4th; present follows the 3rd
+      if (p1 === 'orior') o_inf = 'orīre';
+      else if (p1 === 'exorior') o_inf = 'exorīre';   // infinitive exorīrī; imperative and impf. subj. are 3rd (exorere, exorerētur)
+      else if (/rī$/.test(inf) && conj !== 3 && conj !== '3io') o_inf = cut(inf, 1) + 'e';
     } else {
       if (/āre$/.test(inf)) conj = 1;
       else if (/ēre$/.test(inf)) conj = ends(p1, 'eō') ? 2 : (flag = 'source has -ēre; treated as 3rd conj.', 3);
@@ -355,11 +411,16 @@
       const raw = (parts[2] || '').replace(/\s*sum$/, '').trim();
       const ppl = raw && /us$/.test(raw) ? expandPart(p1, stem, raw) : null;
       const futp = FUT_FIX[p1] || (ppl && !/uus$/.test(ppl) ? cut(ppl, 2) + 'ūrus' : null);
-      return done({ conj, voice: 'dep', flag }, regular({ conj, stem, p1, voice: 'dep', ppp: ppl, futp, infA: o_inf, gdv: !DEP_INTRANS.has(p1) }));
+      const T = regular({ conj, stem, p1, voice: 'dep', ppp: ppl, futp, infA: o_inf, gdv: !DEP_INTRANS.has(p1),
+        imp: p1 === 'exorior' ? 'exorere' : null, impfInf: p1 === 'exorior' ? 'exorere' : null });
+      if (ALT_FORMS[p1]) ALT_FORMS[p1](T);
+      return done({ conj, voice: 'dep', flag }, T);
     }
     if (pp3full) {          // semi-deponent (audeō, ausus sum)
       const semi = expandPart(p1, stem, pp3full.replace(/\s*sum$/, ''));
-      return done({ conj, voice: 'act', semi: true, noPassive: true, flag }, regular({ conj, stem, p1, voice: 'act', semi, futp: futFrom(p1, pp4) || cut(semi, 2) + 'ūrus', gdv: p1 === 'audeō' }));
+      const Ts = regular({ conj, stem, p1, voice: 'act', semi, futp: p1 === 'soleō' ? null : (futFrom(p1, pp4) || cut(semi, 2) + 'ūrus'), gdv: p1 === 'audeō' });
+      if (p1 === 'soleō') for (const k of Object.keys(Ts)) if (/\.fut(\.|$)/.test(k)) delete Ts[k];   // L&S: soleō has no future
+      return done({ conj, voice: 'act', semi: true, noPassive: true, flag }, Ts);
     }
     const ppp = pppFrom(pp4);
     const passive = !!ppp && !INTRANS.has(p1);
