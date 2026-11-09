@@ -633,13 +633,13 @@ t('edō', 'pres.3s', 'edit'); ok19(M.check('ēst', tb('edō')['ind.act.pres.3s']
   };
   const grid = (h, g, rows) => { if (!g) return; rows.forEach((row, ni) => row.forEach((exp, ci) => cellOk(h, `${g}.${CS[ci]}.${ni ? 'pl' : 'sg'}`, exp))); };
   const both = (sg, pl) => { for (const g of ['m', 'f', 'n']) grid(null, g, [sg, pl]); };
-  const eis = ['eīs', 'iīs', 'īs'], eiPl = ['eī', 'iī', 'ī'], eidem = ['eīsdem', 'īsdem', 'iīsdem'], qbus = ['quibus', 'quīs'];
+  const eis = ['eīs', 'iīs', 'īs'], eiPl = ['eī', 'iī', 'ī'], eidem = ['eīsdem', 'īsdem', 'iīsdem'];
   const tables = {
     is: { m: [['is', 'eius', ['eī', 'ēī'], 'eum', 'eō'], [eiPl, 'eōrum', eis, 'eōs', eis]], f: [['ea', 'eius', ['eī', 'ēī'], 'eam', 'eā'], ['eae', 'eārum', eis, 'eās', eis]], n: [['id', 'eius', ['eī', 'ēī'], 'id', 'eō'], ['ea', 'eōrum', eis, 'ea', eis]] },
     'īdem': { m: [['īdem', 'eiusdem', 'eīdem', 'eundem', 'eōdem'], [['īdem', 'eīdem', 'iīdem'], 'eōrundem', eidem, 'eōsdem', eidem]], f: [['eadem', 'eiusdem', 'eīdem', 'eandem', 'eādem'], ['eaedem', 'eārundem', eidem, 'eāsdem', eidem]], n: [['idem', 'eiusdem', 'eīdem', 'idem', 'eōdem'], ['eadem', 'eōrundem', eidem, 'eadem', eidem]] },
     iste: { m: [['iste', 'istīus', 'istī', 'istum', 'istō'], ['istī', 'istōrum', 'istīs', 'istōs', 'istīs']], f: [['ista', 'istīus', 'istī', 'istam', 'istā'], ['istae', 'istārum', 'istīs', 'istās', 'istīs']], n: [['istud', 'istīus', 'istī', 'istud', 'istō'], ['ista', 'istōrum', 'istīs', 'ista', 'istīs']] },
     ipse: { m: [['ipse', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsī', 'ipsōrum', 'ipsīs', 'ipsōs', 'ipsīs']], f: [['ipsa', 'ipsīus', 'ipsī', 'ipsam', 'ipsā'], ['ipsae', 'ipsārum', 'ipsīs', 'ipsās', 'ipsīs']], n: [['ipsum', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsa', 'ipsōrum', 'ipsīs', 'ipsa', 'ipsīs']] },
-    'quī': { m: [[['quī', 'quis'], 'cuius', 'cui', 'quem', 'quō'], ['quī', 'quōrum', qbus, 'quōs', qbus]], f: [['quae', 'cuius', 'cui', 'quam', 'quā'], ['quae', 'quārum', qbus, 'quās', qbus]], n: [[['quod', 'quid'], 'cuius', 'cui', ['quod', 'quid'], 'quō'], ['quae', 'quōrum', qbus, 'quae', qbus]] },
+    'quī': { m: [['quī', 'cuius', 'cui', 'quem', 'quō'], ['quī', 'quōrum', 'quibus', 'quōs', 'quibus']], f: [['quae', 'cuius', 'cui', 'quam', 'quā'], ['quae', 'quārum', 'quibus', 'quās', 'quibus']], n: [['quod', 'cuius', 'cui', 'quod', 'quō'], ['quae', 'quōrum', 'quibus', 'quae', 'quibus']] },
   };
   for (const h of Object.keys(tables)) for (const g of ['m', 'f', 'n']) grid(h, g, tables[h][g]);
   const qui = (h, suf, o) => {
@@ -678,6 +678,8 @@ t('edō', 'pres.3s', 'edit'); ok19(M.check('ēst', tb('edō')['ind.act.pres.3s']
     bad.length ? fail++ : pass++; if (bad.length) console.log('FAIL vocative on', h, bad);
   }
   ok19(find('is')[1].par === 'pi' && find('sē')[1].par === 'pr' && find('quī')[1].par === 'pq' && find('nēmō')[1].par === 'pn' && !find('sē')[1].gcase && find('is')[1].gcase, 'pronoun paradigm keys');
+  const q = find('quī')[1].tbl;
+  ok19(!M.check('quis', q['m.nom.sg'], true) && !M.check('quid', q['n.nom.sg'], true) && !M.check('quid', q['n.acc.sg'], true) && !M.check('quīs', q['m.dat.pl'], true) && !M.check('quīs', q['m.abl.pl'], true) && !M.check('quīs', q['f.dat.pl'], true) && !M.check('quīs', q['n.abl.pl'], true) && q['m.nom.sg'].join() === 'quī' && q['n.nom.sg'].join() === 'quod' && q['m.dat.pl'].join() === 'quibus', 'quis, quid, and quīs rejected for relative quī');
 }
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

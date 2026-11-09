@@ -93,7 +93,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v33`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v34`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug` (signed with `~/.android/debug.keystore`).
@@ -135,7 +135,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 | is, ea, id | `pi` | nom. pl. m. `eī` (`iī`, `ī`); dat./abl. pl. `eīs` (`iīs`, `īs`); dat. sg. `eī` (`ēī`) |
 | īdem | `pm` | nom. pl. m. `īdem` (`eīdem`, `iīdem`); dat./abl. pl. `eīsdem` (`īsdem`, `iīsdem`). `eundem`, `eōrundem` (m → n before -dem) |
 | iste, ipse | `pt`, `px` | iste like ille (`istīus`, `istud`). ipse neuter `ipsum`, gen. `ipsīus` |
-| quī, quis | `pq` | relative / interrogative adjective. `quis` and `quid` accepted for `quī` and `quod`. Dat./abl. pl. `quibus`, alternate `quīs` |
+| quī, quae, quod | `pq` | relative only. `quis`, `quid`, and dat./abl. pl. `quīs` are not accepted. Dat./abl. pl. is `quibus` |
 | aliquis | `pa` | substantive `aliquis`, `aliquid` shown; `aliquī`, `aliquod` accepted. `aliqua` except nom. pl. f. `aliquae` |
 | quīdam, quisque, quīlibet, quisnam | `pdm`, `pqe`, `pl`, `pqn` | neuter substantive `quid-` shown, adjective `quod-` accepted. quīdam: `quendam`, `quōrundam` |
 | quisquam | `pqh` | singular only. m. = f. `quisquam`. Neuter `quidquam` (`quicquam`) |

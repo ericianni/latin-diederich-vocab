@@ -788,12 +788,12 @@
       [['ipse', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsī', 'ipsōrum', 'ipsīs', 'ipsōs', 'ipsīs']],
       [['ipsa', 'ipsīus', 'ipsī', 'ipsam', 'ipsā'], ['ipsae', 'ipsārum', 'ipsīs', 'ipsās', 'ipsīs']],
       [['ipsum', 'ipsīus', 'ipsī', 'ipsum', 'ipsō'], ['ipsa', 'ipsōrum', 'ipsīs', 'ipsa', 'ipsīs']]) },
-    // A&G §147. The list line is "quī, quis": the table is the relative (and the interrogative adjective).
-    // quis / quid are the substantive interrogative (A&G §148) and are accepted on those cells. Dat./abl. pl. quīs is classical (A&G §150.c).
+    // A&G §147. Relative only. quis / quid are the interrogative pronoun, a different word, and are not accepted.
+    // Dat./abl. pl. is quibus; quīs is rare (A&G §150.c) and is not accepted.
     'quī': { pron: 'rel', par: 'pq', sheet: 'cs-p-qui', blurb: 'relative pronoun quī, quae, quod', tbl: () => pronTbl(
-      [[['quī', 'quis'], 'cuius', 'cui', 'quem', 'quō'], ['quī', 'quōrum', ['quibus', 'quīs'], 'quōs', ['quibus', 'quīs']]],
-      [['quae', 'cuius', 'cui', 'quam', 'quā'], ['quae', 'quārum', ['quibus', 'quīs'], 'quās', ['quibus', 'quīs']]],
-      [[['quod', 'quid'], 'cuius', 'cui', ['quod', 'quid'], 'quō'], ['quae', 'quōrum', ['quibus', 'quīs'], 'quae', ['quibus', 'quīs']]]) },
+      [['quī', 'cuius', 'cui', 'quem', 'quō'], ['quī', 'quōrum', 'quibus', 'quōs', 'quibus']],
+      [['quae', 'cuius', 'cui', 'quam', 'quā'], ['quae', 'quārum', 'quibus', 'quās', 'quibus']],
+      [['quod', 'cuius', 'cui', 'quod', 'quō'], ['quae', 'quōrum', 'quibus', 'quae', 'quibus']]) },
     // A&G §151.e. aliqua stands where aliquae would, except nom. pl. f. Substantive aliquid / aliquis shown; adjective aliquod / aliquī accepted.
     'aliquis': { pron: 'indef', par: 'pa', sheet: 'cs-p-indef', blurb: 'indefinite pronoun aliquis', tbl: () => pronTbl(
       [[['aliquis', 'aliquī'], 'alicuius', 'alicui', 'aliquem', 'aliquō'], ['aliquī', 'aliquōrum', 'aliquibus', 'aliquōs', 'aliquibus']],
