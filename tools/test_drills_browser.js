@@ -391,5 +391,68 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     console.log('[alternates] ' + (flagged ? 'omnēs shown, omnīs flagged' : 'FAILED'));
     await pg.close();
   }
+  // Sentences in drills: off by default. When on, a set mixes some in, never two in a row, and each answer counts once.
+  {
+    const pg = await br.newPage(); const errs = []; pg.on('pageerror', e => errs.push(String(e)));
+    await pg.goto(URL + 'manifest.webmanifest'); await pg.evaluate(() => localStorage.clear());
+    await pg.goto(URL + '#drills'); await pg.waitForSelector('#tset');
+    await pg.evaluate(() => document.querySelector('#tset').click()); await pg.waitForSelector('#dsent');
+    const def = await pg.evaluate(() => ({
+      off: document.querySelector('#dsent button[data-v="0"]').classList.contains('on'),
+      type: document.querySelector('#dstype .on').dataset.v,
+      dir: document.querySelector('#dsdir .on').dataset.v,
+    }));
+    if (!def.off || def.type !== 'both' || def.dir !== 'le') { bad++; console.log('   - sentence defaults', JSON.stringify(def)); }
+    else console.log('[sentences] defaults: off, Both, Latin → English');
+    await pg.evaluate(() => document.querySelector('#dsent button[data-v="1"]').click());
+    const saved = await pg.evaluate(() => JSON.parse(localStorage.getItem('latin1400.v1')).set.df);
+    if (saved.sent !== true || saved.stype !== 'both' || saved.sdir !== 'le') { bad++; console.log('   - sentence setting did not save', JSON.stringify(saved)); }
+    await pg.close();
+    const LEX = require('../sentences/lexicon.js');
+    const ids = [];
+    for (const g of ['nouns', 'verbs', 'adjs', 'advs']) for (const [k, e] of Object.entries(LEX[g] || {})) if (k !== 'sum' && typeof e.id === 'number') ids.push(e.id);
+    const pg2 = await br.newPage(); pg2.on('pageerror', e => errs.push(String(e)));
+    await pg2.goto(URL + 'manifest.webmanifest');
+    await pg2.evaluate(ids => {
+      const cards = {}; ids.forEach(id => { cards['r:' + id] = { box: 1, due: 9e9 }; });
+      localStorage.clear();
+      localStorage.setItem('latin1400.v1', JSON.stringify({ cards, v: 4, ds: { w: {} }, dst: {}, dq: 0, set: { dmode: 'type', dlen: 20, strictMac: false, df: { sent: true, stype: 'both', sdir: 'le' } } }));
+    }, ids);
+    await pg2.goto(URL + '#drills'); await pg2.waitForSelector('#dgo');
+    await pg2.evaluate(() => document.querySelector('#dgo').click());
+    await pg2.waitForFunction(() => !document.querySelector('#dgo'), { timeout: 20000 });
+    await pg2.waitForSelector('#typed, #idrows, #chk', { timeout: 20000 });
+    let sentN = 0, prev = false, pairs = 0, n = 0, gloss = 0;
+    for (let i = 0; i < 20; i++) {
+      if (!(await pg2.$('#typed')) && !(await pg2.$('#idrows')) && !(await pg2.$('#chk'))) break;
+      const kind = await pg2.$eval('.prompt-kind', e => e.textContent);
+      const isSent = /translate into|highlighted/i.test(kind);
+      n++; if (isSent) { sentN++; if (prev) pairs++; prev = true; } else prev = false;
+      if (await pg2.$('.sgloss')) gloss++;
+      if (await pg2.$('#idrows')) {
+        for (let k = 0; k < 6; k++) {
+          const done = await pg2.evaluate(() => {
+            const b = document.querySelector('#idrows .idrow:not(:has(.on)) button');
+            if (b) { b.click(); return false; }
+            const chk = document.querySelector('#chk'); if (chk && !chk.disabled) { chk.click(); return true; }
+            return false;
+          });
+          if (done) break;
+        }
+      } else if (await pg2.$('#typed')) {
+        await pg2.evaluate(() => { const t = document.querySelector('#typed'); t.value = 'zzz'; document.querySelector('#chk').click(); });
+      } else if (await pg2.$('#chk')) await pg2.evaluate(() => document.querySelector('#chk').click());
+      else { bad++; console.log('   - no way to answer', kind); break; }
+      await pg2.waitForSelector('#ans [data-r]', { timeout: 8000 });
+      await pg2.evaluate(() => document.querySelector('#ans [data-r]').click());
+      await pg2.waitForFunction(() => document.querySelector('#typed') || document.querySelector('#idrows') || document.querySelector('#chk') || document.querySelector('#dgo'), { timeout: 15000 });
+    }
+    const dn = await pg2.evaluate(() => (JSON.parse(localStorage.getItem('latin1400.v1')).day || {}).dn);
+    console.log(`[sentences] ${sentN} sentences in ${n} answers, back-to-back ${pairs}, glosses ${gloss}, answered today ${dn}`);
+    if (n < 15 || sentN < 1 || sentN / n > 0.5 || pairs) { bad++; console.log('   - sentence mix out of range'); }
+    if (dn !== n) { bad++; console.log('   - daily count ' + dn + ' vs answers ' + n); }
+    if (errs.length) { bad++; console.log('   - page errors: ' + errs.join(' | ')); }
+    await pg2.close();
+  }
   console.log(bad ? 'ISSUES: ' + bad : 'ALL OK'); await br.close(); srv.close(); process.exit(bad ? 1 : 0);
 })();

@@ -29,7 +29,7 @@
       }
       s.v = 2;
     }
-    s.set.df = Object.assign({}, DF, s.set.df || {});
+    s.set.df = Object.assign({}, DF, DrillPick.SENT_DF, s.set.df || {});
     s.lessons = s.lessons || {};
     if (!s.ds) s.ds = { w: {} };        // words seen in drills (id -> times); s.ds.f was v9's form list
     s.dst = s.dst || {};                       // drill stats per form combination: see drillpick.js
@@ -150,8 +150,9 @@
 
   let Q = null; // current session: vocab {kind, items:[{k,isNew}], done, total}; drill {kind, len, done, total, asked, ok, redo:[{c, at, avoid}], only}
   function startDrills(only) {
-    Q = { kind: 'drill', len: S.set.dlen, done: 0, total: S.set.dlen, asked: 0, ok: 0, redo: [], only: only || null, recent: [] };
-    next();
+    Q = { kind: 'drill', len: S.set.dlen, done: 0, total: S.set.dlen, asked: 0, ok: 0, redo: [], only: only || null, recent: [], mix: DrillPick.sentenceMixStart(Math.random) };
+    if (DrillPick.sentenceSettings(S.set.df).on && !window.LatinEngine) loadSentences().then(() => { if (Q && Q.kind === 'drill') next(); }, () => { if (Q && Q.kind === 'drill') next(); });
+    else next();
   }
   function startSession(kind) {
     if (kind === 'drill') return startDrills();
@@ -167,6 +168,12 @@
   }
   function grade(item, right) {
     const d = day();
+    if (item.sent) {                           // one sentence is one drill answer; identify writes the asked form back
+      const st = DrillPick.applySentenceGrade({ dn: d.dn || 0, dq: S.dq || 0, dst: S.dst }, item, right);
+      d.dn = st.dn; S.dq = st.dq;
+      save(); Q.done++; if (right) Q.ok++;
+      return next();
+    }
     if (item.c) {                              // drill: update the combo's stats; a wrong answer comes back with another word
       S.dq++; S.dst[item.c] = DrillPick.record(S.dst[item.c], right, Date.now(), S.dq);
       S.ds.w[item.id] = (S.ds.w[item.id] || 0) + 1; d.dn = (d.dn || 0) + 1;
@@ -196,9 +203,18 @@
     if (i >= 0) { const r = Q.redo.splice(i, 1)[0]; const ids = UNITS.get(r.c);
       if (ids) { const id = DrillPick.pickWord(ids.map(x => ({ id: x, r: BY[x].r, fc: !!S.cards['r:' + x] })), new Set([r.avoid])); it = { c: r.c, id, key: r.c.slice(r.c.indexOf('|') + 1), redo: true }; }
       else Q.total--; }
-    if (!it && Q.asked < Q.len) { const q = drillQ(Q.only, new Set(Q.recent.map(x => x.c)), new Set(Q.recent.map(x => x.id))); if (q) { it = q; Q.asked++; } }
+    if (!it && Q.asked < Q.len) {
+      const sentOn = DrillPick.sentenceSettings(S.set.df).on && !!window.LatinEngine;
+      const mix = DrillPick.sentenceMixNext(Q.mix, sentOn, Math.random);
+      Q.mix = mix.state;
+      if (mix.take) {
+        const made = DrillPick.pickDrillSentence(LatinEngine, { wordsById: self.LatinWords, seen: DrillPick.seenWordIds(S), df: S.set.df, stats: S.dst, allow: Q.only, rnd: Math.random, q: S.dq });
+        if (made) { it = made; Q.asked++; }
+      }
+      if (!it) { const q = drillQ(Q.only, new Set(Q.recent.map(x => x.c)), new Set(Q.recent.map(x => x.id))); if (q) { it = q; Q.asked++; } }
+    }
     if (!it) { if (Q.redo.length) return nextDrill(); const fin = { n: Q.done, ok: Q.ok, only: Q.only }; Q = null; if (TEST) return renderTest(fin); drillEnd = fin; return renderDrills(); }
-    Q.recent = Q.recent.concat({ c: it.c, id: it.id }).slice(-3);
+    if (!it.sent) Q.recent = Q.recent.concat({ c: it.c, id: it.id }).slice(-3);
     renderDrill(it);
   }
 
@@ -330,7 +346,7 @@
       : `<div class="card">${fin ? `<div class="prompt-kind">Set done</div><h2 style="margin:4px 0 0">${fin.ok} of ${fin.n} right</h2>` : '<div class="prompt-kind">Form drills · free practice</div>'}
           <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${tried}</b><span>of ${UNITS.size} forms tried</span></div><div class="stat"><b>${d.dn || 0}</b><span>answered today</span></div></div>
           <button class="primary big" id="dgo">${fin ? 'Keep going' : `Start a set of ${S.set.dlen}`}</button>
-          <p class="small muted center" style="margin:10px 0 0">Questions lean toward forms you miss, haven’t tried, or haven’t seen lately. Stop anytime; every answer is saved. ${modeTxt()}</p></div>
+          <p class="small muted center" style="margin:10px 0 0">Questions lean toward forms you miss, haven’t tried, or haven’t seen lately. Stop anytime; every answer is saved. ${modeTxt()}${DrillPick.sentenceSettings(S.set.df).on ? ' About one in seven is a short sentence.' : ''}</p></div>
         <div class="card"><div class="row"><h2 class="grow" style="margin:0">Weak spots</h2><button class="link" id="gweak">View ›</button></div>
           <div class="small muted" style="margin-top:4px">${weak.length ? weak.slice(0, 3).map(c => esc(comboLabel(c)) + ' · ' + pct(S.dst[c])).join('<br>') : (Object.keys(S.dst).length ? 'None right now: every form you’ve tried is at 85% or better.' : 'Your lowest-accuracy forms will show up here once you’ve answered a few.')}</div></div>`;
     const msg = drillMsg ? `<div class="card small" id="dmsg">${esc(drillMsg)}</div>` : ''; drillMsg = '';
@@ -341,6 +357,11 @@
       ${showSet ? `<div id="dset">${chipRow('types', 'Word types')}
         <h3>Verbs</h3>${chipRow('moods', 'Mood / form')}${chipRow('voices', 'Voice')}${chipRow('tenses', 'Tense')}${chipRow('persons', 'Person')}${chipRow('vnums', 'Number')}${chipRow('conj', 'Conjugation')}
         <h3>Nouns, adjectives &amp; pronouns</h3>${chipRow('cases', 'Case')}${chipRow('nums', 'Number')}${chipRow('decl', 'Declension')}
+        <h3>Sentences</h3>
+        <div class="small muted chiph">Sentences in drills</div><div class="seg" id="dsent"><button data-v="0" class="${DrillPick.sentenceSettings(S.set.df).on ? '' : 'on'}" aria-pressed="${!DrillPick.sentenceSettings(S.set.df).on}">Off</button><button data-v="1" class="${DrillPick.sentenceSettings(S.set.df).on ? 'on' : ''}" aria-pressed="${DrillPick.sentenceSettings(S.set.df).on}">On</button></div>
+        <div class="small muted chiph">Sentence type</div><div class="seg" id="dstype">${[['tr', 'Translate'], ['id', 'Identify'], ['both', 'Both']].map(([v, l]) => `<button data-v="${v}" class="${DrillPick.sentenceSettings(S.set.df).type === v ? 'on' : ''}" aria-pressed="${DrillPick.sentenceSettings(S.set.df).type === v}">${l}</button>`).join('')}</div>
+        <div class="small muted chiph">Translate direction</div><div class="seg sentset" id="dsdir">${[['le', 'Latin → English'], ['el', 'English → Latin'], ['both', 'Both']].map(([v, l]) => `<button data-v="${v}" class="${DrillPick.sentenceSettings(S.set.df).dir === v ? 'on' : ''}" aria-pressed="${DrillPick.sentenceSettings(S.set.df).dir === v}">${l}</button>`).join('')}</div>
+        <p class="small muted">About one question in seven is a short sentence made from words you have already seen. Helper words you have not studied yet, such as in, sum, and mē, show a short gloss. This stays off until you turn it on.</p>
         <div class="small muted chiph">Questions per set</div><div class="seg" id="sdr">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.dlen === n ? 'on' : ''}">${n}</button>`).join('')}</div>
         <button class="primary big" id="tdone" style="margin-top:16px">Done</button>
         <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}
@@ -358,6 +379,11 @@
     });
     document.querySelectorAll('#sdr button').forEach(b => b.onclick = () => { S.set.dlen = +b.dataset.n; save(); renderDrills(); });
     document.querySelectorAll('#dmode button').forEach(b => b.onclick = () => { S.set.dmode = b.dataset.m; save(); renderDrills(); });
+    const bindSeg = (id, fn) => { const n = $('#' + id); if (!n) return; n.querySelectorAll('button').forEach(b => b.onclick = () => { fn(b.dataset.v); save(); if (S.set.df.sent) loadSentences(); renderDrills(); }); };
+    bindSeg('dsent', v => { S.set.df.sent = v === '1'; });
+    bindSeg('dstype', v => { S.set.df.stype = v; });
+    bindSeg('dsdir', v => { S.set.df.sdir = v; });
+    if (DrillPick.sentenceSettings(S.set.df).on) loadSentences();
   }
   let drillEnd = null;
   const WEAK_N = 12, WEAK_MAX = 0.85;   // weak spot = recent accuracy under 85%
@@ -389,7 +415,10 @@
     if (df.types.includes('verb')) parts.push(`verbs: ${names('moods').join(', ') || 'no mood'}; ${names('voices').join('/') || 'no voice'}; ${all('tenses') ? 'all tenses' : names('tenses').join(', ') || 'no tense'}${all('persons') && all('vnums') ? '' : '; ' + (all('persons') ? 'all persons' : names('persons').join(', ') || 'no person') + ' ' + (all('vnums') ? '' : names('vnums').join('/') || 'no number')}`);
     const nt = [['noun', 'nouns'], ['adj', 'adjectives'], ['pron', 'pronouns']].filter(x => df.types.includes(x[0])).map(x => x[1]);
     if (nt.length) parts.push(`${nt.length < 3 ? nt.join(' & ') : nt.slice(0, 2).join(', ') + ' & ' + nt[2]}: ${all('cases') ? 'all cases' : names('cases').join(' ')}${all('nums') ? '' : ', ' + names('nums').join(' ')}`);
-    return parts.join(' · ') || 'nothing selected';
+    const ss = DrillPick.sentenceSettings(df);
+    const ty = ss.type === 'tr' ? 'translate' : ss.type === 'id' ? 'identify' : 'translate and identify';
+    const dir = ss.type === 'id' ? '' : (ss.dir === 'el' ? ', English → Latin' : ss.dir === 'both' ? ', both directions' : ', Latin → English');
+    return (parts.join(' · ') || 'nothing selected') + (ss.on ? ' · sentences on (' + ty + dir + ')' : '');
   }
   function miniTable(a, key) {
     const k = key.split('.');
@@ -402,7 +431,82 @@
     else rows = Morph.CASES_X.map(c => [c, k[0] + '.' + c + '.' + k[2]]);
     return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(Morph.standard(a.tbl[x]))}</td></tr>`).join('')}</table>`;
   }
+  const S_CASE = [['nom', 'Nom.'], ['gen', 'Gen.'], ['dat', 'Dat.'], ['acc', 'Acc.'], ['abl', 'Abl.']];
+  const S_NUM = [['sg', 'Singular'], ['pl', 'Plural']];
+  const S_TENSE = [['pres', 'Present'], ['impf', 'Imperfect'], ['perf', 'Perfect'], ['fut', 'Future']];
+  const S_PERS = [['1s', '1st sg.'], ['2s', '2nd sg.'], ['3s', '3rd sg.'], ['1p', '1st pl.'], ['2p', '2nd pl.'], ['3p', '3rd pl.']];
+  const S_VOICE = [['act', 'Active'], ['pas', 'Passive']];
+  const CASE_FULL = { nom: 'nominative', gen: 'genitive', dat: 'dative', acc: 'accusative', abl: 'ablative' };
+  const TENSE_FULL = { pres: 'present', impf: 'imperfect', perf: 'perfect', fut: 'future' };
+  function sentenceLine(s, hints, hl) {
+    const hintAt = new Map((hints || []).map(h => [h.i, h.en]));
+    const last = s.laTokens.length - 1;
+    return s.laTokens.map((t, k) => {
+      const show = k === 0 ? t.charAt(0).toUpperCase() + t.slice(1) : t;
+      const word = hl && hl.includes(k) ? `<mark class="tgt">${esc(show)}</mark>` : esc(show);
+      const g = hintAt.get(k);
+      return `<span class="stok">${word}${k === last ? '.' : ''}${g ? `<small class="sgloss">${esc(g)}</small>` : ''}</span>`;
+    }).join('');
+  }
+  function idAnswerText(t) {
+    if (t.kind === 'noun') return CASE_FULL[t.case] + ' ' + (t.num === 'sg' ? 'singular' : 'plural');
+    const L = Object.fromEntries(S_PERS);
+    return t.accept.map(a => TENSE_FULL[a.tense] + ' ' + L[a.person] + (t.hasVoice ? ' ' + (a.voice === 'act' ? 'active' : 'passive') : '')).filter((x, i, arr) => arr.indexOf(x) === i).join(' or ');
+  }
+  function renderSentence(it) {
+    const s = it.sentence, tr = it.ex === 'tr', le = tr && it.dir !== 'el', t = it.target;
+    const kind = tr ? (le ? 'Translate into English' : 'Translate into Latin') : 'Identify the highlighted ' + (t.kind === 'verb' ? 'verb' : t.pron ? 'pronoun' : 'noun');
+    const prompt = tr && !le ? `<div class="english">${esc(s.enPrompt || s.en)}</div>` : `<div class="latin sentline" lang="la">${sentenceLine(s, it.hints, t && t.idx)}</div>`;
+    const note = tr && le ? '<div class="small muted" style="margin-top:6px">Articles (a, the) are optional.</div>' : '';
+    const rows = !tr && t ? (t.kind === 'noun'
+      ? [['case', 'Case', S_CASE], ['num', 'Number', S_NUM]]
+      : [['tense', 'Tense', S_TENSE], ['person', 'Person and number', S_PERS]].concat(t.hasVoice ? [['voice', 'Voice', S_VOICE]] : [])) : [];
+    V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">${kind}</div>${prompt}
+      ${tr ? `<div id="ans"><input type="text" id="typed" lang="${le ? 'en' : 'la'}" placeholder="${le ? 'Type the English' : 'Type the Latin'}" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${le ? '' : macKeys()}${note}
+      <button class="primary big" id="chk" style="margin-top:10px">Check</button></div>` : `<div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button><div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div>`}
+      </div>`;
+    if (tr) {
+      const go = () => {
+        const v = $('#typed').value.trim(); if (!v) return;
+        const g = le ? { ok: LatinEngine.gradeEnglish(s, v), alternate: false, standard: '' } : LatinEngine.gradeLatinReport(s, v, { strict: S.set.strictMac });
+        const mac = !g.ok && !le && S.set.strictMac && LatinEngine.gradeLatin(s, v, { strict: false }) ? '<div class="small muted">Right letters, but the macrons don’t match.</div>' : '';
+        const model = le ? `<div class="english">${esc(s.en)}</div>` : `<div class="latin sentline" lang="la">${sentenceLine(s, it.hints, null)}</div>`;
+        $('#ans').innerHTML = `<div class="answer">${g.ok ? answerNote(g) : `<div class="no">✗ Wrong${v ? ' — you typed “' + esc(v) + '”' : ''}</div>`}${mac}
+          <div class="small muted">${g.ok ? 'Answer' : 'Model answer'}</div>${model}
+          <div class="row" style="margin-top:14px">${g.ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
+        bindRW(it); focusNext();
+      };
+      $('#chk').onclick = go; bindTyped(go); bindStop();
+      return;
+    }
+    const sel = {}; if (t.kind === 'verb' && !t.hasVoice) sel.voice = 'act';
+    const draw = () => {
+      $('#idrows').innerHTML = rows.map(([attr, title, op]) => `<div class="idrow" data-a="${attr}"><div class="small muted chiph">${title}</div><div class="chips idc">${op.map(([v, l]) => `<button type="button" data-v="${v}" class="${sel[attr] === v ? 'on' : ''}" aria-pressed="${sel[attr] === v}">${l}</button>`).join('')}</div></div>`).join('');
+      document.querySelectorAll('#idrows button').forEach(b => b.onclick = () => { sel[b.closest('.idrow').dataset.a] = b.dataset.v; draw(); });
+      const full = rows.every(([attr]) => sel[attr]);
+      $('#chk').disabled = !full; $('#idhint').style.visibility = full ? 'hidden' : '';
+    };
+    const go = () => {
+      if ($('#chk').disabled) return;
+      const ok = t.kind === 'noun' ? sel.case === t.case && sel.num === t.num : t.accept.some(a => a.tense === sel.tense && a.person === sel.person && a.voice === sel.voice);
+      const yours = t.kind === 'noun' ? CASE_FULL[sel.case] + ' ' + (sel.num === 'sg' ? 'singular' : 'plural') : TENSE_FULL[sel.tense] + ' ' + Object.fromEntries(S_PERS)[sel.person] + (t.hasVoice ? ' ' + (sel.voice === 'act' ? 'active' : 'passive') : '');
+      document.querySelectorAll('#idrows .idrow').forEach(r => {
+        const attr = r.dataset.a;
+        const wanted = t.kind === 'noun' ? t[attr] : (attr === 'tense' ? t.tense : attr === 'person' ? t.person : t.voice);
+        const selOk = t.kind === 'verb' ? t.accept.some(a => a.tense === sel.tense && a.person === sel.person && a.voice === sel.voice) : sel[attr] === wanted;
+        r.querySelectorAll('button').forEach(b => { b.disabled = true; if (b.dataset.v === sel[attr]) b.classList.add(selOk ? 'right' : 'wrong'); else if (!ok && b.dataset.v === wanted) b.classList.add('want'); });
+      });
+      $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : '<div class="no">✗ Wrong</div>'}
+        <div class="small" style="margin-top:6px"><span lang="la"><i>${esc(t.token)}</i></span>: ${esc(idAnswerText(t))}</div>
+        ${ok ? '' : `<div class="small muted">You said: ${esc(yours)}</div>`}
+        <div class="small muted" style="margin-top:4px">${esc(s.en)}</div>
+        <div class="row" style="margin-top:10px"><button class="primary big" data-r="${ok ? 1 : 0}">Next</button></div></div>`;
+      bindRW(it); focusNext();
+    };
+    draw(); $('#chk').onclick = go; bindStop();
+  }
   function renderDrill(it) {
+    if (it.sent) return renderSentence(it);
     if (S.set.dmode === 'id' || S.set.dmode === 'mix' && Math.random() < 0.5) { if (renderIdentify(it)) return; }
     const w = BY[it.id], a = an(w), key = it.key;
     const sub = Identify.typedSub(a, key, S.set.df);   // participle / gerundive in an allowed case and number when nom. sg. is off
@@ -431,7 +535,7 @@
 
   // ---------- "new" tags: a word never drilled, or a form (paradigm + attributes) never attempted ----------
   const plur = (n, x) => `<b>${n}</b> ${x}${n === 1 ? '' : 's'}`;
-  const pdg = a => a.kind === 'verb' ? 'v' + (a.conj === 'irr' ? IRR_ID[a.irr] || 'irr' : conjKey(a)) : a.kind === 'noun' ? 'n' + (a.decl === 3 && a.istem ? '3i' : a.decl) : a.kind === 'pron' ? (a.pron === 'pers' ? 'pp' : 'pd') : 'a' + (a.decl === 3 ? '3' : '12');
+  const pdg = a => DrillPick.paradigmOf(a);
   const LESSON_ID = { vpossum: 'sum', vsum: 'sum', veo: 'eo', vfero: 'fero', vvolo: 'volo', a12: 'a12', a3: 'a3' };
   const lessonOf = a => { const p = pdg(a), id = LESSON_ID[p] || (/^(n[1-5]|n3i|v[1-4]|v3io)$/.test(p) ? p : null); return LS.find(l => l.id === id) || null; };
   function newTags(it, w) {
@@ -1054,6 +1158,7 @@
       <p><b>Today</b> is flashcards: a few new words each day plus whatever is due. Answer <b>Right</b> or <b>Wrong</b> (or type the Latin and it’s checked for you). Cards move through Leitner boxes: each right answer moves a card up a box and spaces it out further (1, 3, 7, 14, 30, 60, 120 days); a wrong answer sends it back to the start and shows it again in a few cards. Latin→English and English→Latin are scheduled separately; the English→Latin card unlocks the day after you first get a word right.</p>
       <p><b>Drills</b> ask for one form at a time (macrons optional unless you turn on <b>Require macrons</b>) and check your answer. Choose the moods, voices, tenses, cases and numbers you want. Forms are generated from the dictionary entry using standard paradigms; ${drillWords} of ${W.length} words are drillable. Words that can’t be generated reliably (defective, impersonal, indeclinable words, some irregulars) are left out and say so in the word list. If you think the app marked you wrong unfairly, tap <b>Count as correct</b>.</p>
       <p>Drills have no schedule: practice in short sets and stop anytime. The app keeps a recent-weighted right/wrong score for each form in each paradigm (say, dative plural in the 3rd declension) and asks more often about forms you miss, haven’t tried, or haven’t seen lately, then picks a word with that form, slightly favoring common words and words you know from flashcards. A form you miss comes back a few questions later with a different word. <b>Weak spots</b> on the Drills tab lists your lowest-accuracy forms.</p>
+      <p>Turn on <b>Sentences in drills</b> and about one question in seven is a short sentence built only from words you have already seen, aimed at a form you miss. Translate it, or identify one word. Helper words you have not studied yet show a small gloss. Each sentence counts as one answer.</p>
       <p>The <b>Cheat sheet</b> has endings tables for every declension and conjugation the drills use, plus the pronouns and the main irregular verbs; open it from any drill question.</p>
       <p>Your progress stays on this device (localStorage). No account, no tracking; works offline once installed.</p></div>
       <div class="card"><h2 style="margin-top:0">Sources &amp; credits</h2>
@@ -1072,9 +1177,19 @@
 
   // ---------- boot ----------
   document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  const SENT_SRC = ['sentences/lexicon_s1.js', 'sentences/lexicon_s2.js', 'sentences/lexicon_s3.js', 'sentences/lexicon_s4.js', 'sentences/lexicon_s5.js', 'sentences/lexicon_s7.js', 'sentences/lexicon_s8.js', 'sentences/lexicon.js', 'sentences/engine.js'];
+  let sentLoad = null;
+  function loadSentences() {
+    if (window.LatinEngine) return Promise.resolve();
+    if (!sentLoad) sentLoad = SENT_SRC.reduce((p, src) => p.then(() => new Promise((res, rej) => {
+      const el = document.createElement('script'); el.src = src; el.onload = () => res(); el.onerror = () => rej(new Error(src)); document.body.appendChild(el);
+    })), Promise.resolve()).catch(e => { sentLoad = null; throw e; });
+    return sentLoad;
+  }
   fetch('data/words.json').then(r => r.json()).then(all => {
     W = all.filter(w => !w.d).sort((a, b) => (a.r || 1e9) - (b.r || 1e9) || a.id - b.id);
     W.forEach(w => { BY[w.id] = w; });
+    const LW = []; all.forEach(w => { LW[w.id] = w; }); self.LatinWords = LW;
     let ps = null; all.sort((a, b) => a.id - b.id).forEach(w => { if (w.s) ps = w.s + '.' + w.ss; w.sec = ps; });   // 3 entries without a section sit inside the one before
     UNITS = buildUnits();
     const t = (location.hash || '').slice(1);
