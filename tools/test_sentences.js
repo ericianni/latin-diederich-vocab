@@ -16,7 +16,7 @@ const PREP_FORMS = { ab: ['ā', 'ab'], ex: ['ē', 'ex'] };
 const N = E.nounInfo, A = E.adjInfo, V = E.verbInfo;
 const golden = [
   [N('puella').form('acc', 'sg')[0], 'puellam'], [N('rex').form('abl', 'pl')[0], 'rēgibus'], [N('flumen').form('acc', 'pl')[0], 'flūmina'],
-  [N('mare').form('abl', 'sg')[0], 'marī'], [N('castra').form('abl', 'pl')[0], 'castrīs'], [N('filia').form('dat', 'pl')[0], 'fīliābus'],
+  [N('mare').form('abl', 'sg')[0], 'marī'], [N('castra').form('abl', 'pl')[0], 'castrīs'], [N('filia').form('dat', 'pl')[0], 'fīliīs'],
   [N('deus').form('nom', 'pl')[0], 'dī'], [N('turris').form('acc', 'sg')[0], 'turrim'], [N('liber').form('acc', 'sg')[0], 'librum'],
   [A('celer').form('m', 'nom', 'pl')[0], 'celerēs'], [A('celer').form('f', 'nom', 'sg')[0], 'celeris'], [A('celer').form('n', 'nom', 'sg')[0], 'celere'],
   [A('celer').form('n', 'acc', 'pl')[0], 'celeria'], [A('celer').form('m', 'abl', 'sg')[0], 'celerī'], [A('celer').form('m', 'gen', 'pl')[0], 'celerium'],
@@ -30,7 +30,7 @@ const golden = [
 for (const [got, want] of golden) ok(got === want, `golden form: got ${got}, want ${want}`);
 // forms the POC used to patch and that now come straight from the synced app morph.js (2026-11-02)
 const synced = [[N('senex').form('acc', 'sg')[0], 'senem'], [N('senex').form('gen', 'pl')[0], 'senum'], [N('arcus').form('dat', 'pl')[0], 'arcubus'], [N('castellum').form('nom', 'pl')[0], 'castella'],
-  [N('castellum').g, 'n'], [V('quiesco').tbl['ind.act.perf.3s'][0], 'quiēvit'], [V('adsum').tbl['ind.act.perf.3s'].join(), 'adfuit,affuit'], [A('celer').form('m', 'acc', 'pl').join(), 'celerīs,celerēs'],
+  [N('castellum').g, 'n'], [V('quiesco').tbl['ind.act.perf.3s'][0], 'quiēvit'], [V('adsum').tbl['ind.act.perf.3s'].join(), 'adfuit,affuit'], [A('celer').form('m', 'acc', 'pl').join(), 'celerēs,celerīs'],
   [A('hic').form('m', 'acc', 'sg')[0], 'hunc'], [A('ille').form('f', 'abl', 'pl')[0], 'illīs'],
   // app commit 7803df1 (2026-11-02 20:30 ET): edō athematic forms, ex(s)tinguō, ārdeō active only, pāscō 3rd conj., trānseō passive, lavātus
   [V('edo').tbl['ind.act.pres.3s'].join(), 'edit,ēst'], [V('edo').tbl['ind.pas.pres.3s'].join(), 'editur,ēstur'], [V('exstinguo').tbl['ind.act.perf.3s'].join(), 'exstīnxit'],
@@ -476,26 +476,26 @@ for (const k of Object.keys(E.LEX.nouns)) { const n = E.nounInfo(k); ok(!!n.form
     } }
   for (const k of Object.keys(E.LEX.ppTypes)) ok(seenPP[k], 'section VIII PP type never generated: ' + k);
 }
-// ---------- app port: no per-word overrides, fīliābus, ex(s)-, word pool, Identify answers ----------
+// ---------- app port: no per-word overrides, standard forms on screen, ex(s)-, word pool, Identify answers ----------
 {
   const W = require('../data/words.json');
   const forms = tbl => Object.values(tbl || {}).flat().map(normM).sort().join(',');
   ok(Object.keys(E.OVERRIDES).length === 0, 'per-word form overrides present');
-  // every engine table holds exactly the forms of the app's morph.js (the homograph rule may only reorder a cell)
+  // every engine table holds exactly the forms of the app's morph.js, in the same order (the standard form stays first)
   for (const k of Object.keys(E.LEX.nouns)) { const r = Morph.analyze(W[E.LEX.nouns[k].id]); const n = N(k);
-    for (const c of Object.keys(r.tbl)) ok([...r.tbl[c]].sort().join() === [...n.tbl[c]].sort().join(), `noun ${k} ${c}: ${n.tbl[c]} vs morph ${r.tbl[c]}`);
+    for (const c of Object.keys(r.tbl)) ok(r.tbl[c].join() === n.tbl[c].join(), `noun ${k} ${c}: ${n.tbl[c]} vs morph ${r.tbl[c]}`);
     ok(forms(r.tbl) === forms(n.tbl), 'noun table differs from morph.js: ' + k); }
   for (const k of Object.keys(E.LEX.verbs)) ok(forms(Morph.analyze(W[E.LEX.verbs[k].id]).tbl) === forms(V(k).tbl), 'verb table differs from morph.js: ' + k);
   for (const k of Object.keys(E.LEX.adjs)) ok(forms(Morph.analyze(W[E.LEX.adjs[k].id]).tbl) === forms(A(k).tbl), 'adjective table differs from morph.js: ' + k);
-  // the homograph rule changes fīlia dat./abl. pl. only
-  let reordered = [];
-  for (const k of Object.keys(E.LEX.nouns)) { const r = Morph.analyze(W[E.LEX.nouns[k].id]); for (const c of Object.keys(r.tbl)) if (r.tbl[c][0] !== N(k).tbl[c][0]) reordered.push(k + ' ' + c + ' ' + N(k).tbl[c][0]); }
-  ok(reordered.sort().join() === 'filia abl.pl fīliābus,filia dat.pl fīliābus', 'homograph rule reordered: ' + reordered.join('; '));
-  ok(N('filius').form('dat', 'pl')[0] === 'fīliīs' && N('filia').form('abl', 'pl').join() === 'fīliābus,fīliīs', 'fīlius / fīlia dat./abl. pl.');
-  // fīliīs for "to the daughters" is still accepted when typed
+  ok(N('filius').form('dat', 'pl')[0] === 'fīliīs' && N('filia').form('abl', 'pl').join() === 'fīliīs,fīliābus', 'fīlius / fīlia dat./abl. pl.');
+  // the sentence shows fīliīs; fīliābus is still accepted, and graded as an alternate
   const gf = E.build({ verb: 'do', tense: 'pres', subj: { n: 'mater', num: 'sg' }, obj: { n: 'donum', num: 'sg' }, io: { n: 'filia', num: 'pl' } });
-  ok(/fīliābus/.test(gf.la), 'fīliābus shown: ' + gf.la);
-  ok(E.gradeLatin(gf, gf.la.replace('fīliābus', 'fīliīs')), 'fīliīs (to the daughters) rejected');
+  ok(/fīliīs/.test(gf.la) && !/fīliābus/.test(gf.la), 'standard fīliīs shown: ' + gf.la);
+  ok(E.gradeLatin(gf, gf.la.replace('fīliīs', 'fīliābus'), { strict: true }), 'fīliābus (to the daughters) rejected');
+  const rep = E.gradeLatinReport(gf, gf.la.replace('fīliīs', 'fīliābus'), { strict: true });
+  ok(rep.ok && rep.alternate && rep.standard === 'fīliīs', 'fīliābus flagged as an alternate: ' + JSON.stringify(rep));
+  const rep0 = E.gradeLatinReport(gf, gf.la, { strict: true });
+  ok(rep0.ok && !rep0.alternate, 'the shown sentence is not an alternate');
   // ex(s)tinguō: only exst- is shown; ext- is accepted through Morph.variants (the app's check() rule)
   const gx = E.build({ verb: 'exstinguo', tense: 'perf', subj: { n: 'miles', num: 'sg' }, obj: { n: 'ignis', num: 'sg' } });
   ok(gx.la === 'Mīles ignem exstīnxit.', 'exstinguo perfect: ' + gx.la);

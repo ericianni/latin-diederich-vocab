@@ -708,16 +708,14 @@
     const abl = comp || cons ? st + 'e' : st + 'ī';
     const gpl = comp || cons ? st + 'um' : st + 'ium';
     const npl = comp || cons ? st + 'a' : st + 'ia';
-    // A&G §114.a and the paradigms of §115–119: acc. pl. of i-stems is regularly -īs (-ēs).
-    // Comparatives commonly have -ēs, with -īs in parentheses (§120, §121.c). vetus and ūber have -ēs only (§119).
-    const accPl = comp ? [st + 'ēs', st + 'īs']
-      : (nom === 'vetus' || nom === 'ūber') ? st + 'ēs'
-      : (cons && nom !== 'dīves') ? st + 'ēs'
-      : [st + 'īs', st + 'ēs'];
+    // Accusative plural shown to the learner is -ēs, the same ending as the nouns (A&G §71, §77).
+    // -īs stays accepted for i-stems, comparatives (§120, §121.c), trēs, plūrēs, and dīves.
+    // vetus, ūber, and the other consonant stems have -ēs only (§119).
+    const accPl = (comp || nom === 'dīves' || !cons) ? [st + 'ēs', st + 'īs'] : st + 'ēs';
     const mf = nn => [[nn, st + 'is', st + 'ī', st + 'em', abl], [st + 'ēs', gpl, st + 'ibus', accPl, st + 'ibus']];
     const n = [[nNom, st + 'is', st + 'ī', nNom, abl], [npl, gpl, st + 'ibus', npl, st + 'ibus']];
     const T = adjVoc(adjTbl(mf(mNom), mf(fNom), n));
-    // L&S: the nom. and acc. of the neuter plural of dīves do not occur. A&G §119 prints acc. dīvītīs (-ēs).
+    // L&S: the nom. and acc. of the neuter plural of dīves do not occur. Acc. pl. dīvitēs is shown; dīvitīs is accepted.
     if (nom === 'dīves') for (const c of ['nom', 'acc', 'voc']) delete T['n.' + c + '.pl'];
     // A&G §119: ūber has abl. ūberī, gen. pl. ūberum, neut. pl. ūbera, acc. pl. ūberēs. Abl. ūbere is very rare (one Columella).
     if (nom === 'ūber') {
@@ -789,6 +787,25 @@
     return out;
   }
   function check(input, answers, strict) { const f = strict ? normM : norm, n = f(input); return answers.some(a => variants(a).some(v => f(v) === n)); }
+  // A cell keeps every accepted form. The first is the one standard form; renderers must show only that.
+  function accepts(cell) { return cell == null ? [] : [].concat(cell).filter(f => f != null && f !== ''); }
+  function standard(cell) { const fs = accepts(cell); return fs.length ? fs[0] : ''; }
+  // Right/wrong grading. alternate: the answer is accepted but is not the standard form
+  // (spelling variants of the standard, such as ex(s)- and participle gender, are not alternates).
+  function grade(input, cell, strict) {
+    const forms = accepts(cell), std = forms[0] || '';
+    if (!input || !forms.length) return { ok: false, alternate: false, standard: std };
+    if (check(input, [std], strict)) return { ok: true, alternate: false, standard: std };
+    if (check(input, forms.slice(1), strict)) return { ok: true, alternate: true, standard: std };
+    return { ok: false, alternate: false, standard: std };
+  }
+  function gradeHead(input, answers, strict) {
+    const forms = accepts(answers), std = forms[0] || '';
+    if (!input || !forms.length) return { ok: false, alternate: false, standard: std };
+    if (checkHead(input, [std], strict)) return { ok: true, alternate: false, standard: std };
+    if (checkHead(input, forms.slice(1), strict)) return { ok: true, alternate: true, standard: std };
+    return { ok: false, alternate: false, standard: std };
+  }
   // Dictionary affix hyphens are notation, not letters. Normalize only answers
   // marked as affixes; ordinary words and internal punctuation stay strict.
   function checkHead(input, answers, strict) {
@@ -799,6 +816,6 @@
       return check(affix ? bare(dash(input)) : input, [affix ? bare(key) : a], strict);
     });
   }
-  const api = { analyze, label, check, checkHead, variants, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
+  const api = { analyze, label, check, checkHead, grade, gradeHead, standard, accepts, variants, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
   root.Morph = api; if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

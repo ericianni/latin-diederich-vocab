@@ -71,6 +71,26 @@
     const m = h.match(/\s\((?:or\s+)?([^)]*)\)/); if (m && !/\s/.test(m[1].trim())) out.add(m[1]);
     return [...out].map(s => s.trim()).filter(Boolean);
   }
+  // Dictionary line with alternate spellings removed. Principal parts stay; (or honōs), (assum), c(h)arta do not.
+  function shownLa(la) {
+    let s = String(la).replace(/^c\(h\)arta/, 'charta').replace(/^prosper\(us\)/, 'prosperus');
+    s = s.replace(/\s+\([^)]*\)/g, (m) => {
+      const inner = m.slice(m.indexOf('(') + 1, -1).trim();
+      if (/^or\s+/.test(inner) || !/\s/.test(inner) || /pl\.\s+\S+$/.test(inner)) return '';
+      return m;
+    });
+    s = s.replace(/^(\S+)\s+or\s+\S+/, '$1');
+    return s.replace(/\s{2,}/g, ' ').replace(/\s+,/g, ',').trim();
+  }
+  function headStandard(w) {
+    const a = an(w);
+    if (a && a.tbl) {
+      const k = a.kind === 'verb' ? (a.voice === 'dep' ? 'ind.dep.pres.1s' : 'ind.act.pres.1s')
+        : a.tbl['nom.sg'] ? 'nom.sg' : a.tbl['m.nom.sg'] ? 'm.nom.sg' : a.tbl['nom.pl'] ? 'nom.pl' : a.tbl['m.nom.pl'] ? 'm.nom.pl' : a.headKey;
+      if (k && a.tbl[k]) return Morph.standard(a.tbl[k]);
+    }
+    return shownLa(w.la).split(/[ ,]/)[0];
+  }
 
   // ---------- drill filters ----------
   const conjKey = a => a.conj === 'irr' ? 'irr' : String(a.conj);
@@ -252,7 +272,8 @@
     });
     t.focus({ preventScroll: true });                     // synchronous, so a tap on Next/Start also brings up the mobile keyboard
   }
-  const wrongMsg = (v, answers) => `<div class="no">✗ Wrong${v ? ' — you typed “' + esc(v) + '”' : ''}</div>${v && S.set.strictMac && Morph.check(v, answers) ? '<div class="small muted">Right letters, but the macrons don’t match.</div>' : ''}`;
+  const wrongMsg = (v, answers, head) => `<div class="no">✗ Wrong${v ? ' — you typed “' + esc(v) + '”' : ''}</div>${v && S.set.strictMac && (head ? Morph.checkHead(v, answers) : Morph.check(v, answers)) ? '<div class="small muted">Right letters, but the macrons don’t match.</div>' : ''}`;
+  const answerNote = g => g.alternate ? `<div class="alt">Accepted alternate — standard form: ${esc(g.standard)}</div>` : `<div class="ok">✓ Right</div>`;
   const focusNext = () => { const b = $('#ans .primary'); if (b && matchMedia('(hover:hover)').matches) b.focus({ preventScroll: true }); };
 
   function renderVocab(it) {
@@ -260,21 +281,21 @@
     const pills = `<span class="pill">${POS_SHORT[w.pos] || w.pos}</span><span class="pill">rank ${rankTxt(w)}</span>${it.isNew ? '<span class="pill">new</span>' : ''}`;
     if (dir === 'r') {
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">Latin → English</div>
-        <div class="latin">${esc(w.la)}</div>${pills}
+        <div class="latin">${esc(shownLa(w.la))}</div>${pills}
         <div id="ans"><button class="primary big" id="show" style="margin-top:18px">Show answer</button></div></div>`;
       $('#show').onclick = () => { $('#ans').innerHTML = `<div class="answer"><div class="english">${esc(w.en)}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; bindRW(it); };
     } else {
-      const hs = heads(w.la);
+      const std = headStandard(w), hs = [std].concat(heads(w.la).filter(h => Morph.normM(h) !== Morph.normM(std)));
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">English → Latin</div>
         <div class="english">${esc(w.en)}</div>${pills}
         <div id="ans"><input type="text" id="typed" placeholder="Optional: type the Latin to check yourself" aria-label="Optional: type the Latin to check yourself" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
         <button class="primary big" id="show" style="margin-top:10px">Show answer</button></div></div>`;
       const go = () => {
         const v = $('#typed').value.trim();
-        if (!v) { $('#ans').innerHTML = `<div class="answer"><div class="latin">${esc(w.la)}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; return bindRW(it); }
-        const ok = Morph.checkHead(v, hs, S.set.strictMac);
-        $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : wrongMsg(v, hs)}<div class="latin">${esc(w.la)}</div>
-          <div class="row" style="margin-top:14px">${ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
+        if (!v) { $('#ans').innerHTML = `<div class="answer"><div class="latin">${esc(shownLa(w.la))}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; return bindRW(it); }
+        const g = Morph.gradeHead(v, hs, S.set.strictMac);
+        $('#ans').innerHTML = `<div class="answer">${g.ok ? answerNote(g) : wrongMsg(v, hs, true)}<div class="latin">${esc(shownLa(w.la))}</div>
+          <div class="row" style="margin-top:14px">${g.ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
         bindRW(it); focusNext();
       };
       $('#show').onclick = go; bindTyped(go);
@@ -379,29 +400,30 @@
       rows = Object.keys(a.tbl).filter(x => x.startsWith(pre)).map(x => { const r = x.slice(pre.length); return [NM[r] || r.replace(/^(\d)s$/, '$1 sg').replace(/^(\d)p$/, '$1 pl'), x]; });
     } else if (a.kind === 'noun' || k.length === 2) rows = Morph.CASES_X.map(c => [c, c + '.' + k[1]]);
     else rows = Morph.CASES_X.map(c => [c, k[0] + '.' + c + '.' + k[2]]);
-    return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(a.tbl[x].join(' / '))}</td></tr>`).join('')}</table>`;
+    return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(Morph.standard(a.tbl[x]))}</td></tr>`).join('')}</table>`;
   }
   function renderDrill(it) {
     if (S.set.dmode === 'id' || S.set.dmode === 'mix' && Math.random() < 0.5) { if (renderIdentify(it)) return; }
     const w = BY[it.id], a = an(w), key = it.key;
     const sub = Identify.typedSub(a, key, S.set.df);   // participle / gerundive in an allowed case and number when nom. sg. is off
     const answers = sub ? sub.forms : a.tbl[key];
+    const std = Morph.standard(answers);
     const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : a.kind === 'pron' ? 'Decline the pronoun' : 'Decline the adjective';
     const ctx = csTarget(a, key);
     V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w)}
-      <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
+      <div class="latin">${esc(shownLa(w.la))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
       <div class="english" style="margin-top:14px"><b>${esc(sub ? Identify.parseLabel(a, sub) : Morph.label(a.kind, key))}</b>?</div>
       <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
-      <div class="small muted" style="margin-top:6px">${macHint()}${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(answers[0]) ? ' Two words, e.g. “amātus est”.' : ''}</div>
+      <div class="small muted" style="margin-top:6px">${macHint()}${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(std) ? ' Two words, e.g. “amātus est”.' : ''}</div>
       <button class="primary big" id="chk" style="margin-top:10px">Check</button></div>${newTip(it, a, ctx)}</div>`;
     $('#cs').onclick = () => openSheet(ctx.id); bindTip(ctx);
     const go = () => {
       const v = $('#typed').value.trim();
-      const ok = !!v && Morph.check(v, answers, S.set.strictMac);
-      $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : wrongMsg(v, answers)}
-        <div class="latin">${esc(answers.join(' / '))}</div>${a.flag ? `<div class="small muted">Note: ${esc(a.flag)}</div>` : ''}
+      const g = Morph.grade(v, answers, S.set.strictMac);
+      $('#ans').innerHTML = `<div class="answer">${g.ok ? answerNote(g) : wrongMsg(v, answers)}
+        <div class="latin">${esc(std)}</div>${a.flag ? `<div class="small muted">Note: ${esc(a.flag)}</div>` : ''}
         <div class="forms">${miniTable(a, key)}</div>
-        <div class="row" style="margin-top:14px">${ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
+        <div class="row" style="margin-top:14px">${g.ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
       bindRW(it); focusNext();
     };
     $('#chk').onclick = go; bindStop(); bindTyped(go);
@@ -433,7 +455,7 @@
     const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
     const sel = {}; let done = false, phase = 'ask', first = null, guesses = 0; const found = [];   // guesses: And…? tries left (one per remaining reading)
-    const entry = w.la.replace(/\s\([^)]*\)$/, '');   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
+    const entry = shownLa(w.la);   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
     V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w)}
       <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
       <div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button>
@@ -533,15 +555,13 @@
   const findW = h => W.find(w => Morph.plain(w.la.split(/[ ,]/)[0]) === Morph.plain(h));
   // bold the ending: the part after the longest stem the form starts with
   function hl(form, stems) {
-    return form.split(' / ').map(f => {
-      const st = stems.filter(s => s && f.startsWith(s) && f.length > s.length).sort((x, y) => y.length - x.length)[0];
-      return st ? esc(st) + '<b>' + esc(f.slice(st.length)) + '</b>' : esc(f);
-    }).join(' / ');
+    const st = stems.filter(s => s && form.startsWith(s) && form.length > s.length).sort((x, y) => y.length - x.length)[0];
+    return st ? esc(st) + '<b>' + esc(form.slice(st.length)) + '</b>' : esc(form);
   }
-  const cell = (a, k, stems) => a.tbl[k] ? (stems ? hl(a.tbl[k].join(' / '), stems) : esc(a.tbl[k].join(' / '))) : '–';
+  const cell = (a, k, stems) => a.tbl[k] ? (stems ? hl(Morph.standard(a.tbl[k]), stems) : esc(Morph.standard(a.tbl[k]))) : '–';
   function nounTable(h, note) {
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
-    const g = (a.tbl['gen.sg'] || a.tbl['gen.pl'])[0];
+    const g = Morph.standard(a.tbl['gen.sg'] || a.tbl['gen.pl']);
     const stem = a.decl === 'irr' ? null : [g.replace(/(ae|ī|is|ūs|ēī|eī)$/, '')];
     const nums = ['sg', 'pl'].filter(n => Morph.CASES_X.some(c => a.tbl[c + '.' + n]));
     return `<div class="cst"><div class="csh">${esc(w.la.split(',').slice(0, 2).join(','))} <span class="muted">${esc(note || '')}</span></div><table><tr><th></th>${nums.map(n => `<th>${n === 'sg' ? 'singular' : 'plural'}</th>`).join('')}</tr>
@@ -552,11 +572,11 @@
     const P = ['ego', 'nōs', 'tū', 'vōs'].map(h => { const w = findW(h); return w ? an(w) : null; });
     if (P.some(a => !a || a.skip)) return '';
     return `<div class="cst"><div class="forms"><table><tr><th></th><th>I</th><th>we</th><th>you (sg.)</th><th>you (pl.)</th></tr>
-      ${Morph.CASES.map(k => `<tr><th>${k}.</th>${P.map(a => `<td>${esc((a.tbl[k + '.' + a.num] || ['–']).join(' / '))}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
+      ${Morph.CASES.map(k => `<tr><th>${k}.</th>${P.map(a => `<td>${a.tbl[k + '.' + a.num] ? esc(Morph.standard(a.tbl[k + '.' + a.num])) : '–'}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
   }
   function adjTable(h, note) {
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
-    const g = a.tbl['m.gen.sg'][0], stem = a.kind === 'pron' ? (h === 'ille' ? ['ill'] : null) : [g.replace(/(īus|ī|is)$/, '')];
+    const g = Morph.standard(a.tbl['m.gen.sg']), stem = a.kind === 'pron' ? (h === 'ille' ? ['ill'] : null) : [g.replace(/(īus|ī|is)$/, '')];
     const gs = ['m', 'f', 'n'].filter(x => a.tbl[x + '.nom.sg']);
     const one = n => `<table><tr><th>${n === 'sg' ? 'sg.' : 'pl.'}</th>${gs.map(x => `<th>${{ m: 'masc.', f: 'fem.', n: 'neut.' }[x]}</th>`).join('')}</tr>${Morph.CASES_X.filter(c => gs.some(x => a.tbl[x + '.' + c + '.' + n])).map(c => `<tr><th>${c}.</th>${gs.map(x => `<td>${cell(a, x + '.' + c + '.' + n, stem)}</td>`).join('')}</tr>`).join('')}</table>`;
     return `<div class="cst"><div class="csh">${esc(w.la.split(',').slice(0, 3).join(','))} <span class="muted">${esc(note || '')}</span></div>${one('sg')}<div style="height:6px"></div>${one('pl')}</div>`;
@@ -596,27 +616,27 @@
   }
   function verbStems(a) {
     const T = a.tbl, ind = a.voice === 'dep' ? 'dep' : 'act';
-    const p1 = (T[`ind.${ind}.pres.1s`] || [''])[0];
-    return a.conj === 'irr' ? null : [p1.replace(/(iō|eō|ō|ior|eor|or)$/, ''), T['ind.act.perf.1s'] ? T['ind.act.perf.1s'][0].replace(/ī$/, '') : null, (T['ptc.pas.perf'] || T['ptc.dep.perf'] || [''])[0].replace(/us$/, '')];
+    const p1 = Morph.standard(T[`ind.${ind}.pres.1s`] || ['']);
+    return a.conj === 'irr' ? null : [p1.replace(/(iō|eō|ō|ior|eor|or)$/, ''), T['ind.act.perf.1s'] ? Morph.standard(T['ind.act.perf.1s']).replace(/ī$/, '') : null, Morph.standard(T['ptc.pas.perf'] || T['ptc.dep.perf'] || ['']).replace(/us$/, '')];
   }
   function verbBlock(h, id, title, note) {
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
     const stems = verbStems(a);
-    return `<details class="cs" id="${id}"><summary><b>${esc(title)}</b> <span class="muted">${esc(w.la.replace(/\s\([^)]*\)/g, ''))}</span></summary>${note ? `<p class="small muted">${note}</p>` : ''}${verbGroups(a, stems, id)}</details>`;
+    return `<details class="cs" id="${id}"><summary><b>${esc(title)}</b> <span class="muted">${esc(shownLa(w.la))}</span></summary>${note ? `<p class="small muted">${note}</p>` : ''}${verbGroups(a, stems, id)}</details>`;
   }
   const det = (id, title, body, note) => `<details class="cs" id="${id}"><summary><b>${title}</b></summary>${note ? `<p class="small muted">${note}</p>` : ''}${body}</details>`;
   function vocLocHTML() {
     const rows = [['dominus'], ['fīlius'], ['puer'], ['deus'], ['puella'], ['rēx']].map(([h]) => { const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
-      return `<tr><th>${esc(h)}</th><td>${esc(a.tbl['voc.sg'].join(' / '))}</td><td>${esc((a.tbl['voc.pl'] || ['–']).join(' / '))}</td></tr>`; }).join('');
-    const adjs = ['bonus', 'ēgregius', 'meus'].map(h => { const w = findW(h); if (!w) return ''; const a = an(w); return a.skip ? '' : `<tr><th>${esc(h)}</th><td>${esc(a.tbl['m.voc.sg'].join(' / '))}</td><td>${esc(a.tbl['m.voc.pl'].join(' / '))}</td></tr>`; }).join('');
-    const locs = ['domus', 'rūs', 'humus', 'bellum', 'mīlitia'].map(h => { const w = findW(h); if (!w) return ''; const a = an(w); return a.skip || !a.tbl['loc.sg'] ? '' : `<tr><th>${esc(h)}</th><td>${esc(a.tbl['loc.sg'].join(' / '))}</td></tr>`; }).join('');
+      return `<tr><th>${esc(h)}</th><td>${esc(Morph.standard(a.tbl['voc.sg']))}</td><td>${a.tbl['voc.pl'] ? esc(Morph.standard(a.tbl['voc.pl'])) : '–'}</td></tr>`; }).join('');
+    const adjs = ['bonus', 'ēgregius', 'meus'].map(h => { const w = findW(h); if (!w) return ''; const a = an(w); return a.skip ? '' : `<tr><th>${esc(h)}</th><td>${esc(Morph.standard(a.tbl['m.voc.sg']))}</td><td>${esc(Morph.standard(a.tbl['m.voc.pl']))}</td></tr>`; }).join('');
+    const locs = ['domus', 'rūs', 'humus', 'bellum', 'mīlitia'].map(h => { const w = findW(h); if (!w) return ''; const a = an(w); return a.skip || !a.tbl['loc.sg'] ? '' : `<tr><th>${esc(h)}</th><td>${esc(Morph.standard(a.tbl['loc.sg']))}</td></tr>`; }).join('');
     return `<div class="cst"><div class="csh">Vocative</div><table><tr><th></th><th>singular</th><th>plural</th></tr>${rows}${adjs}</table></div>
       <div class="cst"><div class="csh">Locative <span class="muted">(“at / in”; only these words on the list take it)</span></div><table>${locs}</table>
       <p class="small muted">Rule: 1st/2nd-decl. singular = genitive (Rōmae, bellī); plural and 3rd decl. = ablative (Athēnīs, rūre / rūrī). Diederich’s list has no city names, so city locatives aren’t drilled.</p></div>`;
   }
   function gxSummary() {
     const L = [['amō', '1st'], ['moneō', '2nd'], ['regō', '3rd'], ['capiō', '3rd -iō'], ['audiō', '4th'], ['hortor', 'deponent']];
-    const rows = L.map(([h, l]) => { const w = findW(h); if (!w) return []; const a = an(w), T = a.tbl, v = a.voice === 'dep' ? 'dep' : 'act', g = k => T[k] ? esc(T[k][0]) : '–';
+    const rows = L.map(([h, l]) => { const w = findW(h); if (!w) return []; const a = an(w), T = a.tbl, v = a.voice === 'dep' ? 'dep' : 'act', g = k => T[k] ? esc(Morph.standard(T[k])) : '–';
       return [`<tr><th>${l}</th><td>${g('ger.gen')}</td><td>${g('gdv.m')}</td><td>${g('sup.um')}</td></tr>`, `<tr><th>${l}</th><td>${g(`imp.${v}.fut.2s`)}</td><td>${g(`imp.${v}.fut.3p`)}</td></tr>`]; });
     return `<div class="cst"><table><tr><th></th><th>gerund (gen.)</th><th>gerundive</th><th>supine</th></tr>${rows.map(r => r[0] || '').join('')}</table></div>
       <div class="cst"><div class="csh">Future imperative</div><table><tr><th></th><th>2nd sg</th><th>3rd pl</th></tr>${rows.map(r => r[1] || '').join('')}</table>
@@ -754,14 +774,14 @@
     const st = verbStems(a), v = a.voice === 'dep' ? 'dep' : 'act';
     const fin = ts => `<table><tr><th></th>${ts.map(t => `<th>${Morph.TENSES[t]}</th>`).join('')}</tr>${Morph.P.map(p => `<tr><th>${p}</th>${ts.map(t => `<td>${cell(a, `ind.${v}.${t}.${p}`, st)}</td>`).join('')}</tr>`).join('')}</table>`;
     const ex = [['infinitive', `inf.${v}.pres`], ['imperative', `imp.${v}.pres.2s`], ['imperative pl.', `imp.${v}.pres.2p`]].filter(r => a.tbl[r[1]]);
-    return `<div class="cst"><div class="csh">${esc(w.la.replace(/\s\([^)]*\)/g, ''))} <span class="muted">indicative ${v === 'dep' ? 'deponent' : 'active'}</span></div><div class="forms">${fin(['pres', 'impf', 'fut'])}<div style="height:6px"></div>${fin(['perf', 'plup', 'fperf'])}</div>
+    return `<div class="cst"><div class="csh">${esc(shownLa(w.la))} <span class="muted">indicative ${v === 'dep' ? 'deponent' : 'active'}</span></div><div class="forms">${fin(['pres', 'impf', 'fut'])}<div style="height:6px"></div>${fin(['perf', 'plup', 'fperf'])}</div>
       <table style="margin-top:6px">${ex.map(([l, k]) => `<tr><th>${l}</th><td>${cell(a, k, st)}</td></tr>`).join('')}</table></div>`;
   }
   function lessonTable(t) {
     if (t.t === 'noun') return nounTable(t.h, t.note);
     if (t.t === 'adj') return adjTable(t.h, t.note);
     if (t.t === 'verb') return lessonVerb(t.h);
-    const A = h => an(findW(h)), F = (h, k) => { const a = A(h); return a.tbl[k] ? esc(a.tbl[k].join(' / ')) : '–'; };
+    const A = h => an(findW(h)), F = (h, k) => { const a = A(h); return a.tbl[k] ? esc(Morph.standard(a.tbl[k])) : '–'; };
     if (t.t === 'cmp') return `<div class="cst"><div class="csh">${esc(t.title)}</div><div class="forms"><table><tr><th></th>${t.cols.map(c => `<th>${esc(c[2])}</th>`).join('')}</tr>${Morph.P.map(p => `<tr><th>${p}</th>${t.cols.map(c => `<td>${F(c[0], c[1] + '.' + p)}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
     return `<div class="cst"><div class="csh">${esc(t.title)}</div><div class="forms"><table>${t.rows.map(r => `<tr><th>${esc(r[0])}</th><td>${F(r[1], r[2])}</td>${r[3] ? `<td class="en">${esc(r[3])}</td>` : ''}</tr>`).join('')}</table></div></div>`;
   }
@@ -788,7 +808,7 @@
     V().innerHTML = `<div class="row"><button class="link" id="lback">‹ All lessons</button><span class="grow"></span>${st ? '<span class="ok small">✓ Done</span>' : ''}</div>
       <div class="card lesson"><div class="prompt-kind">${esc(l.sec)}</div><h2 style="margin:4px 0 8px">${esc(l.title)}</h2>${l.body}</div>
       <div class="card"><h3 style="margin-top:0">${l.tables[0].t === 'rows' || l.tables[0].t === 'cmp' ? 'Forms' : 'Endings'}</h3>${['noun', 'adj', 'verb'].includes(l.tables[0].t) ? '<p class="small muted" style="margin:2px 0 0">Endings are in <b>bold</b>.</p>' : ''}${l.tables.map(lessonTable).join('')}</div>
-      <div class="card"><h3 style="margin-top:0">From your word list</h3>${ex.map(w => `<div class="lex"><span class="latin">${esc(w.la.replace(/\s\([^)]*\)/g, ''))}</span><div class="small muted">${esc(w.en.length > 80 ? w.en.slice(0, 78) + '…' : w.en)}</div></div>`).join('')}</div>
+      <div class="card"><h3 style="margin-top:0">From your word list</h3>${ex.map(w => `<div class="lex"><span class="latin">${esc(shownLa(w.la))}</span><div class="small muted">${esc(w.en.length > 80 ? w.en.slice(0, 78) + '…' : w.en)}</div></div>`).join('')}</div>
       <div class="card"><button class="primary big" id="lq">Quick check · ${quizItems(l).length} questions</button>
         ${l.drill ? '<button class="big" id="ldr" style="margin-top:10px">Practice this in Drills</button>' : ''}
         <div class="row" style="margin-top:10px">${st ? '' : '<button class="grow" id="lmark">Mark as done</button>'}${nx ? `<button class="grow" id="lnext">Next: ${esc(nx.title)} ›</button>` : ''}</div>
@@ -838,8 +858,8 @@
       const w = verbs[Math.floor(Math.random() * verbs.length)], a = an(w);
       const want = C.opts[Math.floor(Math.random() * C.opts.length)];
       const ks = C.keys(a).filter(k => C.of(k) === want); if (!ks.length) continue;
-      const key = ks[Math.floor(Math.random() * ks.length)], form = a.tbl[key][0];
-      if (C.cmp(a).some(k => C.of(k) !== want && a.tbl[k].includes(form))) continue;   // ambiguous
+      const key = ks[Math.floor(Math.random() * ks.length)], form = Morph.standard(a.tbl[key]);
+      if (C.cmp(a).some(k => C.of(k) !== want && Morph.standard(a.tbl[k]) === form)) continue;   // ambiguous among standard forms
       if (out.some(x => x.form === form)) continue;
       out.push({ t: 'mc', form, w, key, prompt: `Which ${q.t} is <span class="latin">${esc(form)}</span>?<div class="small muted" style="margin-top:4px">from ${esc(w.la.split(',')[0])} — ${esc(w.en.slice(0, 50))}</div>`, opts: C.opts.map(C.name), ans: C.name(want) });
     }
@@ -876,15 +896,15 @@
           bindNext();
         });
       } else {
-        const { w, a, key } = it, answers = a.tbl[key];
+        const { w, a, key } = it, answers = a.tbl[key], std = Morph.standard(answers);
         V().innerHTML = `${head()}<div class="card"><div class="prompt-kind">${a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective'}</div>
-          <div class="latin">${esc(w.la.replace(/\s\([^)]*\)$/, ''))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
-          <div class="english" style="margin-top:14px"><b>${esc(sub ? Identify.parseLabel(a, sub) : Morph.label(a.kind, key))}</b>?</div>
+          <div class="latin">${esc(shownLa(w.la))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
+          <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
           <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
           <div class="small muted" style="margin-top:6px">${macHint()}</div><button class="primary big" id="chk" style="margin-top:10px">Check</button></div></div>`;
         const go = () => {
-          const v = $('#typed').value.trim(), ok = !!v && Morph.check(v, answers, S.set.strictMac); if (ok) score++;
-          $('#ans').innerHTML = `<div class="answer">${ok ? '<div class="ok">✓ Right</div>' : wrongMsg(v, answers)}<div class="latin">${esc(answers.join(' / '))}</div><div class="forms">${miniTable(a, key)}</div>${nextBtn()}</div>`;
+          const v = $('#typed').value.trim(), g = Morph.grade(v, answers, S.set.strictMac); if (g.ok) score++;
+          $('#ans').innerHTML = `<div class="answer">${g.ok ? answerNote(g) : wrongMsg(v, answers)}<div class="latin">${esc(std)}</div><div class="forms">${miniTable(a, key)}</div>${nextBtn()}</div>`;
           bindNext();
         };
         $('#chk').onclick = go; bindTyped(go);
@@ -920,7 +940,7 @@
       if (same.length < 3) same = pool.filter(x => x.id !== w.id);
       const opts = shuffle([w, ...shuffle(same.slice()).slice(0, 3)]);
       V().innerHTML = `<div class="row small muted"><span class="grow">Question ${i + 1} / ${qs.length}</span><span>Score ${score}</span></div>
-        <div class="card"><div class="latin">${esc(w.la)}</div><span class="pill">${POS_SHORT[w.pos]}</span>
+        <div class="card"><div class="latin">${esc(shownLa(w.la))}</div><span class="pill">${POS_SHORT[w.pos]}</span>
         <div class="opts">${opts.map(o => `<button data-id="${o.id}">${esc(short(o.en))}</button>`).join('')}</div><div id="qn"></div></div>`;
       document.querySelectorAll('.opts button').forEach(b => b.onclick = () => {
         const right = +b.dataset.id === w.id; if (right) score++;
@@ -956,14 +976,14 @@
   }
   function fill() {
     const q = listQ.trim(), nq = Morph.norm(q), lq = q.toLowerCase();
-    let rows = q ? W.filter(w => Morph.norm(w.la).includes(nq) || w.en.toLowerCase().includes(lq)) : W.slice();
+    let rows = q ? W.filter(w => Morph.norm(w.la).includes(nq) || Morph.norm(shownLa(w.la)).includes(nq) || w.en.toLowerCase().includes(lq)) : W.slice();
     if (listSort === 'az') rows.sort((a, b) => Morph.norm(a.la).localeCompare(Morph.norm(b.la)));
     else if (listSort === 'diederich') rows.sort((a, b) => a.id - b.id);
     const cnt = {}; if (listSort === 'diederich') rows.forEach(w => { cnt[w.sec] = (cnt[w.sec] || 0) + 1; });
     let prev = null;
     $('#ul').innerHTML = rows.slice(0, listN).map(w => { let h = '';
       if (listSort === 'diederich' && w.sec !== prev) { h = secHead(w.sec, cnt[w.sec], !prev || prev.split('.')[0] !== w.sec.split('.')[0]); prev = w.sec; }
-      return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(w.la)}</div><div class="en">${esc(w.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
+      return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(shownLa(w.la))}</div><div class="en">${esc(w.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
     const bar = $('#ul').previousElementSibling; if (bar) $('#ul').style.setProperty('--lt', bar.offsetHeight + 'px');
     $('#moreBox').innerHTML = rows.length > listN ? `<button class="big" id="lm" style="margin-top:10px">Show more (${rows.length - listN})</button>` : '';
     if ($('#lm')) $('#lm').onclick = () => { listN += 200; fill(); };
@@ -978,7 +998,7 @@
     const a = an(w);
     let forms = '';
     if (!a.skip) {
-      const T = (cols, rows, get) => `<table><tr><th></th>${cols.map(c => `<th>${c}</th>`).join('')}</tr>${rows.map(r => `<tr><th>${r}</th>${cols.map(c => `<td>${esc((get(r, c) || ['–']).join(' / '))}</td>`).join('')}</tr>`).join('')}</table>`;
+      const T = (cols, rows, get) => `<table><tr><th></th>${cols.map(c => `<th>${c}</th>`).join('')}</tr>${rows.map(r => `<tr><th>${r}</th>${cols.map(c => { const cell = get(r, c); return `<td>${cell && cell.length ? esc(Morph.standard(cell)) : '–'}</td>`; }).join('')}</tr>`).join('')}</table>`;
       if (a.kind === 'verb') forms = verbGroups(a, null, null) + (a.noPassiveWhy ? `<div class="small muted">No passive: ${esc(a.noPassiveWhy)}.</div>` : '') + (a.note ? `<div class="small muted">${esc(a.note)}</div>` : '');
       else if (a.kind === 'noun' || a.pron === 'pers') forms = T(['sg', 'pl'].filter(n => Morph.CASES_X.some(c => a.tbl[c + '.' + n])), Morph.CASES_X.filter(r => a.tbl[r + '.sg'] || a.tbl[r + '.pl']), (r, c) => a.tbl[r + '.' + c]);
       else forms = ['sg', 'pl'].map(n => T(['m', 'f', 'n'].filter(g => a.tbl[g + '.nom.' + n]), Morph.CASES_X.filter(r => a.tbl['m.' + r + '.' + n] || a.tbl['f.' + r + '.' + n]), (r, g) => a.tbl[g + '.' + r + '.' + n])).join('<div style="height:6px"></div>');
@@ -1000,7 +1020,7 @@
     $('#sub').textContent = 'Test mode';
     const why = a.skip ? 'Not in form drills: ' + a.skip : UNITS.size ? '' : 'No forms of this word match your drill settings (Drills › What to drill).';
     V().innerHTML = `<div class="card"><div class="prompt-kind">Test mode · nothing is saved</div>
-      <div class="latin" style="margin-top:6px">${esc(w.la)}</div><div class="small muted">${esc(w.en.slice(0, 120))}</div>
+      <div class="latin" style="margin-top:6px">${esc(shownLa(w.la))}</div><div class="small muted">${esc(w.en.slice(0, 120))}</div>
       ${fin ? `<div class="small" id="tfin" style="margin-top:8px">Last set: ${fin.ok} of ${fin.n} right</div>` : ''}</div>
       <div class="card"><div class="small muted chiph" style="margin-top:0">Flashcard</div>
         <div class="row wrap"><button class="grow" id="tf-r">Latin → English</button><button class="grow" id="tf-p">English → Latin</button></div>

@@ -471,9 +471,9 @@ t('manus', 'dat.sg', 'manuī'); t('senātus', 'gen.sg', 'senātūs'); t('exercit
 ok19(!M.check('manū', tb('manus')['dat.sg'], true) && !M.check('senātī', tb('senātus')['gen.sg'], true) && !M.check('currum', tb('currus')['gen.pl'], true), 'no dat -u, senati, or syncopated currum', tb('manus')['dat.sg'], tb('senātus')['gen.sg']);
 // v29: adjectives and pronouns (Wiktionary tables, confirmed in A&G §§49, 110–122, 134, 143, 145 and L&S).
 { let n = 0; for (const e of W) if (e.pos === 'adjective' || e.pos === 'pronoun') n++; ok19(n === 307, 'adjectives and pronouns audited', n); }
-// Acc. pl. of i-stems is -īs, with -ēs accepted (A&G §114.a, §§115–119). Comparatives lead with -ēs (§121.c).
-for (const [h, acc] of [['omnis', 'omnīs'], ['ācer', 'ācrīs'], ['celer', 'celerīs'], ['ingēns', 'ingentīs'], ['fēlīx', 'fēlīcīs'], ['pār', 'parīs'], ['memor', 'memorīs'], ['potēns', 'potentīs']]) {
-  t(h, 'm.acc.pl', acc); ok19(M.check(acc.replace(/īs$/, 'ēs'), tb(h)['m.acc.pl'], true) && tb(h)['f.acc.pl'][0] === acc, h + ' acc. pl.', tb(h)['m.acc.pl']);
+// Acc. pl. shown for i-stem adjectives is -ēs, matching the nouns. -īs stays accepted.
+for (const [h, acc] of [['omnis', 'omnēs'], ['ācer', 'ācrēs'], ['celer', 'celerēs'], ['ingēns', 'ingentēs'], ['fēlīx', 'fēlīcēs'], ['pār', 'parēs'], ['memor', 'memorēs'], ['potēns', 'potentēs']]) {
+  t(h, 'm.acc.pl', acc); ok19(M.check(acc.replace(/ēs$/, 'īs'), tb(h)['m.acc.pl'], true) && tb(h)['f.acc.pl'][0] === acc, h + ' acc. pl.', tb(h)['m.acc.pl']);
 }
 t('melior', 'm.acc.pl', 'meliōrēs'); t('māior', 'm.acc.pl', 'māiōrēs'); t('vetus', 'm.acc.pl', 'veterēs'); t('ūber', 'm.acc.pl', 'ūberēs');
 ok19(M.check('meliōrīs', tb('melior')['m.acc.pl'], true) && !tb('vetus')['m.acc.pl'].includes('veterīs') && !tb('ūber')['m.acc.pl'].includes('ūberīs'), 'comparative -is; vetus and uber -es only');
@@ -486,13 +486,13 @@ ok19(!M.check('memore', tb('memor')['m.abl.sg'], true) && !M.check('memorum', tb
 // ūber (A&G §119): abl. -ī, gen. pl. -um, neut. pl. -a.
 t('ūber', 'm.abl.sg', 'ūberī'); t('ūber', 'm.gen.pl', 'ūberum'); t('ūber', 'n.nom.pl', 'ūbera'); t('ūber', 'n.acc.sg', 'ūber');
 ok19(!M.check('ūberium', tb('ūber')['m.gen.pl'], true) && !M.check('ūberia', tb('ūber')['n.nom.pl'], true) && !M.check('ūbere', tb('ūber')['m.abl.sg'], true), 'uber', tb('ūber')['m.gen.pl'], tb('ūber')['n.nom.pl']);
-// dīves: no neuter plural (L&S). Acc. dīvītīs (-ēs). Abl. dīvite, not the Pliny dīvitī.
-t('dīves', 'm.abl.sg', 'dīvite'); t('dīves', 'm.gen.pl', 'dīvitum'); t('dīves', 'm.acc.pl', 'dīvitīs'); t('dīves', 'n.nom.sg', 'dīves'); t('dīves', 'n.acc.sg', 'dīves');
-ok19(M.check('dīvitēs', tb('dīves')['m.acc.pl'], true) && !tb('dīves')['n.nom.pl'] && !tb('dīves')['n.acc.pl'] && !tb('dīves')['n.voc.pl'], 'dives neuter plural', tb('dīves')['n.nom.pl'], tb('dīves')['m.acc.pl']);
+// dīves: no neuter plural (L&S). Acc. dīvitēs is shown; dīvitīs is accepted. Abl. dīvite, not the Pliny dīvitī.
+t('dīves', 'm.abl.sg', 'dīvite'); t('dīves', 'm.gen.pl', 'dīvitum'); t('dīves', 'm.acc.pl', 'dīvitēs'); t('dīves', 'n.nom.sg', 'dīves'); t('dīves', 'n.acc.sg', 'dīves');
+ok19(M.check('dīvitīs', tb('dīves')['m.acc.pl'], true) && tb('dīves')['m.acc.pl'][0] === 'dīvitēs' && !tb('dīves')['n.nom.pl'] && !tb('dīves')['n.acc.pl'] && !tb('dīves')['n.voc.pl'], 'dives neuter plural', tb('dīves')['n.nom.pl'], tb('dīves')['m.acc.pl']);
 ok19(!M.check('dīvitī', tb('dīves')['m.abl.sg'], true) && !M.check('dīvita', [].concat(tb('dīves')['n.nom.pl'], tb('dīves')['n.acc.pl']).filter(Boolean), true), 'no diviti or divita');
 // dīs, dīte (L&S). Genitive dītis; the plural otherwise follows the i-stem.
-t('dīs', 'm.abl.sg', 'dīte'); t('dīs', 'm.gen.sg', 'dītis'); t('dīs', 'm.gen.pl', 'dītium'); t('dīs', 'n.nom.pl', 'dītia'); t('dīs', 'm.acc.pl', 'dītīs');
-ok19(!M.check('dītī', tb('dīs')['m.abl.sg'], true) && M.check('dītēs', tb('dīs')['m.acc.pl'], true), 'dis', tb('dīs')['m.abl.sg'], tb('dīs')['m.acc.pl']);
+t('dīs', 'm.abl.sg', 'dīte'); t('dīs', 'm.gen.sg', 'dītis'); t('dīs', 'm.gen.pl', 'dītium'); t('dīs', 'n.nom.pl', 'dītia'); t('dīs', 'm.acc.pl', 'dītēs');
+ok19(!M.check('dītī', tb('dīs')['m.abl.sg'], true) && M.check('dītīs', tb('dīs')['m.acc.pl'], true) && tb('dīs')['m.acc.pl'][0] === 'dītēs', 'dis', tb('dīs')['m.abl.sg'], tb('dīs')['m.acc.pl']);
 // -ius adjectives: vocative -ie only, genitive -iī not contracted -ī (A&G §110.a).
 t('ēgregius', 'm.voc.sg', 'ēgregie'); t('ēgregius', 'm.gen.sg', 'ēgregiī'); t('pius', 'm.voc.sg', 'pie');
 ok19(tb('ēgregius')['m.voc.sg'].join() === 'ēgregie' && !M.check('ēgregī', tb('ēgregius')['m.voc.sg'], true) && !M.check('ēgregī', tb('ēgregius')['m.gen.sg'], true), 'egregius vocative and genitive', tb('ēgregius')['m.voc.sg'], tb('ēgregius')['m.gen.sg']);
@@ -588,5 +588,39 @@ ok19(!M.check('amāstī', tb('amō')['ind.act.perf.2s'], true) && !M.check('amā
 for (const h of ['meminī', 'coepī', 'inquam', 'āiō']) ok19(!!find(h)[1].skip, h + ' not drilled', find(h)[1].skip);
 ok19(!W.some(e => M.plain(e.la.split(/[ ,]/)[0]) === 'odi'), 'odi is not on the list');
 t('edō', 'pres.3s', 'edit'); ok19(M.check('ēst', tb('edō')['ind.act.pres.3s'], true) && tb('edō')['sup.um'][0] === 'ēsum', 'edo');
+// Alternates policy: one standard form, the rest accepted and flagged. Renderers show only the standard.
+{ const cell = tb('omnis')['m.acc.pl'];
+  ok19(M.standard(cell) === 'omnēs' && M.accepts(cell).join() === 'omnēs,omnīs', 'omnēs is the standard accusative plural', cell);
+  const alt = M.grade('omnīs', cell, true), std = M.grade('omnēs', cell, true), bad = M.grade('omnibus', cell, true);
+  ok19(alt.ok && alt.alternate === true && alt.standard === 'omnēs', 'grading flags an alternate', JSON.stringify(alt));
+  ok19(std.ok && alt.alternate !== std.alternate && std.alternate === false, 'the standard form is not flagged', JSON.stringify(std));
+  ok19(!bad.ok && bad.alternate === false, 'a wrong form is not an alternate', JSON.stringify(bad));
+  const ext = M.grade('extinguit', M.analyze(W.find(e => e.la.startsWith('ex(s)tinguō'))).tbl['ind.act.pres.3s'], true);
+  ok19(ext.ok && ext.alternate === false, 'ex(s)- spelling of the standard is not an alternate', JSON.stringify(ext));
+  const head = M.gradeHead('carta', ['charta', 'carta'], true);
+  ok19(head.ok && head.alternate === true && head.standard === 'charta' && M.gradeHead('charta', ['charta', 'carta'], true).alternate === false, 'headword alternate', JSON.stringify(head));
+  const fs = require('fs'), path = require('path');
+  const ui = ['app.js', 'sentences.js', 'lessons.js', 'identify.js', 'sentences/engine.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+  ok19(!ui.includes(".join(' / ')"), 'a renderer still joins alternate forms');
+  let multi = 0, leadEs = 0, leadIs = 0;
+  for (const e of W) {
+    const a = M.analyze(e); if (!a.tbl) continue;
+    for (const [k, forms] of Object.entries(a.tbl)) {
+      if (!forms || forms.length < 2) continue;
+      multi++;
+      ok19(M.standard(forms) === forms[0], 'standard is not the first form', e.la, k, forms);
+      const g0 = M.grade(forms[0], forms, true);
+      ok19(g0.ok && g0.alternate === false && g0.standard === forms[0], 'standard grades as the standard', e.la, k, forms);
+      for (const alt of forms.slice(1)) {
+        const g1 = M.grade(alt, forms, true);
+        const same = M.check(alt, [forms[0]], true);   // a spelling already covered by the standard (gender, ex(s)-) is not a second form
+        ok19(g1.ok && g1.alternate === !same && g1.standard === forms[0], 'alternate flag', e.la, k, alt, JSON.stringify(g1));
+      }
+      if (a.kind === 'adj' && /\.acc\.pl$/.test(k) && forms.some(f => /īs$/.test(f)) && forms.some(f => /ēs$/.test(f))) { if (/ēs$/.test(forms[0])) leadEs++; else leadIs++; }
+    }
+  }
+  ok19(leadIs === 0 && leadEs >= 120, 'every adjective acc. pl. that has both endings shows -ēs', leadIs, leadEs);
+  console.log(`${multi} multi-form cells; ${leadEs} adjective accusative plurals show -ēs beside -īs`);
+}
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

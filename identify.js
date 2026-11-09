@@ -109,10 +109,10 @@
     if (at.mood === 'ger' || at.mood === 'sup') return vCaseOk(key, df);
     return true;
   }
-  function index(a) {      // normalized form -> every key that produces it
+  function index(a) {      // normalized STANDARD form -> every key that shows it (alternates are not readings)
     if (a._ix) return a._ix;
     const x = expand(a), ix = new Map();
-    for (const k in x) for (const f of x[k]) { const n = M.normM(f); if (!ix.has(n)) ix.set(n, []); if (!ix.get(n).includes(k)) ix.get(n).push(k); }
+    for (const k in x) { const f = M.standard(x[k]); if (!f) continue; const n = M.normM(f); if (!ix.has(n)) ix.set(n, []); if (!ix.get(n).includes(k)) ix.get(n).push(k); }
     Object.defineProperty(a, '_ix', { value: ix, enumerable: false });
     return ix;
   }
@@ -128,7 +128,7 @@
       const base = key.startsWith('gdv.') ? 'gdv' : key, subs = Object.keys(x).filter(s => s.startsWith(base + ':') && allowed(a, s, df));
       if (subs.length) k = subs[Math.floor(rnd() * subs.length)]; else if (!x[key]) return null;
     }
-    return { key: k, form: x[k][0] };
+    return { key: k, form: M.standard(x[k]) };
   }
   // typed drills: a participle or gerundive is asked in its nom. sg. (amātus, amanda) when the settings allow that;
   // otherwise in an allowed case and number of the same gender (amātō, amandārum). null = ask the table form as is.

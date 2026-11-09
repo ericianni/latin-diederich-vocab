@@ -132,7 +132,8 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     const M = require('../morph.js'); globalThis.Morph = M; const I = require('../identify.js'), WD = require('../data/words.json');
     const selOf = p => Object.fromEntries(Object.entries(p.at).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]));
     const parsesFor = (df, form, head) => {     // the word on screen: nouns / adjectives show the headword, verbs the entry
-      for (const w of WD) { if (!(w.la.replace(/\s\([^)]*\)$/, '') === head || w.la.split(/[ ,]/)[0] === head)) continue;
+      const bare = s => M.plain(String(s).split(/[ ,]/)[0]).replace(/[()]/g, '');
+      for (const w of WD) { if (bare(w.la) !== bare(head) && w.la.replace(/\s\([^)]*\)$/, '') !== head) continue;
         const a = M.analyze(w); if (a.skip || !a.tbl) continue; const ps = I.parses(a, w, form, df); if (ps.length) return ps; }
       return [];
     };
@@ -350,9 +351,44 @@ const lab = { ind: 'indicative', sub: 'subjunctive', imp: 'imperative', inf: 'in
     await pg.goto(URL + '#drills'); await pg.waitForSelector('#dgo'); await pg.evaluate(() => document.querySelector('#dgo').click());
     await pg.waitForSelector('#cs'); await pg.evaluate(() => document.querySelector('#cs').click()); await pg.waitForSelector('#overlay .jump');
     await new Promise(r => setTimeout(r, 300));
-    const deep = await pg.evaluate(() => { const b = document.querySelector('#overlay .jump').getBoundingClientRect(), d = [...document.querySelectorAll('#overlay details[open]')].pop(); return d ? d.getBoundingClientRect().top - b.bottom : null; });
+    const deep = await pg.evaluate(() => { const b = document.querySelector('#overlay .jump').getBoundingClientRect(), d = document.querySelector('#overlay .flash') || [...document.querySelectorAll('#overlay details[open]')].pop(); return d ? d.getBoundingClientRect().top - b.bottom : null; });
     if (deep == null || deep < 0) { bad++; console.log('   - drill link: section hidden under the bar', deep); }
     const r2 = await pg.evaluate(JT, true); console.log('[cheat] overlay: ' + r2 + ', drill link lands ' + Math.round(deep) + 'px below the bar'); if (!/^ok/.test(r2)) bad++;
+    await pg.close();
+  }
+  // Alternates policy: tables show omnēs, never omnīs; typing omnīs is right and flagged.
+  {
+    const pg = await br.newPage(); const errs = []; pg.on('pageerror', e => errs.push(String(e)));
+    await pg.goto(URL + 'manifest.webmanifest');
+    await pg.evaluate(() => { localStorage.clear(); localStorage.setItem('latin1400.v1', JSON.stringify({ cards: {}, v: 3, set: { dmode: 'type', dlen: 5, df: { types: ['adj'], cases: ['acc'], nums: ['pl'] } } })); });
+    await pg.goto(URL + '#cheat'); await pg.waitForSelector('.sheet');
+    await pg.evaluate(() => document.querySelectorAll('details').forEach(d => d.open = true));
+    const sheet = await pg.$eval('.sheet', e => e.innerText);
+    if (sheet.includes('omnīs')) { bad++; console.log('   - cheat sheet shows omnīs'); }
+    if (!sheet.includes('omnēs')) { bad++; console.log('   - cheat sheet does not show omnēs'); }
+    await pg.evaluate(() => document.querySelector('#tabs [data-tab="list"]').click());
+    await pg.waitForSelector('#q'); await pg.type('#q', 'omnis');
+    await pg.waitForSelector('#ul li[data-id="1154"]');
+    await pg.evaluate(() => document.querySelector('#ul li[data-id="1154"]').click());
+    await pg.waitForSelector('#ul .forms');
+    const detail = await pg.$eval('#ul .forms', e => e.innerText);
+    if (detail.includes('omnīs') || detail.includes(' / ')) { bad++; console.log('   - word detail shows an alternate: ' + detail.replace(/\s+/g, ' ').slice(0, 180)); }
+    if (!detail.includes('omnēs')) { bad++; console.log('   - word detail does not show omnēs'); }
+    await pg.evaluate(() => document.querySelector('.tbtn').click()); await pg.waitForSelector('[data-tm="type"]');
+    await pg.click('[data-tm="type"]'); await pg.waitForSelector('#typed');
+    let flagged = false;
+    for (let i = 0; i < 8 && !flagged; i++) {
+      const label = await pg.$eval('.english b', e => e.textContent);
+      if (!/accusative plural/.test(label) || /neuter/.test(label)) { await pg.evaluate(() => { const t = document.querySelector('#typed'); t.value = 'omnia'; t.dispatchEvent(new Event('input')); document.querySelector('#chk').click(); }); await pg.waitForSelector('#ans [data-r]'); await pg.click('#ans [data-r]'); await pg.waitForSelector('#typed'); continue; }
+      await pg.evaluate(() => { const t = document.querySelector('#typed'); t.value = 'omnīs'; document.querySelector('#chk').click(); });
+      await pg.waitForSelector('#ans .alt');
+      const fb = await pg.$eval('#ans', e => ({ alt: e.querySelector('.alt') && e.querySelector('.alt').textContent, latin: e.querySelector('.latin').textContent, ok: !!e.querySelector('.ok'), r: e.querySelector('[data-r]').dataset.r, slash: e.innerText.includes(' / ') }));
+      if (fb.alt !== 'Accepted alternate — standard form: omnēs' || fb.latin !== 'omnēs' || fb.ok || fb.r !== '1' || fb.slash) { bad++; console.log('   - alternate feedback', JSON.stringify(fb), label); }
+      else flagged = true;
+    }
+    if (!flagged) { bad++; console.log('   - never reached a masculine or feminine accusative plural of omnis'); }
+    if (errs.length) { bad++; console.log('   - page errors: ' + errs.join(' | ')); }
+    console.log('[alternates] ' + (flagged ? 'omnēs shown, omnīs flagged' : 'FAILED'));
     await pg.close();
   }
   console.log(bad ? 'ISSUES: ' + bad : 'ALL OK'); await br.close(); srv.close(); process.exit(bad ? 1 : 0);

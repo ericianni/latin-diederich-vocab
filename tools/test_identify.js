@@ -23,7 +23,7 @@ eq('bonus', 'bonī', DEF, ['m.gen.sg', 'n.gen.sg', 'm.nom.pl']);
 eq('bonus', 'bonīs', DEF, ['m.dat.pl', 'm.abl.pl', 'f.dat.pl', 'f.abl.pl', 'n.dat.pl', 'n.abl.pl']);
 eq('amō', 'amāris', DEF, ['ind.act.pres.2s'].slice(0, 0));                       // passive off by default: no parse
 eq('amō', 'amāris', ALL, ['ind.pas.pres.2s']);
-eq('amō', 'amāre', ALL, ['inf.act.pres', 'imp.pas.pres.2s', 'ind.pas.pres.2s']);   // amāre is also the alternative 2nd sg passive
+eq('amō', 'amāre', ALL, ['inf.act.pres', 'imp.pas.pres.2s']);   // -re on the indicative is an alternate, not a reading
 eq('amō', 'amāre', Object.assign({}, ALL, { voices: ['act'] }), ['inf.act.pres']);
 eq('regō', 'regam', ALL, ['ind.act.fut.1s', 'sub.act.pres.1s']);
 eq('regō', 'regam', DEF, ['ind.act.fut.1s']);                                          // subjunctive off: only the future
@@ -138,7 +138,7 @@ eq('mare', 'marī', Object.assign({}, DEF, { cases: ['dat'] }), ['dat.sg']);    
 
 // pronouns: every reading of a form, case / number (personal) or gender / case / number (hic, ille)
 eq('nōs', 'nōs', DEF, ['nom.pl', 'acc.pl']); eq('egō', 'mē', DEF, ['acc.sg', 'abl.sg']); eq('tū', 'tē', DEF, ['acc.sg', 'abl.sg']);
-eq('vōs', 'vestrī', DEF, ['gen.pl']); eq('vōs', 'vōbīs', DEF, ['dat.pl', 'abl.pl']); eq('egō', 'mihi', DEF, ['dat.sg']); eq('egō', 'mī', DEF, ['dat.sg']);
+eq('vōs', 'vestrum', DEF, ['gen.pl']); eq('vōs', 'vestrī', DEF, []); eq('vōs', 'vōbīs', DEF, ['dat.pl', 'abl.pl']); eq('egō', 'mihi', DEF, ['dat.sg']); eq('egō', 'mī', DEF, []);
 eq('hic', 'huius', DEF, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('hic', 'hīs', DEF, ['m.dat.pl', 'f.dat.pl', 'n.dat.pl', 'm.abl.pl', 'f.abl.pl', 'n.abl.pl']);
 eq('hic', 'haec', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('hic', 'hoc', DEF, ['n.nom.sg', 'n.acc.sg']); eq('hic', 'hōc', DEF, ['m.abl.sg', 'n.abl.sg']);
 eq('ille', 'illī', DEF, ['m.dat.sg', 'f.dat.sg', 'n.dat.sg', 'm.nom.pl']); eq('ille', 'illa', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('ille', 'illud', DEF, ['n.nom.sg', 'n.acc.sg']);
@@ -188,7 +188,7 @@ const psOf = (h, form, df) => { const [w, a] = find(h); return I.parses(a, w, fo
   r = I.andGrade(at('dat.sg'), ps, found); ok(r.kind === 'new', 'puellae: dat. sg. is new'); found.push(r.p);
   ok(I.others(ps, found).length === 0, 'puellae: all named');
 }
-{ // amāre: infinitive or imperative (or the alternative 2nd sg. passive), depending on the settings
+{ // amāre: infinitive or imperative. The indicative -re is an alternate, so it is not an And…? reading.
   const ps = psOf('amō', 'amāre', ALL), inf = ps.find(p => p.key === 'inf.act.pres'), imp = ps.find(p => p.key === 'imp.pas.pres.2s');
   ok(I.grade(selOf(imp), ps).ok, 'amāre: imperative accepted');
   const r = I.andGrade(selOf(inf), ps, [imp]); ok(r.kind === 'new' && r.p === inf, 'amāre: infinitive is the And…? answer');
@@ -196,7 +196,7 @@ const psOf = (h, form, df) => { const [w, a] = find(h); return I.parses(a, w, fo
 }
 // imperatives ignore the Person chips: with only 1st person on, amāre is still an imperative, but not the 2nd sg. indicative
 eq('amō', 'amāre', Object.assign({}, ALL, { persons: ['1'] }), ['inf.act.pres', 'imp.pas.pres.2s']);
-eq('amō', 'amāre', Object.assign({}, ALL, { moods: ['inf', 'ind'] }), ['inf.act.pres', 'ind.pas.pres.2s']);
+eq('amō', 'amāre', Object.assign({}, ALL, { moods: ['inf', 'ind'] }), ['inf.act.pres']);
 eq('amō', 'amāre', Object.assign({}, ALL, { vnums: ['pl'] }), ['inf.act.pres']);
 // vowel length: rēgī (rēx, dat. sg.) and regī (regō, pres. pass. inf.) are different forms, not homographs
 eq('rēx', 'regī', ALL, []);
@@ -205,7 +205,7 @@ eq('regō', 'rēgī', ALL, []);
 eq('rēx', 'rēgī', ALL, ['dat.sg']);
 eq('veniō', 'venit', DEF, ['ind.act.pres.3s']);                       // venit vs. vēnit
 eq('veniō', 'vēnit', DEF, ['ind.act.perf.3s']);
-eq('ferō', 'ferre', ALL, ['inf.act.pres', 'imp.pas.pres.2s', 'ind.pas.pres.2s']);
+eq('ferō', 'ferre', ALL, ['inf.act.pres', 'imp.pas.pres.2s']);
 eq('sum', 'es', ALL, ['ind.act.pres.2s', 'imp.act.pres.2s']);
 eq('cornū', 'cornū', ALL, ['nom.sg', 'voc.sg', 'dat.sg', 'acc.sg', 'abl.sg']);
 eq('agō', 'ēgerit', ALL, ['ind.act.fperf.3s', 'sub.act.perf.3s']);
@@ -219,10 +219,14 @@ eq('tenebrae', 'tenebrā', ALL, []);
 // v15 accuracy fixes
 eq('quaerō', 'quaesīvī', ALL, ['ind.act.perf.1s']); eq('quaerō', 'quaersīvī', ALL, []);
 eq('contemnō', 'contempsit', ALL, ['ind.act.perf.3s']); eq('contemnō', 'contemnpsit', ALL, []);
-eq('dea', 'deābus', ALL, ['dat.pl', 'abl.pl']); eq('dea', 'deīs', ALL, ['dat.pl', 'abl.pl']);
+eq('dea', 'deābus', ALL, ['dat.pl', 'abl.pl']); eq('dea', 'deīs', ALL, []);   // deīs is an accepted alternate, not a prompt
 eq('alter', 'alterīus', ALL, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('alter', 'alterius', ALL, []);
 eq('vīs', 'vīs', ALL, ['nom.sg', 'voc.sg']);                              // rare gen. sg. vīs not drilled
 eq('dēsum', 'deest', ALL, ['ind.act.pres.3s']); eq('dēsum', 'dēest', ALL, []);
+// prompts and And…? readings come from the standard form only
+{ const [w, a] = find('omnis'); const q = I.pick(a, ['m.acc.pl'], ALL, () => 0);
+  ok(q.form === 'omnēs', 'identify prompt is omnēs', q);
+  ok(I.parses(a, w, 'omnēs', ALL).some(p => p.key === 'm.acc.pl') && !I.parses(a, w, 'omnīs', ALL).some(p => p.key.endsWith('.acc.pl')), 'omnīs is not an acc. pl. reading'); }
 // sweep: in every ambiguous form, each reading can be named by chips, and no two readings share one answer
 let amb = 0;
 for (const df of [DEF, ALL, IMP1, PERS]) for (const w of W) {

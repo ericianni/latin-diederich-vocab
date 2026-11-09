@@ -16,29 +16,10 @@
   // ---------- morphology layer (with documented overrides for morph.js bugs) ----------
   const CASES = ['nom', 'gen', 'dat', 'acc', 'abl'];
   const NUMS = ['sg', 'pl'];
-  // No per-word form overrides: every form comes from the app's morph.js as is. (The POC's two workarounds are resolved here:
-  // ex(s)tinguō's ext- spelling is accepted by grading through Morph.variants, the same rule the app's own check() uses, and
-  // fīliābus is chosen by the general homograph rule in preferUnambiguous() below.)
+  // No per-word form overrides: every form comes from the app's morph.js as is. ex(s)tinguō's ext- spelling is
+  // accepted by grading through Morph.variants, the same rule the app's own check() uses. The sentence shows
+  // Morph.standard (the first form of the cell). Other forms stay in the table and gradeLatin still accepts them.
   const OVERRIDES = {};
-  // Homograph rule: when morph.js gives several forms for one cell and the first is also a form of ANOTHER lexicon noun in the same
-  // case and number, show the first alternative that is not (A&G §43 e: fīliābus, deābus "to distinguish them from the corresponding
-  // forms of fīlius, deus"; the Diederich entry itself reads "fīlia, -ae, f. (dat./abl. pl. fīliābus)"). All forms stay accepted.
-  let formIndex = null;
-  function homographIndex() {
-    if (formIndex) return formIndex; formIndex = {};
-    for (const k of Object.keys(LEX.nouns)) { const r = Morph.analyze(WORDS()[LEX.nouns[k].id]); for (const [cell, fs] of Object.entries(r.tbl || {})) for (const f of fs) (formIndex[cell + '|' + normM(f)] = formIndex[cell + '|' + normM(f)] || new Set()).add(k); }
-    return formIndex;
-  }
-  function preferUnambiguous(key, tbl) {
-    const idx = homographIndex();
-    for (const [cell, fs] of Object.entries(tbl)) {
-      if (!fs || fs.length < 2) continue;
-      const clash = f => [...(idx[cell + '|' + normM(f)] || [])].some(k => k !== key);
-      if (!clash(fs[0])) continue;
-      const i = fs.findIndex(f => !clash(f)); if (i > 0) tbl[cell] = [fs[i]].concat(fs.filter((_, j) => j !== i));
-    }
-    return tbl;
-  }
   const GENDER_OVERRIDES = {};
   // Personal pronouns used as object / indirect object / agent (ā mē) / with (mēcum). No nominative here: the subject pronoun is the PRONOUN template's
   // optional ego/tū/nōs/vōs, and leaving nōs/vōs out of the nominative keeps the case check from counting a reading the verb's person already rules out.
@@ -61,8 +42,7 @@
     if (cache['n:' + key]) return cache['n:' + key];
     if (key.startsWith('pron_')) return (cache['n:' + key] = pronInfo(key));
     const lx = LEX.nouns[key]; if (!lx) throw new Error('no noun ' + key);
-    const r = Morph.analyze(WORDS()[lx.id]); let tbl = JSON.parse(JSON.stringify(r.tbl));
-    tbl = preferUnambiguous(key, tbl);
+    const r = Morph.analyze(WORDS()[lx.id]); const tbl = JSON.parse(JSON.stringify(r.tbl));
     const g0 = GENDER_OVERRIDES[key] || r.g;
     const genders = g0 === 'mf' ? ['m', 'f'] : g0 === 'irr' ? ['m'] : [g0];
     const tags = new Set([lx.cls, '@' + key, ...lx.tags]);
@@ -306,10 +286,10 @@
 
   // ---------- ambiguity (case/number readings) ----------
   function nounReadings(n, tok) {
-    const r = []; for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of NUMS) { const f = n.form(c, nu); if (f && f.some(x => norm(x) === norm(tok))) r.push(c + '.' + nu); } return r;
+    const r = []; for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of NUMS) { const f = n.form(c, nu); if (f && f.length && norm(Morph.standard(f)) === norm(tok)) r.push(c + '.' + nu); } return r;
   }
   function adjReadings(a, tok) {
-    const r = []; for (const g of ['m', 'f', 'n']) for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of NUMS) { const f = a.form(g, c, nu); if (f.some(x => norm(x) === norm(tok))) r.push(g + '.' + c + '.' + nu); } return r;
+    const r = []; for (const g of ['m', 'f', 'n']) for (const c of ['nom', 'dat', 'acc', 'abl']) for (const nu of NUMS) { const f = a.form(g, c, nu); if (f && f.length && norm(Morph.standard(f)) === norm(tok)) r.push(g + '.' + c + '.' + nu); } return r;
   }
   // nps: [{np, role}] roles: S (needs nom + verb number), O (acc), IO (dat), MEANS (abl). Returns problem string or null.
   function ambiguity(nps, verbNum, hasExplicitSubject) {
@@ -693,6 +673,35 @@
     return rec(0);
   }
   function gradeLatin(sent, answer, opts) { const strict = !!(opts && opts.strict); const toks = tokLatin(answer, strict); return sent.enLaConsSets.some(c => matchCons(toks, c, strict)); }
+  // Same acceptance as gradeLatin, plus whether a token was a non-standard form of a word in the sentence.
+  function gradeLatinReport(sent, answer, opts) {
+    const strict = !!(opts && opts.strict);
+    const ok = gradeLatin(sent, answer, opts);
+    if (!ok) return { ok: false, alternate: false, standard: '' };
+    const S = sent.spec, cells = [];
+    const addNP = np => {
+      if (!np) return;
+      const fs = np.noun.form(np.case, np.num); if (fs && fs.length) cells.push(fs);
+      if (np.adj) { const a = adjInfo(np.adj); for (const g of np.noun.genders) { const af = a.form(g, np.case, np.num); if (af && af.length) cells.push(af); } }
+    };
+    addNP(S.subj); addNP(S.obj); addNP(S.io); addNP(S.means); if (S.pp) addNP(S.pp.np); if (S.coord) addNP(S.coord.np2);
+    if (S.pred && S.subj) { const a = adjInfo(S.pred); for (const g of S.subj.noun.genders) { const af = a.form(g, 'nom', S.subj.num); if (af && af.length) cells.push(af); } }
+    const v = verbInfo(sent.verb), voice = sent.voice === 'act' ? 'act' : 'pas';
+    for (const t of sent.enLaTenses || [sent.tense]) {
+      const key = 'ind.' + voice + '.' + t + '.' + sent.person;
+      if (v.tbl[key]) cells.push(v.tbl[key]);
+      if (voice === 'pas' && t === 'perf' && v.ptc) {
+        const num = sent.person[1] === 's' ? 'sg' : 'pl';
+        for (const g of (S.subj ? S.subj.noun.genders : ['m', 'f', 'n'])) if (v.ptc[g + '.nom.' + num]) cells.push(v.ptc[g + '.nom.' + num]);
+      }
+    }
+    let alt = '';
+    for (const tok of tokLatin(answer, strict)) for (const c of cells) {
+      const g = Morph.grade(tok, c, strict);
+      if (g.ok && g.alternate) { alt = g.standard; break; }
+    }
+    return { ok: true, alternate: !!alt, standard: alt };
+  }
 
   // ---------- word chips ----------
   function chipsLaEn(sent, rng, nDistract) {
@@ -765,8 +774,10 @@
   function verbForms(v, voice, tense, pn) {
     try {
       const lv = latinVerb(v, voice, tense, pn, ['m', 'f', 'n']);
-      if (Array.isArray(lv)) return lv.map(x => x.join(' '));
-      const out = []; for (const p of lv.ptc) for (const a of lv.aux) out.push(p + ' ' + a); return out;
+      if (Array.isArray(lv)) return lv.length ? [lv[0].join(' ')] : [];   // the standard form only
+      if (!lv.ptc.length || !lv.aux.length) return [];
+      const aux = lv.aux[0];
+      return lv.ptc.map(p => p + ' ' + aux);
     } catch (e) { return []; }
   }
   function identifyTargets(sent) {
@@ -798,6 +809,6 @@
     return out;
   }
 
-  const api = { setPool, sentenceIds, identifyTargets, verbForms, PERSONS, advFits, enVerbAltsAdv, ADV_KEYS, build, mulberry32, nounInfo, adjInfo, verbInfo, latinVerb, enVerbAlts, enNoun, buildNP, generate, generateOne, generateMany, gradeEnglish, gradeLatin, chipsLaEn, chipsEnLa, normEn, TEMPLATES, TENSES, PP_TYPES, CONJ_FORMS, joinConj, enPersonOf, OVERRIDES, matches, adjFits, adjEnglish, ambiguity, nounReadings, adjReadings, LEX, Morph };
+  const api = { setPool, sentenceIds, identifyTargets, verbForms, PERSONS, advFits, enVerbAltsAdv, ADV_KEYS, build, mulberry32, nounInfo, adjInfo, verbInfo, latinVerb, enVerbAlts, enNoun, buildNP, generate, generateOne, generateMany, gradeEnglish, gradeLatin, gradeLatinReport, chipsLaEn, chipsEnLa, normEn, TEMPLATES, TENSES, PP_TYPES, CONJ_FORMS, joinConj, enPersonOf, OVERRIDES, matches, adjFits, adjEnglish, ambiguity, nounReadings, adjReadings, LEX, Morph };
   root.LatinEngine = api; if (isNode) module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

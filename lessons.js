@@ -62,7 +62,7 @@
 <ul class="ll"><li>Nominative <i>-is</i> or <i>-ēs</i> with the same number of syllables as the genitive: <i>cīvis, cīvis</i> “citizen”.</li>
 <li>One-syllable nouns whose stem ends in two consonants: <i>urbs, urbis</i> “city”; <i>mōns, montis</i> “mountain”.</li>
 <li>Neuters in <i>-e, -al, -ar</i>: <i>mare</i> “sea”, <i>animal</i> “animal”.</li></ul>
-<p><b>What changes:</b> genitive plural <i>-ium</i> (<i>cīvium, urbium</i>); masculine and feminine nouns may have accusative plural <i>-īs</i> as well as <i>-ēs</i>. Neuter i-stems also have ablative singular <i>-ī</i> and nominative/accusative plural <i>-ia</i> (<i>marī, maria</i>; <i>animālī, animālia</i>).</p>
+<p><b>What changes:</b> genitive plural <i>-ium</i> (<i>cīvium, urbium</i>); masculine and feminine accusative plural <i>-ēs</i> (<i>cīvēs</i>), the same ending as the nominative plural. Neuter i-stems also have ablative singular <i>-ī</i> and nominative/accusative plural <i>-ia</i> (<i>marī, maria</i>; <i>animālī, animālia</i>).</p>
 <p><b>Exceptions:</b> <i>pater</i>, <i>māter</i>, <i>frāter</i> look like they should be i-stems but are not: <i>patrum</i>.</p>`,
       tables: [{ t: 'noun', h: 'cīvis' }, { t: 'noun', h: 'urbs' }, { t: 'noun', h: 'mare', note: 'neuter' }], pick: { kind: 'noun', decl: 3, istem: true },
       facts: [['cīvis', 'gen.sg', 'cīvis'], ['cīvis', 'gen.pl', 'cīvium'], ['urbs', 'gen.pl', 'urbium'], ['mōns', 'gen.sg', 'montis'], ['cīvis', 'acc.pl', 'cīvīs'], ['cīvis', 'acc.pl', 'cīvēs'], ['mare', 'abl.sg', 'marī'], ['mare', 'nom.pl', 'maria'], ['animal', 'abl.sg', 'animālī'], ['animal', 'nom.pl', 'animālia'], ['pater', 'gen.pl', 'patrum']],
@@ -184,7 +184,7 @@
         ['possum', 'inf.act.pres', 'posse'], ['possum', 'ind.act.perf.1s', 'potuī'], ['possum', 'ind.act.pres.1s', 'possum'], ['possum', 'ind.act.pres.2s', 'potes'], ['possum', 'ind.act.pres.3s', 'potest'], ['possum', 'ind.act.pres.1p', 'possumus'], ['possum', 'ind.act.pres.2p', 'potestis'], ['possum', 'ind.act.pres.3p', 'possunt'], ['possum', 'ind.act.impf.1s', 'poteram'], ['possum', 'ind.act.fut.1s', 'poterō'], ['videō', 'inf.act.pres', 'vidēre'], ['amō', 'ind.pas.perf.3s', 'amātus est']],
       quiz: { t: 'form' }, drill: { types: ['verb'], conj: ['irr'], moods: ['ind'], voices: ['act', 'dep'] } },
     { id: 'eo', sec: 'Irregular verbs', title: 'eō, īre', sum: '“go”.',
-      body: `<p><i>eō, īre, iī (īvī), itum</i> “go”. The stem is <i>i-</i>, which becomes <i>e-</i> before a, o, or u: <i>eō, īs, it, īmus, ītis, eunt</i>.</p>
+      body: `<p><i>eō, īre, iī, itum</i> “go”. The stem is <i>i-</i>, which becomes <i>e-</i> before a, o, or u: <i>eō, īs, it, īmus, ītis, eunt</i>.</p>
 <p>Imperfect <i>ībam</i>, future <i>ībō, ībis … ībunt</i> (with <i>-b-</i>, like the 1st conjugation). Perfect <i>iī</i>, <i>iit</i>. Imperative <i>ī, īte</i> “go!”.</p>
 <p>Many common compounds conjugate the same way: <i>redeō</i> “go back”, <i>exeō</i> “go out”, <i>pereō</i> “perish”, <i>abeō</i> “go away”, <i>adeō</i> “approach”.</p>`,
       tables: [{ t: 'verb', h: 'eō', short: true }], pick: { kind: 'verb', irr: ['eō'] },
