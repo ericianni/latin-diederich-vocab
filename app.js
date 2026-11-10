@@ -1104,7 +1104,7 @@
   let listQ = '', listSort = 'rank', listN = 100;
   function renderList() {
     setSub(W.length + ' words');
-    V().innerHTML = `<div style="position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:2"><input type="search" id="q" placeholder="Search Latin or English" value="${esc(listQ)}">
+    V().innerHTML = `<div class="listbar"><input type="search" id="q" placeholder="Search Latin or English" value="${esc(listQ)}">
       <div class="row" style="margin-top:8px"><select id="srt"><option value="rank">Sort: frequency rank</option><option value="az">Sort: A–Z</option><option value="diederich">Sort: Diederich’s order (by topic)</option></select></div></div>
       <ul class="list" id="ul"></ul><div id="moreBox"></div>`;
     $('#srt').value = listSort;
