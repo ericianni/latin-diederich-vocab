@@ -19,7 +19,7 @@
   function boxFromIvl(c) { const i = c.ivl || 0; if (i <= 0) return c.reps > 0 ? 1 : 0; return i <= 2 ? 1 : i <= 6 ? 2 : i <= 13 ? 3 : i <= 29 ? 4 : i <= 59 ? 5 : i <= 119 ? 6 : 7; }
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
-    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true }, s.set || {});
+    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, church: false, churchMem: 'season' }, s.set || {});
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
         const c = s.cards[k];
@@ -91,6 +91,42 @@
     }
     return shownLa(w.la).split(/[ ,]/)[0];
   }
+  // Church data pack (not shipped). overlay(word) may return { la, en } to show instead of the
+  // classical entry while Church mode is on. It is display only: card keys and Morph.analyze
+  // stay on the classical word, so Leitner progress is not forked.
+  const ChurchPack = { overlay() { return null; } };
+  function faceOf(w) {
+    const o = S.set.church ? ChurchPack.overlay(w) : null;
+    return o ? { la: o.la || w.la, en: o.en || w.en } : { la: w.la, en: w.en };
+  }
+  function latinHTML(text, drop) {
+    const s = String(text);
+    if (!(drop && S.set.church)) return `<div class="latin">${esc(s)}</div>`;
+    const chars = Array.from(s);
+    let i = 0; while (i < chars.length && !/\p{L}/u.test(chars[i])) i++;
+    if (i >= chars.length) return `<div class="latin">${esc(s)}</div>`;
+    const initial = chars[i].toLocaleUpperCase();
+    const rest = chars.slice(0, i).join('') + chars.slice(i + 1).join('');
+    return `<div class="latin dropword" aria-label="${esc(s)}"><span class="drop" aria-hidden="true">${esc(initial)}</span><span class="rest" aria-hidden="true">${esc(rest)}</span></div>`;
+  }
+  function litToday() { return Liturgical.colorFor(new Date(), { memorial: S.set.churchMem === 'saint' ? 'saint' : 'season' }); }
+  function applyChrome() {
+    const on = !!S.set.church;
+    document.body.classList.toggle('church', on);
+    $('#title').textContent = on ? 'Church Latin' : 'Latin 1400';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (on) {
+      const info = litToday();
+      document.body.dataset.lit = info.color;
+      document.documentElement.style.setProperty('--lit', Liturgical.FRAME[info.color]);
+      if (meta) meta.setAttribute('content', Liturgical.FRAME[info.color]);
+    } else {
+      document.body.removeAttribute('data-lit');
+      document.documentElement.style.removeProperty('--lit');
+      if (meta) meta.setAttribute('content', '#7a3428');
+    }
+  }
+  function setSub(label) { $('#sub').textContent = S.set.church ? litToday().celebration : label; }
 
   // ---------- drill filters ----------
   const conjKey = a => a.conj === 'irr' ? 'irr' : String(a.conj);
@@ -224,7 +260,7 @@
   function setTab(t) {
     TAB = t;
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'quiz' ? 'today' : t)));
-    Q = null; closeSheet(); exitTest();
+    Q = null; closeSheet(); exitTest(); applyChrome();
     ({ today: renderToday, learn: renderLearn, drills: renderDrills, cheat: renderCheat, quiz: renderQuiz, list: renderList, about: renderAbout })[t]();
     window.scrollTo(0, 0);
   }
@@ -241,7 +277,7 @@
   function bindStop() { const b = $('#stop'); if (b) b.onclick = () => { const kind = Q && Q.kind; Q = null; TEST ? renderTest() : kind === 'drill' ? renderDrills() : renderToday(); }; }
 
   function renderToday() {
-    $('#sub').textContent = 'Flashcards';
+    setSub('Flashcards');
     const c = counts();
     const vTot = c.vDue + c.vNew;
     const mins = Math.max(1, Math.round((c.vDue * 8 + c.vNew * 15) / 60));
@@ -293,24 +329,24 @@
   const focusNext = () => { const b = $('#ans .primary'); if (b && matchMedia('(hover:hover)').matches) b.focus({ preventScroll: true }); };
 
   function renderVocab(it) {
-    const [dir, id] = it.k.split(':'); const w = BY[id];
+    const [dir, id] = it.k.split(':'); const w = BY[id], face = faceOf(w);
     const pills = `<span class="pill">${POS_SHORT[w.pos] || w.pos}</span><span class="pill">rank ${rankTxt(w)}</span>${it.isNew ? '<span class="pill">new</span>' : ''}`;
     if (dir === 'r') {
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">Latin → English</div>
-        <div class="latin">${esc(shownLa(w.la))}</div>${pills}
+        ${latinHTML(shownLa(face.la), true)}${pills}
         <div id="ans"><button class="primary big" id="show" style="margin-top:18px">Show answer</button></div></div>`;
-      $('#show').onclick = () => { $('#ans').innerHTML = `<div class="answer"><div class="english">${esc(w.en)}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; bindRW(it); };
+      $('#show').onclick = () => { $('#ans').innerHTML = `<div class="answer"><div class="english">${esc(face.en)}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; bindRW(it); };
     } else {
       const std = headStandard(w), hs = [std].concat(heads(w.la).filter(h => Morph.normM(h) !== Morph.normM(std)));
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">English → Latin</div>
-        <div class="english">${esc(w.en)}</div>${pills}
+        <div class="english">${esc(face.en)}</div>${pills}
         <div id="ans"><input type="text" id="typed" placeholder="Optional: type the Latin to check yourself" aria-label="Optional: type the Latin to check yourself" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
         <button class="primary big" id="show" style="margin-top:10px">Show answer</button></div></div>`;
       const go = () => {
         const v = $('#typed').value.trim();
-        if (!v) { $('#ans').innerHTML = `<div class="answer"><div class="latin">${esc(shownLa(w.la))}</div><div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; return bindRW(it); }
+        if (!v) { $('#ans').innerHTML = `<div class="answer">${latinHTML(shownLa(face.la), true)}<div class="small muted">Did you know it?</div>${rwButtons(it.k)}</div>`; return bindRW(it); }
         const g = Morph.gradeHead(v, hs, S.set.strictMac);
-        $('#ans').innerHTML = `<div class="answer">${g.ok ? answerNote(g) : wrongMsg(v, hs, true)}<div class="latin">${esc(shownLa(w.la))}</div>
+        $('#ans').innerHTML = `<div class="answer">${g.ok ? answerNote(g) : wrongMsg(v, hs, true)}${latinHTML(shownLa(face.la), true)}
           <div class="row" style="margin-top:14px">${g.ok ? '<button class="primary big" data-r="1">Next</button>' : '<button class="grow" data-r="1">Count as correct</button><button class="primary grow" data-r="0">Next</button>'}</div></div>`;
         bindRW(it); focusNext();
       };
@@ -338,7 +374,7 @@
   const chipRow = (g, title) => `<div class="small muted chiph">${title}</div><div class="chips" data-g="${g}">${CHIPS[g].map(([v, l]) => `<button data-v="${v}" class="${S.set.df[g].includes(v) ? 'on' : ''}" aria-pressed="${S.set.df[g].includes(v)}">${l}</button>`).join('')}</div>`;
   let showSet = false, drillMsg = '';
   function renderDrills() {
-    $('#sub').textContent = 'Form drills';
+    setSub('Form drills');
     const d = day(), fin = drillEnd; drillEnd = null;
     const tried = [...UNITS.keys()].filter(c => S.dst[c]).length, weak = DrillPick.weakest(S.dst, WEAK_N, new Set(UNITS.keys()), WEAK_MAX);
     const head = UNITS.size === 0
@@ -392,7 +428,7 @@
   const comboLabel = c => { const i = c.indexOf('|'), g = c.slice(0, i); return (GROUP[g] || g) + ' · ' + Morph.label(kindOfC(c), c.slice(i + 1)); };
   const pct = st => st && st.n > 0 ? Math.round(100 * DrillPick.acc(st)) + '%' : '—';
   function renderWeak() {
-    $('#sub').textContent = 'Weak spots';
+    setSub('Weak spots');
     const allow = new Set(UNITS.keys()), weak = DrillPick.weakest(S.dst, WEAK_N, allow, WEAK_MAX);
     const outside = DrillPick.weakest(S.dst, 1e9, null, WEAK_MAX).filter(c => !allow.has(c)).length;
     V().innerHTML = `<div class="row"><button class="link" id="wback">‹ Drills</button></div>
@@ -508,14 +544,14 @@
   function renderDrill(it) {
     if (it.sent) return renderSentence(it);
     if (S.set.dmode === 'id' || S.set.dmode === 'mix' && Math.random() < 0.5) { if (renderIdentify(it)) return; }
-    const w = BY[it.id], a = an(w), key = it.key;
+    const w = BY[it.id], a = an(w), key = it.key, face = faceOf(w);
     const sub = Identify.typedSub(a, key, S.set.df);   // participle / gerundive in an allowed case and number when nom. sg. is off
     const answers = sub ? sub.forms : a.tbl[key];
     const std = Morph.standard(answers);
     const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : a.kind === 'pron' ? 'Decline the pronoun' : 'Decline the adjective';
     const ctx = csTarget(a, key);
     V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w)}
-      <div class="latin">${esc(shownLa(w.la))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
+      ${latinHTML(shownLa(face.la), true)}<div class="small muted">${esc(face.en.slice(0, 90))}</div>
       <div class="english" style="margin-top:14px"><b>${esc(sub ? Identify.parseLabel(a, sub) : Morph.label(a.kind, key))}</b>?</div>
       <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
       <div class="small muted" style="margin-top:6px">${macHint()}${/ (sum|es|est|sumus|estis|sunt|sim|sīs|sit|sīmus|sītis|sint|eram|erās|erat|erāmus|erātis|erant|essem|essēs|esset|essēmus|essētis|essent|erō|eris|erit|erimus|eritis|erunt|esse|īrī)$/.test(std) ? ' Two words, e.g. “amātus est”.' : ''}</div>
@@ -554,14 +590,14 @@
   // After a right answer on an ambiguous form, the optional "And…?" step asks for the other readings (Settings toggle).
   // It is never graded: the card / drill score uses the first answer only; naming every reading just earns a note.
   function renderIdentify(it) {
-    const w = BY[it.id], a = an(w), df = S.set.df;
+    const w = BY[it.id], a = an(w), df = S.set.df, face = faceOf(w);
     const q = Identify.pick(a, [it.key], df); if (!q) return false;
     const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
     const sel = {}; let done = false, phase = 'ask', first = null, guesses = 0; const found = [];   // guesses: And…? tries left (one per remaining reading)
-    const entry = shownLa(w.la);   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
+    const entry = shownLa(face.la);   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
     V().innerHTML = `${sessionHead()}<div class="card"><div class="prompt-kind">Identify the form</div>${newTags(it, w)}
-      <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(w.en.slice(0, 80))}</div>
+      <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(face.en.slice(0, 80))}</div>
       <div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button>
       <div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div>${it.nf ? '<div class="newtip small" id="pretip">New form for you: take your best guess. A refresher link comes with the answer.</div>' : ''}</div>`;
     const draw = () => {
@@ -847,7 +883,7 @@
     setH(); spy();
   }
   function renderCheat() {
-    $('#sub').textContent = 'Cheat sheet';
+    setSub('Cheat sheet');
     V().innerHTML = `<div class="card sheet">${cheatHTML()}</div>`;
     bindJump(V());
   }
@@ -897,7 +933,7 @@
     return `<div class="cst"><div class="csh">${esc(t.title)}</div><div class="forms"><table>${t.rows.map(r => `<tr><th>${esc(r[0])}</th><td>${F(r[1], r[2])}</td>${r[3] ? `<td class="en">${esc(r[3])}</td>` : ''}</tr>`).join('')}</table></div></div>`;
   }
   function renderLearn() {
-    $('#sub').textContent = 'Grammar lessons';
+    setSub('Grammar lessons');
     const n = LS.filter(l => lessonDone(l.id)).length;
     const secs = [...new Set(LS.map(l => l.sec))];
     V().innerHTML = `<div class="card"><div class="prompt-kind">Lessons · about 5–10 minutes each</div>
@@ -914,7 +950,7 @@
   function openLesson(id) {
     const i = LS.findIndex(l => l.id === id), l = LS[i]; if (!l) return renderLearn();
     const nx = LS[i + 1], st = S.lessons[id];
-    $('#sub').textContent = 'Lesson ' + (i + 1) + ' of ' + LS.length;
+    setSub('Lesson ' + (i + 1) + ' of ' + LS.length);
     const ex = lessonExamples(l);
     V().innerHTML = `<div class="row"><button class="link" id="lback">‹ All lessons</button><span class="grow"></span>${st ? '<span class="ok small">✓ Done</span>' : ''}</div>
       <div class="card lesson"><div class="prompt-kind">${esc(l.sec)}</div><h2 style="margin:4px 0 8px">${esc(l.title)}</h2>${l.body}</div>
@@ -1009,7 +1045,7 @@
       } else {
         const { w, a, key } = it, answers = a.tbl[key], std = Morph.standard(answers);
         V().innerHTML = `${head()}<div class="card"><div class="prompt-kind">${a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective'}</div>
-          <div class="latin">${esc(shownLa(w.la))}</div><div class="small muted">${esc(w.en.slice(0, 90))}</div>
+          ${latinHTML(shownLa(faceOf(w).la), true)}<div class="small muted">${esc(faceOf(w).en.slice(0, 90))}</div>
           <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
           <div id="ans"><input type="text" id="typed" placeholder="Type the form" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">${macKeys()}
           <div class="small muted" style="margin-top:6px">${macHint()}</div><button class="primary big" id="chk" style="margin-top:10px">Check</button></div></div>`;
@@ -1028,7 +1064,7 @@
   // ---------- quiz ----------
   let quizPool = 250;
   function renderQuiz() {
-    $('#sub').textContent = 'Multiple choice';
+    setSub('Multiple choice');
     V().innerHTML = `<div class="card"><div class="prompt-kind">Quick quiz · 10 questions</div><p class="muted">Pick the English meaning. Draw words from the most frequent:</p>
       <div class="seg">${[100, 250, 500, 0].map(n => `<button data-n="${n}" class="${n === quizPool ? 'on' : ''}">${n || 'All'}</button>`).join('')}</div>
       <button class="primary big" id="qs" style="margin-top:14px">Start quiz</button><p class="small muted">Quiz results don’t change your review schedule.</p></div>`;
@@ -1046,12 +1082,12 @@
         V().innerHTML = `<div class="card done"><div class="check">${score >= 8 ? '★' : '✓'}</div><h2>${score} / ${qs.length}</h2><button class="primary big" id="again">Another quiz</button></div>`;
         $('#again').onclick = renderQuiz; return;
       }
-      const w = qs[i];
+      const w = qs[i], face = faceOf(w);
       let same = pool.filter(x => x.pos === w.pos && x.id !== w.id && x.en !== w.en);
       if (same.length < 3) same = pool.filter(x => x.id !== w.id);
       const opts = shuffle([w, ...shuffle(same.slice()).slice(0, 3)]);
       V().innerHTML = `<div class="row small muted"><span class="grow">Question ${i + 1} / ${qs.length}</span><span>Score ${score}</span></div>
-        <div class="card"><div class="latin">${esc(shownLa(w.la))}</div><span class="pill">${POS_SHORT[w.pos]}</span>
+        <div class="card">${latinHTML(shownLa(face.la), true)}<span class="pill">${POS_SHORT[w.pos]}</span>
         <div class="opts">${opts.map(o => `<button data-id="${o.id}">${esc(short(o.en))}</button>`).join('')}</div><div id="qn"></div></div>`;
       document.querySelectorAll('.opts button').forEach(b => b.onclick = () => {
         const right = +b.dataset.id === w.id; if (right) score++;
@@ -1067,7 +1103,7 @@
   // ---------- word list ----------
   let listQ = '', listSort = 'rank', listN = 100;
   function renderList() {
-    $('#sub').textContent = W.length + ' words';
+    setSub(W.length + ' words');
     V().innerHTML = `<div style="position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:2"><input type="search" id="q" placeholder="Search Latin or English" value="${esc(listQ)}">
       <div class="row" style="margin-top:8px"><select id="srt"><option value="rank">Sort: frequency rank</option><option value="az">Sort: A–Z</option><option value="diederich">Sort: Diederich’s order (by topic)</option></select></div></div>
       <ul class="list" id="ul"></ul><div id="moreBox"></div>`;
@@ -1094,7 +1130,8 @@
     let prev = null;
     $('#ul').innerHTML = rows.slice(0, listN).map(w => { let h = '';
       if (listSort === 'diederich' && w.sec !== prev) { h = secHead(w.sec, cnt[w.sec], !prev || prev.split('.')[0] !== w.sec.split('.')[0]); prev = w.sec; }
-      return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(shownLa(w.la))}</div><div class="en">${esc(w.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
+      const face = faceOf(w);
+      return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(shownLa(face.la))}</div><div class="en">${esc(face.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
     const bar = $('#ul').previousElementSibling; if (bar) $('#ul').style.setProperty('--lt', bar.offsetHeight + 'px');
     $('#moreBox').innerHTML = rows.length > listN ? `<button class="big" id="lm" style="margin-top:10px">Show more (${rows.length - listN})</button>` : '';
     if ($('#lm')) $('#lm').onclick = () => { listN += 200; fill(); };
@@ -1128,10 +1165,11 @@
   function renderTest(fin) {
     const w = BY[TEST.id], a = an(w);
     S = fix(JSON.parse(TEST.snap)); UNITS = testUnits(w.id);   // every test run starts from the real progress
-    $('#sub').textContent = 'Test mode';
+    setSub('Test mode');
     const why = a.skip ? 'Not in form drills: ' + a.skip : UNITS.size ? '' : 'No forms of this word match your drill settings (Drills › What to drill).';
+    const face = faceOf(w);
     V().innerHTML = `<div class="card"><div class="prompt-kind">Test mode · nothing is saved</div>
-      <div class="latin" style="margin-top:6px">${esc(shownLa(w.la))}</div><div class="small muted">${esc(w.en.slice(0, 120))}</div>
+      ${latinHTML(shownLa(face.la), true)}<div class="small muted">${esc(face.en.slice(0, 120))}</div>
       ${fin ? `<div class="small" id="tfin" style="margin-top:8px">Last set: ${fin.ok} of ${fin.n} right</div>` : ''}</div>
       <div class="card"><div class="small muted chiph" style="margin-top:0">Flashcard</div>
         <div class="row wrap"><button class="grow" id="tf-r">Latin → English</button><button class="grow" id="tf-p">English → Latin</button></div>
@@ -1149,10 +1187,16 @@
 
   // ---------- about / settings ----------
   function renderAbout() {
-    $('#sub').textContent = 'About';
+    setSub('About');
     const drillWords = W.filter(w => !an(w).skip).length;
+    const mem = S.set.churchMem === 'saint' ? 'saint' : 'season';
     V().innerHTML = `<div class="card"><h2 style="margin-top:0">Settings</h2>
-      <div class="small muted">New flashcard words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+      <div class="switchrow"><div class="grow"><b>Church Latin mode</b><div class="small muted">Church meanings, spellings, pronunciation, and liturgical colors.</div></div><button type="button" class="switch${S.set.church ? ' on' : ''}" id="church" role="switch" aria-checked="${S.set.church ? 'true' : 'false'}" aria-label="Church Latin mode"></button></div>
+      <div id="churchopt"${S.set.church ? '' : ' hidden'}>
+        <div class="small muted chiph">Optional memorials</div><div class="seg" id="cmem"><button data-v="season" class="${mem === 'season' ? 'on' : ''}" aria-pressed="${mem === 'season'}">Season color</button><button data-v="saint" class="${mem === 'saint' ? 'on' : ''}" aria-pressed="${mem === 'saint'}">Saint’s color</button></div>
+        <div class="small muted chiph">Pronunciation notes</div><p class="small" id="cpron">Ecclesiastical</p>
+      </div>
+      <div class="small muted" style="margin-top:14px">New flashcard words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
       <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p>
       <div class="small muted" style="margin-top:14px">Identify drills: forms with more than one reading</div><div class="seg" id="sand"><button data-m="1" class="${S.set.andMore ? 'on' : ''}" aria-pressed="${!!S.set.andMore}">Ask “And…?”</button><button data-m="0" class="${S.set.andMore ? '' : 'on'}" aria-pressed="${!S.set.andMore}">Just show them</button></div>
@@ -1172,7 +1216,10 @@
       <p class="small">Word list: <b>Paul B. Diederich</b>, <i>The Frequency of Latin Words and Their Endings</i> (University of Chicago, 1939) — the basic vocabulary of about 1,500 words grouped by topic.</p>
       <p class="small">Entries and English glosses: the “Lodge edition” of Diederich’s list compiled by <b>Carolus Raeticus</b> (<a href="https://hiberna-cr.wikidot.com/" rel="noopener">Hiberna Caroli Raetici</a>), with meanings from Gonzalez Lodge, <i>The Vocabulary of High School Latin</i> (1922) and J. T. White (1904). Licensed <a href="https://creativecommons.org/licenses/by-sa/3.0/" rel="noopener">CC BY‑SA 3.0</a>; this app’s word data is shared under the same license. Frequency ranks come from Diederich’s frequency counts (DWF.csv) published on the same site.</p>
       <p class="small">List size cross-checked against <b>John Muccigrosso</b>’s <a href="https://github.com/Jmuccigr/Latin_vocabulary" rel="noopener">Latin_vocabulary</a> data (Diederich: 1,474 items).</p>
-      <p class="small muted">Made by Eric Ianni. Source code: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>.</p></div>`;
+      <p class="small muted">Made by Eric Ianni. Source code: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>.</p>
+      <p class="small muted">Version 3.3.0</p></div>`;
+    $('#church').onclick = () => { S.set.church = !S.set.church; save(); applyChrome(); renderAbout(); };
+    document.querySelectorAll('#cmem button').forEach(b => b.onclick = () => { S.set.churchMem = b.dataset.v; save(); applyChrome(); renderAbout(); });
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
     document.querySelectorAll('#sand button').forEach(b => b.onclick = () => { S.set.andMore = b.dataset.m === '1'; save(); renderAbout(); });

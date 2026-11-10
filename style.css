@@ -1,10 +1,18 @@
-:root{--bg:#faf7f2;--card:#fff;--ink:#1f1b16;--muted:#776e64;--line:#e6dfd4;--accent:#7a2e1d;--accent-ink:#fff;--good:#2e7d32;--bad:#c62828;--hard:#b26a00;--easy:#1565c0;--soft:#f1ebe2}
-@media (prefers-color-scheme:dark){:root{--bg:#15130f;--card:#201d18;--ink:#eee8de;--muted:#a59b8e;--line:#352f27;--accent:#d9825f;--accent-ink:#1b120e;--good:#66bb6a;--bad:#ef6c6c;--hard:#f0a540;--easy:#64a8f0;--soft:#2a261f}}
+/* Self-hosted SIL Open Font License faces (Cormorant Garamond, Cinzel, EB Garamond). latin-ext carries the macrons. */
+@font-face{font-family:"Cormorant Garamond";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/cormorant-garamond-500-latinext.woff2") format("woff2");unicode-range:U+0100-02BA,U+1E00-1EFF,U+0304}
+@font-face{font-family:"Cormorant Garamond";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/cormorant-garamond-500-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Cinzel;font-style:normal;font-weight:500;font-display:swap;src:url("fonts/cinzel-500-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"EB Garamond";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/eb-garamond-500-latinext.woff2") format("woff2");unicode-range:U+0100-02BA,U+1E00-1EFF,U+0304}
+@font-face{font-family:"EB Garamond";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/eb-garamond-500-latin.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+:root{--bg:#f3eee6;--card:#fbf8f4;--ink:#1c1612;--muted:#7a7066;--line:#e4d9cc;--accent:#7a3428;--accent-ink:#fff;--good:#2e7d32;--bad:#b4332a;--hard:#b26a00;--easy:#1565c0;--soft:#efe6da;--serif:"Cormorant Garamond",Georgia,"Times New Roman",serif;color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 body{min-height:100vh;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
-.top{display:flex;align-items:baseline;gap:.6rem;padding:calc(12px + env(safe-area-inset-top)) 18px 6px}
-.top h1{font-size:1.25rem;margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--accent)}
+.top{display:flex;align-items:baseline;flex-wrap:wrap;gap:.55rem .7rem;padding:calc(14px + env(safe-area-inset-top)) 18px 8px}
+.top h1{font-size:1.85rem;line-height:1;margin:0;font-family:var(--serif);font-weight:500;color:var(--accent)}
+#sub{font-family:Cinzel,Georgia,serif;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);font-weight:500}
+.chirho{display:none;width:40px;height:40px;color:var(--lit,var(--accent))}
+.chirho svg{width:100%;height:100%;display:block}
 main{max-width:560px;margin:0 auto;padding:6px 16px 24px}
 .muted{color:var(--muted)}.center{text-align:center}.small{font-size:.85rem}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:12px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
@@ -19,15 +27,17 @@ button:disabled{opacity:.45}
 .g0{color:var(--bad)}.g1{color:var(--hard)}.g2{color:var(--good)}.g3{color:var(--easy)}
 .grades small{display:block;font-weight:400;font-size:.72rem;color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
-.stat b{display:block;font-size:1.6rem;font-family:Georgia,serif}.stat span{font-size:.8rem;color:var(--muted)}
+.stat b{display:block;font-size:1.7rem;font-family:var(--serif);font-weight:500}.stat span{font-size:.8rem;color:var(--muted)}
 .bar{height:8px;background:var(--soft);border-radius:8px;overflow:hidden;margin:8px 0 2px}.bar i{display:block;height:100%;background:var(--accent);border-radius:8px}
-.prompt-kind{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.latin{font-family:Georgia,"Times New Roman",serif;font-size:1.65rem;line-height:1.25;margin:.35rem 0}
+.prompt-kind{font-family:Cinzel,Georgia,serif;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.latin{font-family:var(--serif);font-weight:500;line-height:1.15}
+div.latin{font-size:2.15rem;margin:.4rem 0 .2rem;text-transform:lowercase}
+span.latin{font-size:1.15rem}
 .english{font-size:1.2rem;margin:.35rem 0}
 .answer{border-top:1px dashed var(--line);margin-top:14px;padding-top:12px}
 .pill{display:inline-block;font-size:.75rem;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--muted);margin-right:4px}
 input[type=text],input[type=search],select{font:inherit;width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
-input[type=text]{font-family:Georgia,serif;font-size:1.25rem}
+input[type=text]{font-family:var(--serif);font-size:1.35rem}
 .ok{color:var(--good);font-weight:600}.no{color:var(--bad);font-weight:600}.alt{color:var(--hard);font-weight:600}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(6,1fr);background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
 .tabs button{background:none;border-radius:0;padding:8px 0 10px;font-size:.7rem;white-space:nowrap;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px}
@@ -36,11 +46,11 @@ input[type=text]{font-family:Georgia,serif;font-size:1.25rem}
 .done{text-align:center;padding:28px 18px}.done .check{font-size:3rem;color:var(--good)}
 .list{list-style:none;margin:0;padding:0}
 .list li{border-bottom:1px solid var(--line);padding:10px 2px;cursor:pointer}
-.list .la{font-family:Georgia,serif;font-size:1.05rem}.list .rk{float:right;color:var(--muted);font-size:.8rem}
+.list .la{font-family:var(--serif);font-size:1.2rem;font-weight:500}.list .rk{float:right;color:var(--muted);font-size:.8rem}
 .list .en{color:var(--muted);font-size:.9rem}
 .forms{overflow-x:auto;margin-top:8px}
 table{border-collapse:collapse;font-size:.85rem;width:100%}th,td{border:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap}th{background:var(--soft);font-weight:600}
-td{font-family:Georgia,serif}
+td{font-family:var(--serif);font-size:1.02rem}
 .opts{display:grid;gap:8px;margin-top:12px}.opts button{text-align:left;background:var(--soft)}
 .opts button.right{background:var(--good);color:#fff}.opts button.wrong{background:var(--bad);color:#fff}
 h2{font-size:1.1rem;margin:18px 0 6px}
@@ -56,7 +66,7 @@ tr.hl{font-weight:700}tr.hl td{background:var(--soft)}
 td b{color:var(--accent)}
 details.cs{border-top:1px solid var(--line);padding:8px 0}
 details.cs summary{cursor:pointer;padding:6px 0;list-style-position:outside}
-.sheet h2{font-family:Georgia,serif;color:var(--accent);margin-top:22px}
+.sheet h2{font-family:var(--serif);font-weight:500;color:var(--accent);margin-top:22px}
 .cst,.csg{margin:10px 0;overflow-x:auto}
 .csh{font-size:.85rem;font-weight:600;margin:4px 0}
 .flash{animation:fl 1.6s}@keyframes fl{0%,40%{background:rgba(217,130,95,.25)}100%{background:transparent}}
@@ -64,7 +74,7 @@ details.cs summary{cursor:pointer;padding:6px 0;list-style-position:outside}
 .ovtop{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--line);background:var(--card)}
 .ovtop button{padding:8px 12px}
 .ovbody{overflow-y:auto;padding:8px 16px 40px;flex:1;max-width:560px;margin:0 auto;width:100%}
-.mac{display:flex;gap:6px;margin-top:8px}.mac button{flex:1;padding:8px 0;font-family:Georgia,serif;font-size:1.15rem;background:var(--soft);border:1px solid var(--line);color:var(--ink)}
+.mac{display:flex;gap:6px;margin-top:8px}.mac button{flex:1;padding:8px 0;font-family:var(--serif);font-size:1.25rem;background:var(--soft);border:1px solid var(--line);color:var(--ink)}
 /* lessons */
 .llist{padding:4px 12px}
 .lrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border-radius:0;padding:12px 2px;border-bottom:1px solid var(--line);color:var(--ink)}
@@ -86,7 +96,7 @@ td.en{font-family:inherit;color:var(--muted);white-space:normal}
 .newtags{display:flex;gap:6px;margin-top:6px}
 .weak td{vertical-align:top}.weak td:first-child{white-space:normal}
 .list li.sec{position:sticky;top:var(--lt,0);z-index:1;background:var(--soft);cursor:default;padding:6px 8px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
-.list .sec1{flex-basis:100%;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.list .sec2{flex:1;font-weight:600}.list .secn{font-size:.8rem;color:var(--muted)}
+.list .sec1{flex-basis:100%;font-family:Cinzel,Georgia,serif;font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500}.list .sec2{flex:1;font-weight:600}.list .secn{font-size:.8rem;color:var(--muted)}
 .parses li.got,.parses li.missed{list-style:none;margin-left:-18px}.parses li.got{color:var(--good)}.parses li.missed{opacity:.85}
 .andq{margin:8px 0 2px;line-height:1.4}.andmsg{margin-top:4px}.andall{color:var(--good);font-weight:600;margin:2px 0 4px}
 /* cheat sheet: sticky section chips */
@@ -108,3 +118,18 @@ mark.tgt{background:none;color:var(--accent);font-weight:700;text-decoration:und
 .sline{min-height:48px;padding:8px;border:1px dashed var(--line);border-radius:12px;align-items:center}
 .sbank{margin-top:10px}.sline button,.sbank button{font-size:1rem;padding:8px 13px}
 .sbank button.used{opacity:.3}
+.switchrow{display:flex;align-items:center;gap:14px}
+.switch{flex:none;width:52px;height:32px;border-radius:99px;background:var(--line);padding:0;position:relative}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .15s ease}
+.switch.on{background:var(--accent)}
+.switch.on::after{transform:translateX(20px)}
+/* Church Latin: parchment, a frame in today's liturgical color, EB Garamond, an illuminated initial. */
+body.church{--bg:#f4e7c8;--card:#fbf6e8;--ink:#2c2116;--muted:#6e5c45;--line:#e2d2b0;--soft:#efe2c8;--accent:var(--lit,#1e6b3a);--serif:"EB Garamond",Georgia,"Times New Roman",serif}
+body.church::before{content:"";position:fixed;inset:7px;border:3px solid var(--lit,#1e6b3a);pointer-events:none;z-index:40}
+body.church .card{border:2px solid var(--lit,#1e6b3a);box-shadow:inset 0 0 0 1px var(--lit,#1e6b3a)}
+body.church .chirho{display:block}
+body.church .top{align-items:center}
+body.church #sub{flex-basis:calc(100% - 52px);margin:0 0 0 52px;font-family:"EB Garamond",Georgia,serif;font-size:1.05rem;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:500}
+body.church .latin.dropword{display:flex;align-items:flex-end;gap:12px;text-transform:none;margin-top:8px}
+body.church .drop{flex:none;width:1.28em;height:1.28em;font-size:3.5rem;line-height:1;display:grid;place-items:center;background:var(--lit,#1e6b3a);color:#f7f1e2;border:2px solid color-mix(in srgb,var(--lit,#1e6b3a) 72%,#1a1208);font-family:"EB Garamond",Georgia,serif;text-transform:uppercase}
+body.church .rest{font-family:"EB Garamond",Georgia,serif;font-size:1.9rem;line-height:1;padding-bottom:.12em;text-transform:lowercase}
