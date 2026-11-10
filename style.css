@@ -113,6 +113,7 @@ td.en{font-family:inherit;color:var(--muted);white-space:normal}
 .jump a.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .ovbody .jump{top:-8px;margin:-8px -16px 8px;padding:8px 16px;background:var(--bg)}
 .sheet [id]{scroll-margin-top:calc(var(--jh,48px) + 8px)}
+.massline{margin:0 0 12px}.massline .la{font-family:var(--serif);font-size:1.2rem;line-height:1.35}.massline .en{color:var(--muted);font-size:.95rem;margin-top:1px}
 /* sentences (beta) page */
 body.sent{padding-bottom:env(safe-area-inset-bottom)}
 .top .back{margin-left:auto;font-size:.9rem;white-space:nowrap}

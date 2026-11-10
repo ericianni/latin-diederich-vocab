@@ -266,6 +266,8 @@
   function verb(e) {
     const { parts } = clean(e.la);
     const p1 = parts[0];
+    // A&G §206.g: quaesō is defective. Ordinary prose uses only quaesō and quaesumus.
+    if (p1 === 'quaesō') return { kind: 'verb', conj: 'irr', irr: 'quaesō', voice: 'act', noPassive: true, tbl: { 'ind.act.pres.1s': ['quaesō'], 'ind.act.pres.1p': ['quaesumus'] } };
     if (DEFECTIVE.includes(p1) || ends(p1, 'ī') && /isse/.test(parts[1] || '')) return { skip: 'defective verb' };
     if (/et$/.test(p1) && /uit|^-?ēre/.test(parts.slice(1).join(' '))) return { skip: 'impersonal verb' };
     const infRaw = parts[1] || '';
@@ -439,7 +441,8 @@
     if (T['nom.pl']) T['voc.pl'] = T['nom.pl'].slice();
     if (!T['nom.sg']) return T;
     let v = T['nom.sg'].slice();
-    if (decl === 2 && g !== 'n' && /us$/.test(nom)) v = /^(fīlius|genius)$/.test(nom) ? [cut(nom, 3) + 'ī'] : [cut(nom, 2) + 'e'];
+    // A&G §49.c: proper names in -ius have vocative -ī. Pontius is the only such name added for the Mass.
+    if (decl === 2 && g !== 'n' && /us$/.test(nom)) v = /^(fīlius|genius|pontius)$/.test(nom) ? [cut(nom, 3) + 'ī'] : [cut(nom, 2) + 'e'];
     T['voc.sg'] = v;
     if (LOC[nom]) T['loc.sg'] = LOC[nom].slice();
     return T;
@@ -454,7 +457,13 @@
     'bōs': cells(['bōs', 'bovis', 'bovī', 'bovem', 'bove'], ['bovēs', 'boum', ['bōbus', 'būbus'], 'bovēs', ['bōbus', 'būbus']]),
     'Iuppiter': cells(['Iuppiter', 'Iovis', 'Iovī', 'Iovem', 'Iove'], null),
     'iter': cells(['iter', 'itineris', 'itinerī', 'iter', 'itinere'], ['itinera', 'itinerum', 'itineribus', 'itinera', 'itineribus']),
+    // Ecclesiastical names. Iēsus has no plural in the liturgy (gen./dat./abl./voc. Iēsū, acc. Iēsum).
+    // Andreās is a Greek 1st-declension name (gen. Andreae, acc. Andreām, voc. Andreā); the regular parser skips those.
+    // Lowercase, like every other dictionary line. The Mass text capitalizes them on the page.
+    'iēsus': cells(['iēsus', 'iēsū', 'iēsū', 'iēsum', 'iēsū'], null),
+    'andreās': cells(['andreās', 'andreae', 'andreae', 'andreām', 'andreā'], null),
   };
+  const VOC_FIX = { 'iēsus': ['iēsū'], 'andreās': ['andreā'] };
   // gen. pl. -um, not the i-stem -ium (A&G §78). mēnsis is a mixed i-stem (§71, §78 "sometimes"). parēns leads with parentum.
   const GPL_UM = ['pater', 'māter', 'frāter', 'canis', 'iuvenis', 'senex', 'sēdēs', 'vātēs', 'apis', 'volucris'];
   // both gen. pl. endings. i-stems lead with -ium; the others lead with -um (A&G §71, §78).
@@ -486,7 +495,11 @@
       const pl = ['rēs pūblicae', 'rērum pūblicārum', 'rēbus pūblicīs', 'rēs pūblicās', 'rēbus pūblicīs'];
       return { kind: 'noun', decl: 5, g: 'f', istem: false, plOnly: false, flag: null, tbl: addVoc(cells(sg, pl), nom, 5, 'f') };
     }
-    if (NOUN_IRR[nom]) return { kind: 'noun', decl: 'irr', irr: nom, g: 'irr', tbl: addVoc(Object.assign({}, NOUN_IRR[nom]), nom, 'irr', 'irr') };
+    if (NOUN_IRR[nom]) {
+      const tbl = addVoc(Object.assign({}, NOUN_IRR[nom]), nom, 'irr', 'irr');
+      if (VOC_FIX[nom]) tbl['voc.sg'] = VOC_FIX[nom].slice();
+      return { kind: 'noun', decl: 'irr', irr: nom, g: 'irr', tbl };
+    }
     if (/indecl/.test(notes) || /indecl/.test(e.la)) return { skip: 'indeclinable' };
     if (parts.length === 2) { const mm = parts[1].match(/^(\S+)\s+(m|f|n|mf|c)\.$/); if (mm) parts.splice(1, 1, mm[1], mm[2] + '.'); }
     if (parts.length < 3) return { skip: 'defective / unusual entry' };

@@ -58,7 +58,7 @@
   const nextTxt = k => { const b = Math.min(7, ((S.cards[k] || {}).box || 0) + 1), n = INT[b]; return n === 1 ? 'tomorrow' : n < 31 ? 'in ' + n + ' days' : 'in ' + Math.round(n / 30) + ' mo'; };
 
   // ---------- data ----------
-  let W = [], BY = {}, UNITS = new Map();
+  let W = [], BY = {}, UNITS = new Map(), CLASSICAL = [], CHURCH_WORDS = [], OVERLAYS = new Map(), PACK = null;
   const AN = {};
   const an = w => AN[w.id] || (AN[w.id] = ['verb', 'noun', 'adjective', 'pronoun'].includes(w.pos) ? Morph.analyze(w) : { skip: 'not drilled (' + w.pos + ')' });
   const rankTxt = w => w.r ? '#' + w.r : '—';
@@ -91,13 +91,20 @@
     }
     return shownLa(w.la).split(/[ ,]/)[0];
   }
-  // Church data pack (not shipped). overlay(word) may return { la, en } to show instead of the
-  // classical entry while Church mode is on. It is display only: card keys and Morph.analyze
-  // stay on the classical word, so Leitner progress is not forked.
-  const ChurchPack = { overlay() { return null; } };
+  // Church tier 1. overlay(word) returns { la, en } while Church mode is on.
+  // Card keys stay the word id, so a shared word keeps one Leitner record.
+  // The active deck (W / BY) already carries the overlay, and an() reads that copy.
+  const ChurchPack = { overlay(w) { return S.set.church && OVERLAYS.size ? Church.faceWord(w, OVERLAYS, true, Morph.plain) : null; } };
   function faceOf(w) {
-    const o = S.set.church ? ChurchPack.overlay(w) : null;
-    return o ? { la: o.la || w.la, en: o.en || w.en } : { la: w.la, en: w.en };
+    const o = ChurchPack.overlay(w);
+    return o ? { la: o.la, en: o.en } : { la: w.la, en: w.en };
+  }
+  function rebuildDeck() {
+    for (const k of Object.keys(AN)) delete AN[k];
+    W = Church.activeWords(CLASSICAL, CHURCH_WORDS, OVERLAYS, !!S.set.church, Morph.plain);
+    BY = {};
+    W.forEach(w => { BY[w.id] = w; });
+    UNITS = buildUnits();
   }
   function latinHTML(text, drop) {
     const s = String(text);
@@ -178,9 +185,9 @@
   // ---------- queues ----------
   function dueKeys(prefixRe, cap, allow) {
     const t = today();
-    return Object.keys(S.cards).filter(k => prefixRe.test(k) && S.cards[k].due <= t && (!allow || allow.has(k))).sort((a, b) => S.cards[a].due - S.cards[b].due).slice(0, cap);
+    return Church.dueCardKeys(S.cards, W, t).filter(k => prefixRe.test(k) && (!allow || allow.has(k))).slice(0, cap);
   }
-  function newWords(n) { const out = []; for (const w of W) { if (out.length >= n) break; if (!S.cards['r:' + w.id]) out.push('r:' + w.id); } return out; }
+  function newWords(n) { return Church.newWordKeys(W, S.cards, n, !!S.set.church); }
   const vNewLeft = () => { const d = day(); return Math.max(0, S.set.newPerDay + (d.extra || 0) - d.nv); };
   function counts() { return { vDue: dueKeys(/^[rp]:/, REVIEW_CAP).length, vNew: newWords(vNewLeft()).length }; }
 
@@ -901,6 +908,11 @@
   // ---------- lessons ----------
   // Prose lives in lessons.js; every table and quick-check question here comes from the generator.
   const LS = window.LESSONS || [];
+  // Mass lessons are part of the list only while Church mode is on. Their done-marks stay either way.
+  function lessonSet() {
+    const mass = S.set.church && PACK ? PACK.lessons.map(l => Object.assign({ mass: true }, l)) : [];
+    return mass.concat(LS);
+  }
   const lessonDone = id => !!S.lessons[id];
   const isFin = a => a.kind === 'verb' && a.conj !== 'irr';
   function specOk(a, sp) {
@@ -934,12 +946,14 @@
   }
   function renderLearn() {
     setSub('Grammar lessons');
-    const n = LS.filter(l => lessonDone(l.id)).length;
-    const secs = [...new Set(LS.map(l => l.sec))];
+    const list = lessonSet();
+    const n = list.filter(l => lessonDone(l.id)).length;
+    const secs = [...new Set(list.map(l => l.sec))];
+    const massNote = S.set.church ? ' Church mode adds the Ordinary of the Mass, in order, at the top. Pronunciation is on the About tab.' : '';
     V().innerHTML = `<div class="card"><div class="prompt-kind">Lessons · about 5–10 minutes each</div>
-      <p class="small muted" style="margin:6px 0 10px">What each case, declension, and conjugation does and how to spot it, with endings tables and a short quick check. <b>${n}</b> of ${LS.length} done.</p>
-      <div class="bar"><i style="width:${(100 * n / LS.length).toFixed(1)}%"></i></div></div>
-      ${secs.map(sec => `<h3>${esc(sec)}</h3><div class="card llist">${LS.filter(l => l.sec === sec).map(l => `<button class="lrow" data-l="${l.id}"><span class="lck${lessonDone(l.id) ? ' on' : ''}" aria-label="${lessonDone(l.id) ? 'done' : 'not done'}">${lessonDone(l.id) ? '✓' : LS.indexOf(l) + 1}</span><span class="grow"><b>${esc(l.title)}</b><br><span class="small muted">${esc(l.sum)}</span></span><span class="muted">›</span></button>`).join('')}</div>`).join('')}`;
+      <p class="small muted" style="margin:6px 0 10px">What each case, declension, and conjugation does and how to spot it, with endings tables and a short quick check.${massNote} <b>${n}</b> of ${list.length} done.</p>
+      <div class="bar"><i style="width:${(100 * n / list.length).toFixed(1)}%"></i></div></div>
+      ${secs.map(sec => `<h3>${esc(sec)}</h3><div class="card llist">${list.filter(l => l.sec === sec).map(l => `<button class="lrow" data-l="${l.id}"><span class="lck${lessonDone(l.id) ? ' on' : ''}" aria-label="${lessonDone(l.id) ? 'done' : 'not done'}">${lessonDone(l.id) ? '✓' : list.indexOf(l) + 1}</span><span class="grow"><b>${esc(l.title)}</b><br><span class="small muted">${esc(l.sum)}</span></span><span class="muted">›</span></button>`).join('')}</div>`).join('')}`;
     document.querySelectorAll('.lrow').forEach(b => b.onclick = () => openLesson(b.dataset.l));
   }
   function markLesson(id, score, total) {
@@ -947,10 +961,40 @@
     S.lessons[id] = { d: today(), s: score != null ? Math.max(score, o.s || 0) : o.s, n: total || o.n };
     save();
   }
+  function wordByKey(k) {
+    const hits = W.filter(w => Church.headKey(w.la, Morph.plain) === k);
+    return hits.find(w => w.church) || hits[0] || null;
+  }
+  function openMass(l, i, list) {
+    const nx = list[i + 1], st = S.lessons[l.id];
+    setSub('Lesson ' + (i + 1) + ' of ' + list.length);
+    const body = (l.sections || []).map(sid => {
+      const sec = PACK.texts.find(t => t.id === sid); if (!sec) return '';
+      return `<h3>${esc(sec.title)}</h3>` + sec.lines.map(line => {
+        const la = line.words.map(w => w.t).join(' ');
+        return `<div class="massline"><div class="la">${esc(la)}</div><div class="en">${esc(line.en)}</div></div>`;
+      }).join('');
+    }).join('');
+    const keys = (l.words || []).map(wordByKey).filter(Boolean);
+    V().innerHTML = `<div class="row"><button class="link" id="lback">‹ All lessons</button><span class="grow"></span>${st ? '<span class="ok small">✓ Done</span>' : ''}</div>
+      <div class="card lesson"><div class="prompt-kind">${esc(l.sec)}</div><h2 style="margin:4px 0 8px">${esc(l.title)}</h2>
+      <p class="small muted">The Latin is the older Missal, with macrons added. The English is a literal translation.</p>${body}</div>
+      <div class="card"><h3 style="margin-top:0">Notes</h3>${l.notes || ''}${l.diff ? `<h3>Older Missal and the current Ordinary</h3>${l.diff}` : ''}</div>
+      <div class="card"><h3 style="margin-top:0">Key words</h3>${keys.map(w => `<div class="lex"><span class="latin">${esc(shownLa(faceOf(w).la))}</span><div class="small muted">${esc(faceOf(w).en)}</div></div>`).join('') || '<p class="small muted">None.</p>'}</div>
+      <div class="card">${l.quiz ? `<button class="primary big" id="lq">Quick check · ${l.quiz.qs.length} questions</button>` : ''}
+        <div class="row" style="margin-top:10px">${st ? '' : '<button class="grow" id="lmark">Mark as done</button>'}${nx ? `<button class="grow" id="lnext">Next: ${esc(nx.title)} ›</button>` : ''}</div>
+        <p class="small muted center" style="margin:8px 0 0">The quick check doesn’t change your review schedule.</p></div>`;
+    $('#lback').onclick = renderLearn;
+    if ($('#lq')) $('#lq').onclick = () => runLessonQuiz(l, quizItems(l));
+    if ($('#lmark')) $('#lmark').onclick = () => { markLesson(l.id); openLesson(l.id); };
+    if ($('#lnext')) $('#lnext').onclick = () => { openLesson(nx.id); window.scrollTo(0, 0); };
+  }
   function openLesson(id) {
-    const i = LS.findIndex(l => l.id === id), l = LS[i]; if (!l) return renderLearn();
-    const nx = LS[i + 1], st = S.lessons[id];
-    setSub('Lesson ' + (i + 1) + ' of ' + LS.length);
+    const list = lessonSet();
+    const i = list.findIndex(l => l.id === id), l = list[i]; if (!l) return renderLearn();
+    if (l.mass) return openMass(l, i, list);
+    const nx = list[i + 1], st = S.lessons[id];
+    setSub('Lesson ' + (i + 1) + ' of ' + list.length);
     const ex = lessonExamples(l);
     V().innerHTML = `<div class="row"><button class="link" id="lback">‹ All lessons</button><span class="grow"></span>${st ? '<span class="ok small">✓ Done</span>' : ''}</div>
       <div class="card lesson"><div class="prompt-kind">${esc(l.sec)}</div><h2 style="margin:4px 0 8px">${esc(l.title)}</h2>${l.body}</div>
@@ -1020,8 +1064,8 @@
     const ask = () => {
       if (i >= qs.length) {
         markLesson(l.id, score, qs.length);
-        const nx = LS[LS.indexOf(l) + 1];
-        V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>${score} / ${qs.length}</h2><p class="muted">${esc(l.title)} is marked done.${score < qs.length ? ' Look over the table once more, then try again.' : ''}</p>
+        const nx = lessonSet()[lessonSet().findIndex(x => x.id === l.id) + 1];
+        V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>${score} / ${qs.length}</h2><p class="muted">${esc(l.title)} is marked done.${score < qs.length ? (l.mass ? ' Read the Latin once more, then try again.' : ' Look over the table once more, then try again.') : ''}</p>
           <button class="big" id="lagain">Try another quick check</button><button class="big" id="lback2" style="margin-top:10px">Back to lesson</button>
           ${l.drill ? '<button class="big" id="ldr" style="margin-top:10px">Practice this in Drills</button>' : ''}
           ${nx ? `<button class="primary big" id="lnext" style="margin-top:10px">Next: ${esc(nx.title)} ›</button>` : '<button class="primary big" id="lall" style="margin-top:10px">All lessons</button>'}</div>`;
@@ -1191,10 +1235,10 @@
     const drillWords = W.filter(w => !an(w).skip).length;
     const mem = S.set.churchMem === 'saint' ? 'saint' : 'season';
     V().innerHTML = `<div class="card"><h2 style="margin-top:0">Settings</h2>
-      <div class="switchrow"><div class="grow"><b>Church Latin mode</b><div class="small muted">Church meanings, spellings, pronunciation, and liturgical colors.</div></div><button type="button" class="switch${S.set.church ? ' on' : ''}" id="church" role="switch" aria-checked="${S.set.church ? 'true' : 'false'}" aria-label="Church Latin mode"></button></div>
+      <div class="switchrow"><div class="grow"><b>Church Latin mode</b><div class="small muted">Church meanings for the Mass, the Ordinary in Learn, and liturgical colors.</div></div><button type="button" class="switch${S.set.church ? ' on' : ''}" id="church" role="switch" aria-checked="${S.set.church ? 'true' : 'false'}" aria-label="Church Latin mode"></button></div>
       <div id="churchopt"${S.set.church ? '' : ' hidden'}>
         <div class="small muted chiph">Optional memorials</div><div class="seg" id="cmem"><button data-v="season" class="${mem === 'season' ? 'on' : ''}" aria-pressed="${mem === 'season'}">Season color</button><button data-v="saint" class="${mem === 'saint' ? 'on' : ''}" aria-pressed="${mem === 'saint'}">Saint’s color</button></div>
-        <div class="small muted chiph">Pronunciation notes</div><p class="small" id="cpron">Ecclesiastical</p>
+        <div class="small muted chiph">Pronunciation</div><div class="small" id="cpron">${PACK ? PACK.about.pronunciation : ''}</div>
       </div>
       <div class="small muted" style="margin-top:14px">New flashcard words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
@@ -1216,17 +1260,18 @@
       <p class="small">Word list: <b>Paul B. Diederich</b>, <i>The Frequency of Latin Words and Their Endings</i> (University of Chicago, 1939) — the basic vocabulary of about 1,500 words grouped by topic.</p>
       <p class="small">Entries and English glosses: the “Lodge edition” of Diederich’s list compiled by <b>Carolus Raeticus</b> (<a href="https://hiberna-cr.wikidot.com/" rel="noopener">Hiberna Caroli Raetici</a>), with meanings from Gonzalez Lodge, <i>The Vocabulary of High School Latin</i> (1922) and J. T. White (1904). Licensed <a href="https://creativecommons.org/licenses/by-sa/3.0/" rel="noopener">CC BY‑SA 3.0</a>; this app’s word data is shared under the same license. Frequency ranks come from Diederich’s frequency counts (DWF.csv) published on the same site.</p>
       <p class="small">List size cross-checked against <b>John Muccigrosso</b>’s <a href="https://github.com/Jmuccigr/Latin_vocabulary" rel="noopener">Latin_vocabulary</a> data (Diederich: 1,474 items).</p>
+      ${PACK ? PACK.about.sources : ''}
       <p class="small muted">Made by Eric Ianni. Source code: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>.</p>
       <p class="small muted">Version 3.3.0</p></div>`;
-    $('#church').onclick = () => { S.set.church = !S.set.church; save(); applyChrome(); renderAbout(); };
+    $('#church').onclick = () => { S.set.church = !S.set.church; rebuildDeck(); save(); applyChrome(); renderAbout(); };
     document.querySelectorAll('#cmem button').forEach(b => b.onclick = () => { S.set.churchMem = b.dataset.v; save(); applyChrome(); renderAbout(); });
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
     document.querySelectorAll('#sand button').forEach(b => b.onclick = () => { S.set.andMore = b.dataset.m === '1'; save(); renderAbout(); });
     $('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'latin1400-progress.json'; a.click(); };
     $('#imp').onclick = () => $('#impf').click();
-    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; S = fix(s); save(); UNITS = buildUnits(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
-    $('#rst').onclick = () => { if (confirm('Erase all progress on this device?')) { S = fix({}); save(); UNITS = buildUnits(); renderAbout(); } };
+    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; S = fix(s); save(); rebuildDeck(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
+    $('#rst').onclick = () => { if (confirm('Erase all progress on this device?')) { S = fix({}); save(); rebuildDeck(); renderAbout(); } };
   }
 
   // ---------- boot ----------
@@ -1240,12 +1285,17 @@
     })), Promise.resolve()).catch(e => { sentLoad = null; throw e; });
     return sentLoad;
   }
-  fetch('data/words.json').then(r => r.json()).then(all => {
-    W = all.filter(w => !w.d).sort((a, b) => (a.r || 1e9) - (b.r || 1e9) || a.id - b.id);
-    W.forEach(w => { BY[w.id] = w; });
-    const LW = []; all.forEach(w => { LW[w.id] = w; }); self.LatinWords = LW;
+  Promise.all([
+    fetch('data/words.json').then(r => r.json()),
+    fetch('data/church/tier1.json').then(r => r.json()),
+  ]).then(([all, pack]) => {
+    PACK = pack;
+    CLASSICAL = all.filter(w => !w.d);
+    CHURCH_WORDS = pack.words || [];
+    OVERLAYS = Church.overlayMap(pack, Morph.plain);
+    const LW = []; all.forEach(w => { LW[w.id] = w; }); self.LatinWords = LW;   // sentence engine stays on the classical list
     let ps = null; all.sort((a, b) => a.id - b.id).forEach(w => { if (w.s) ps = w.s + '.' + w.ss; w.sec = ps; });   // 3 entries without a section sit inside the one before
-    UNITS = buildUnits();
+    rebuildDeck();
     const t = (location.hash || '').slice(1);
     save();   // persist any v1 -> v2 migration
     setTab(['learn', 'drills', 'cheat', 'quiz', 'list', 'about'].includes(t) ? t : 'today');

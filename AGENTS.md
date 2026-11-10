@@ -13,6 +13,8 @@ Offline PWA that teaches Paul Diederich's high-frequency Latin vocabulary (study
 | `drillpick.js` | Weak-spot weighted free-practice picker (`DrillPick`), plus the sentence-mix scheduler used by Drills |
 | `lessons.js` | 21 lesson specs (`LESSONS`) |
 | `liturgical.js` | US Roman (Ordinary Form) colors: `Liturgical.colorFor(date, {memorial})` → `{color, celebration, season}` |
+| `church.js` | Church Latin tier 1 helpers: deck membership, gloss overlays, new-word weaving, due-card filter |
+| `data/church/tier1.json` | Ordinary of the Mass (1920 Missal), Church-only words, gloss overlays, nine Learn lessons |
 | `style.css` | Styles (`.alt` = amber “Accepted alternate” note) |
 | `sw.js` | Service worker; **bump `CACHE` on every code/data release** |
 | `manifest.webmanifest` | PWA manifest |
@@ -90,11 +92,11 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 - Normal classical alternates may be **accepted** in typed answers but must show amber: `Accepted alternate — standard form: X` (via `Morph.grade` → `alternate`).
 - I-stem adjective accusative plural **shown as `-ēs`** (`omnēs` standard; `omnīs` accepted alternate). Same pattern for nouns like `fīlia`: dat/abl pl standard `fīliīs`, alternate `fīliābus`.
 - Right/wrong grading only (no ease/confidence). US English UI and glosses.
-- Future **Church Latin** pack → keep morphology/data extensible; do not hard-wire “classical-only” into irreversible schemas. `ChurchPack.overlay(word)` in `app.js` may later return `{la, en}` for the card face. It does not change card keys or `Morph.analyze`, so Leitner progress stays one shared store. `S.set.church` (default off) and `S.set.churchMem` (`season` or `saint`) live on the same settings object.
+- **Church Latin, tier 1** (the Ordinary of the Mass) is `data/church/tier1.json` plus `church.js`. `S.set.church` (default off) and `S.set.churchMem` (`season` or `saint`) are unchanged. While Church mode is on, an overlay replaces that word’s gloss (and `la`, if the overlay has one) on the card, in drills, Learn, the cheat sheet, and the word list. `Morph.analyze` reads the overlaid copy. Card keys stay the word id, so a shared word has one Leitner record. Church-only words (`church: true`, ids from 10001) join the deck only while the mode is on; turning it off hides them and does not delete their cards. New Church words use the same daily cap, one Church word after every two new classical words. The sentence engine is not wired to Church-only words. Learn shows nine Mass lessons only in Church mode. `tools/test_church.js` checks tokens, paradigms, and the progress rule.
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v39`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v40`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug` (signed with `~/.android/debug.keystore`).
@@ -113,6 +115,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 | `node tools/test_drill_sentences.js` | ~1s | sentences mixed into drills |
 | `node tools/test_sentences.js` | ~16s | 2k sentences |
 | `node tools/test_liturgical.js` | ~0.2s | USCCB dates 2025–2030 |
+| `node tools/test_church.js` | ~0.2s | Mass tokens, Church paradigms, mode toggle |
 | Browser: `tools/test_drills_browser.js`, `test_sentences_browser.js`, `test_testmode_browser.js` | slower | need Chrome |
 
 ## Gotchas
