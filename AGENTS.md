@@ -93,7 +93,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v34`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v35`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug` (signed with `~/.android/debug.keystore`).
@@ -144,7 +144,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 | alius, uter, uterque | `pal`, `pu`, `puq` | gen. `-īus`, dat. `-ī`. alius gen. `alterīus`, neuter `aliud` |
 | nēmō | `pn` | singular only: `nēmō`, `nūllīus`, `nēminī`, `nēminem`, `nūllō` |
 
-`is` and `sē` are not in the sentence engine’s helper list. That pool is the closed class the templates already know (prepositions, ego/tū/nōs/vōs, sum). Adding `is` or `sē` would mean new sentence patterns, so they stay out.
+`is` and `sē` are sentence-engine helpers from the `PRON_OBJ` tier (80+ seen content words), glossed when that lemma has not been seen. `sē` is only an object, indirect object, or `sēcum` (never `cum sē`), and only with the clause’s own third-person subject (`himself` / `herself` / `itself` / `themselves`). `is` is a non-reflexive direct object (`eum`, `eam`, `id`, `eōs`, `eās`, `ea`), indirect object (`eī`, `eīs`), or possessive genitive (`eius`, `eōrum`, `eārum`), never a nominative subject. Shown forms are `Morph.standard`. `iī` / `ī` are alternates of nominative plural `eī` only; `iīs` / `īs` are alternates of `eīs`. Syncretic English is accepted (`eī` to him/her/it, `eius` his/her/its).
 
 ## Sentences in Drills
 
@@ -160,7 +160,7 @@ Off until the learner turns it on. Three settings, all on `S.set.df` (no mix %, 
 
 **Mix.** `DrillPick.sentenceMixNext` draws how many ordinary drill items come before the next sentence from `[4, 5, 5, 6, 6, 7, 9]`. Each stretch is one sentence out of 5–10 items, so that stretch is 10–20% sentences. The mean gap is 6, so a long run is 1 sentence in 7 (about 15%). A sentence is never followed by another sentence. If the pool is too small, generation throws, or the drill filter cannot be matched, that slot is an ordinary drill item and the gap resets. Each sentence is one item in the set and adds **1** to the daily drill count (`S.day.dn`), whether it was right or wrong. A missed sentence is not re-asked.
 
-**Words.** `LatinEngine.setPool` receives Diederich ids the learner has a flashcard for (`r:` / `p:`) or has met in a drill (`S.ds.w`), intersected with lexicon content words. Prepositions, personal pronouns (`egō`, `tū`, `nōs`, `vōs` and their object forms), and `sum` are the engine’s helpers: always allowed, and not counted in the tier. A helper whose own entry is not in that seen set is shown with a short English gloss under the word (`.sgloss`). Only `Morph.standard` forms are displayed. Latin answers use `gradeLatinReport`; an accepted alternate uses the same amber `.alt` note as other drills (`Accepted alternate — standard form: X`). Translate is right/wrong only.
+**Words.** `LatinEngine.setPool` receives Diederich ids the learner has a flashcard for (`r:` / `p:`) or has met in a drill (`S.ds.w`), intersected with lexicon content words. Prepositions, personal pronouns (`egō`, `tū`, `nōs`, `vōs` and their object forms), and `sum` are the engine’s helpers: always allowed, and not counted in the tier. `is` and `sē` are helpers too, but only once `PRON_OBJ` is unlocked. A helper whose own entry is not in that seen set is shown with a short English gloss under the word (`.sgloss`). Only `Morph.standard` forms are displayed. Latin answers use `gradeLatinReport`; an accepted alternate uses the same amber `.alt` note as other drills (`Accepted alternate — standard form: X`). Translate is right/wrong only.
 
 **Length tiers** use the count of seen lexicon content words (helpers do not count):
 
@@ -171,4 +171,4 @@ Off until the learner turns it on. Three settings, all on `S.set.df` (no mix %, 
 | 80–139 | those, plus `PASSIVE`, `SOV_ADJ`, `DAT_IO`, `PP_ADJ`, `PRON_OBJ` |
 | 140 and up | every template, including `DET`, `ADV`, `COORD` |
 
-**Weak spots and filters.** The sentence is biased toward the weakest engine-feasible combo in the current drill chips (`DrillPick.weakest`, otherwise `weight`). The engine only builds indicative present, imperfect, perfect, and future, and noun/adjective case-number in nominative, accusative, dative, and ablative; anything else is skipped. Identify records that asked form with `DrillPick.record`. Translate does not write a form stat. If the chips restrict the drill (for example 1st declension, or accusative only), the sentence must contain a matching target; otherwise the slot falls back to an ordinary drill.
+**Weak spots and filters.** The sentence is biased toward the weakest engine-feasible combo in the current drill chips (`DrillPick.weakest`, otherwise `weight`). The engine only builds indicative present, imperfect, perfect, and future, and noun/adjective case-number in nominative, accusative, dative, and ablative; anything else is skipped. `is` (`pi`, including the possessive genitive) and `sē` (`pr`) are engine-feasible once `PRON_OBJ` is in the tier. Identify records that asked form with `DrillPick.record`. Translate does not write a form stat. If the chips restrict the drill (for example 1st declension, or accusative only), the sentence must contain a matching target; otherwise the slot falls back to an ordinary drill.

@@ -76,7 +76,7 @@ ok(!E.build({ verb: 'laudo', subj: { n: 'mater', num: 'sg' }, obj: { n: 'pater',
 
 // ---------- 3. property checks over many generated sentences ----------
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
-let total = 0; const templCount = {}; const tenseVoice = {};
+let total = 0, nSe = 0, nIs = 0; const templCount = {}; const tenseVoice = {};
 for (const seed of SEEDS) for (const s of E.generateMany(250, seed)) {
   total++; templCount[s.template] = (templCount[s.template] || 0) + 1; tenseVoice[s.tense + '/' + s.voice] = (tenseVoice[s.tense + '/' + s.voice] || 0) + 1;
   const S = s.spec, ADVLA = S.adv ? E.LEX.advs[S.adv].la : null, toks = s.laTokens.filter(t => t !== ADVLA); const id = `[${s.la}]`; // the adverb (nōn, semper …) is checked in the adverb section
@@ -185,7 +185,36 @@ for (const seed of SEEDS) for (const s of E.generateMany(250, seed)) {
   const ce = E.chipsEnLa(s, rng); ok(E.gradeLatin(s, ce.answer.join(' '), { strict: true }), `${id} En→La chip answer rejected`);
   ok(ce.distractors.length >= 3, `${id} too few Latin distractors`);
   for (const d of ce.distractors) for (let i = 0; i < ce.answer.length; i++) { const a = ce.answer.slice(); a[i] = d; ok(!E.gradeLatin(s, a.join(' '), { strict: true }), `${id} Latin distractor accepted: ${a.join(' ')}`); }
+  // is / sē: third-person reflexive only, no nominative is, shown form is Morph.standard
+  const anNps = [S.subj, S.obj, S.io, S.means, S.pp && S.pp.np, S.coord && S.coord.np2].filter(Boolean);
+  ok(!(S.subj && S.subj.noun.key === 'pron_is'), id + ' is, ea, id used as a subject');
+  for (const np of anNps) {
+    if (np.noun.key === 'pron_is') ok(np.case !== 'nom', id + ' nominative is: ' + s.la);
+    if (np.poss) { nIs++; const cell = np.poss.noun.form('gen', np.poss.num); const std = Morph.standard(cell); ok(s.laTokens.includes(std) && std === cell[0], id + ' possessive not the standard form ' + std);
+      if (np.poss.noun.isAlts && np.poss.noun.isAlts.length > 1) for (const a of np.poss.noun.isAlts) ok(E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + np.poss.noun.gloss + '\\b', 'i'), a)), id + ' eius English ' + a + ' rejected: ' + s.en); }
+    if (np.noun.key !== 'pron_se' && np.noun.key !== 'pron_is') continue;
+    if (np.noun.key === 'pron_is') nIs++; else nSe++;
+    const cell = np.noun.form(np.case, np.num);
+    const std = Morph.standard(cell);
+    const cum = S.pp && S.pp.np === np && np.noun.cumForm;
+    ok(std === cell[0], id + ' cell does not lead with Morph.standard');
+    if (cum) ok(s.laTokens.includes(np.noun.cumForm) && !s.laTokens.includes('cum') && !s.laTokens.includes('sēsē'), id + ' cum sē / sēsē shown');
+    else { ok(s.laTokens.includes(std), id + ' standard form ' + std + ' not shown'); for (const alt of cell) if (alt !== std) ok(!s.laTokens.includes(alt), id + ' alternate shown: ' + alt); }
+    if (np.noun.key === 'pron_se') {
+      ok(!S.pron && s.person[0] === '3', id + ' sē with a first- or second-person subject');
+      const g = (S.subj && S.subj.noun.genders) || [];
+      const uncertain = g.length !== 1 || g[0] === 'n';
+      const want = (S.subj && S.subj.num === 'pl') ? 'themselves' : uncertain ? 'itself' : g[0] === 'f' ? 'herself' : 'himself';
+      ok(np.noun.gloss === want && s.en.toLowerCase().includes(want), id + ' sē gloss ' + np.noun.gloss + ' want ' + want + ' in ' + s.en);
+      if (S.subj && S.subj.num === 'pl') ok(!/\b(himself|herself|itself)\b/.test(s.en.toLowerCase()), id + ' plural sē glossed as singular');
+      for (const a of np.noun.seAlts) ok(E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + np.noun.gloss + '\\b', 'i'), a)), id + ' sē English ' + a + ' rejected');
+      if (!uncertain && S.subj && S.subj.num === 'sg') { const other = want === 'himself' ? 'herself' : 'himself'; ok(!E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + want + '\\b', 'i'), other)), id + ' wrong reflexive accepted'); }
+    } else if (np.noun.isAlts && np.noun.isAlts.length > 1) {
+      for (const a of np.noun.isAlts) ok(E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + np.noun.gloss + '\\b', 'i'), a)), id + ' is English ' + a + ' rejected: ' + s.en);
+    }
+  }
 }
+ok(nSe >= 20 && nIs >= 20, 'is and sē both show up across the generated sentences (sē ' + nSe + ', is ' + nIs + ')');
 function normEnStr(x) { return E.normEn(x); }
 function specOf(s) { const S = s.spec; const npS = x => x ? { n: x.noun.key, num: x.num, adj: x.adj } : undefined;
   return { verb: s.verb, frame: E.verbInfo(s.verb).frames.indexOf(S.fr.f), tense: s.tense, voice: s.voice, subj: npS(S.subj), pron: S.pron, obj: npS(S.obj), io: npS(S.io), means: npS(S.means), pp: S.pp ? Object.assign({ type: S.pp.type }, npS(S.pp.np)) : undefined, nocte: S.nocte, pred: S.pred,
@@ -502,6 +531,37 @@ for (const k of Object.keys(E.LEX.nouns)) { const n = E.nounInfo(k); ok(!!n.form
   ok(E.gradeLatin(gx, 'Mīles ignem extīnxit') && E.gradeLatin(gx, 'miles ignem extinxit') && !E.gradeLatin(gx, 'Mīles ignem extīnxērunt'), 'ext- spelling grading');
   ok(Morph.check('extīnxit', ['exstīnxit']) && Morph.variants('exstīnxit').includes('extīnxit'), 'Morph.variants export');
 
+  // is / sē grading: syncretic English, and alternates only of the cell that was actually used
+  const seF = E.build({ verb: 'amo', subj: { n: 'puella' }, obj: { n: 'pron_se' } });
+  ok(seF.la === 'Puella sē amat.' && seF.en === 'The girl loves herself.', 'sē feminine: ' + seF.la + ' / ' + seF.en);
+  ok(E.gradeEnglish(seF, 'The girl loves herself.') && !E.gradeEnglish(seF, 'The girl loves himself.') && !E.gradeEnglish(seF, 'The girl loves itself.'), 'herself does not accept himself or itself');
+  const seM = E.build({ verb: 'amo', subj: { n: 'puer' }, obj: { n: 'pron_se' } });
+  ok(seM.en === 'The boy loves himself.' && !E.gradeEnglish(seM, 'The boy loves herself.'), 'himself stays masculine');
+  const seN = E.build({ verb: 'amo', subj: { n: 'templum' }, obj: { n: 'pron_se' } });
+  ok(seN.en === 'The temple loves itself.' && ['himself', 'herself', 'itself'].every(a => E.gradeEnglish(seN, 'The temple loves ' + a + '.')), 'neuter sē accepts every singular English form');
+  const seP = E.build({ verb: 'amo', subj: { n: 'puella', num: 'pl' }, obj: { n: 'pron_se', num: 'pl' } });
+  ok(seP.en === 'The girls love themselves.' && !E.gradeEnglish(seP, 'The girls love itself.') && !E.gradeEnglish(seP, 'The girls love herself.'), 'plural sē is themselves');
+  const seRep = E.gradeLatinReport(seF, seF.la.replace('sē', 'sēsē'), { strict: true });
+  ok(seRep.ok && seRep.alternate && seRep.standard === 'sē', 'sēsē flagged, standard sē');
+  const eum = E.build({ verb: 'amo', subj: { n: 'puer' }, obj: { n: 'pron_is', g: 'm' } });
+  ok(/eum/.test(eum.la) && E.gradeEnglish(eum, 'The boy loves him.') && !E.gradeEnglish(eum, 'The boy loves her.') && !E.gradeEnglish(eum, 'The boy loves himself.'), 'eum is him, not her or himself');
+  const ei = E.build({ verb: 'do', subj: { n: 'rex' }, obj: { n: 'donum' }, io: { n: 'pron_is', g: 'f', num: 'sg' } });
+  ok(/eī/.test(ei.la) && !/ēī/.test(ei.la), 'dative singular shows eī: ' + ei.la);
+  ok(['him', 'her', 'it'].every(w => E.gradeEnglish(ei, ei.en.replace(/\b(him|her|it)\b/i, w))), 'eī accepts to him, to her, and to it');
+  const eiAlt = E.gradeLatinReport(ei, ei.la.replace('eī', 'ēī'), { strict: true });
+  ok(eiAlt.ok && eiAlt.alternate && eiAlt.standard === 'eī', 'ēī flagged, standard eī');
+  ok(!E.gradeLatin(ei, ei.la.replace('eī', 'iī'), { strict: true }) && !E.gradeLatin(ei, ei.la.replace('eī', 'ī'), { strict: true }), 'iī and ī are not dative');
+  const eis = E.build({ verb: 'do', subj: { n: 'rex' }, obj: { n: 'donum' }, io: { n: 'pron_is', g: 'm', num: 'pl' } });
+  ok(eis.laTokens.includes('eīs') && !eis.laTokens.includes('iīs') && !eis.laTokens.includes('īs') && E.gradeEnglish(eis, 'The king gives the gift to them.') && !E.gradeEnglish(eis, 'The king gives the gift to her.'), 'eīs is to them: ' + eis.la);
+  for (const alt of ['iīs', 'īs']) { const r = E.gradeLatinReport(eis, eis.la.replace('eīs', alt), { strict: true }); ok(r.ok && r.alternate && r.standard === 'eīs', alt + ' flagged, standard eīs'); }
+  const eius = E.build({ verb: 'amo', subj: { n: 'puella' }, obj: { n: 'pater' }, poss: { host: 'obj', g: 'm', num: 'sg' } });
+  ok(eius.la === 'Puella patrem eius amat.' && ['his', 'her', 'its'].every(w => E.gradeEnglish(eius, 'The girl loves ' + w + ' father.')), 'eius accepts his, her, and its: ' + eius.en);
+  const earum = E.build({ verb: 'amo', subj: { n: 'puer' }, obj: { n: 'mater' }, poss: { host: 'obj', g: 'f', num: 'pl' } });
+  ok(/eārum/.test(earum.la) && earum.en === 'The boy loves their mother.', 'eārum is their: ' + earum.la);
+  const nomPl = Morph.analyze(W[507]).tbl['m.nom.pl'];
+  ok(Morph.grade('iī', nomPl, true).alternate && Morph.grade('iī', nomPl, true).standard === 'eī' && Morph.grade('ī', nomPl, true).alternate, 'iī and ī are alternates of nominative plural eī only');
+  ok(!Morph.grade('iī', Morph.analyze(W[507]).tbl['m.dat.sg'], true).ok, 'iī is not an alternate of dative eī');
+
   // independent form sets: everything a Diederich id can show, plus the words every pool allows (prepositions, personal pronouns, sum)
   const idForms = {};
   const formsOfId = id => idForms[id] || (idForms[id] = (() => { const r = Morph.analyze(W[id]); const f = new Set(Object.values(r.tbl || {}).flat().flatMap(x => x.split(' ')).map(normM));
@@ -512,6 +572,8 @@ for (const k of Object.keys(E.LEX.nouns)) { const n = E.nounInfo(k); ok(!!n.form
   for (const p of ['1s', '2s', '1p', '2p', '3s', '3p']) { let n; try { n = N('pron_' + p); } catch (e) { continue; } if (!n || !n.tbl) continue; for (const f of Object.values(n.tbl).flat()) exempt.add(normM(f)); if (n.cumForm) exempt.add(normM(n.cumForm)); }
   for (const x of ['egō', 'tū', 'nōs', 'vōs']) exempt.add(normM(x));
   for (const f of Object.values(V('sum').tbl).flat()) exempt.add(normM(f));
+  for (const id of [495, 507]) for (const f of formsOfId(id)) exempt.add(f);
+  exempt.add(normM('sēcum'));
   const allIds = [...new Set(Object.values(E.LEX).flatMap(g => Object.values(g || {})).map(x => x && x.id).filter(x => typeof x === 'number'))];
   ok(allIds.length > 480, 'lexicon id count ' + allIds.length);
   const prng = E.mulberry32(777); let nPool = 0, nFail = 0;
@@ -544,8 +606,14 @@ for (const k of Object.keys(E.LEX.nouns)) { const n = E.nounInfo(k); ok(!!n.form
         if (t.kind === 'noun') { nN++;
           ok(s.laTokens.filter(x => x === t.token).length === 1, id + ' noun target not unique: ' + t.token);
           const lx = /^pron_/.test(t.key) ? null : E.LEX.nouns[t.key];
-          const tbl = lx ? Morph.analyze(W[lx.id]).tbl : N(t.key).tbl;
-          ok(has(tbl[t.case + '.' + t.num], t.form), id + ` ${t.form} is not ${t.case} ${t.num} of ${t.key}`);
+          if (t.key === 'pron_se' && t.form === 'sēcum') ok(t.case === 'abl' && Morph.standard(Morph.analyze(W[495]).tbl['abl.' + t.num]) === 'sē', id + ' sēcum is not the enclitic of sē');
+          else if (t.key === 'pron_is' || t.key === 'pron_se') {
+            const cell = t.key === 'pron_se' ? Morph.analyze(W[495]).tbl[t.case + '.' + t.num] : Morph.analyze(W[507]).tbl[(t.g || 'm') + '.' + t.case + '.' + t.num];
+            ok(Morph.standard(cell) === t.form, id + ` ${t.form} is not the standard ${t.case} ${t.num} of ${t.key}`);
+          } else {
+            const tbl = lx ? Morph.analyze(W[lx.id]).tbl : N(t.key).tbl;
+            ok(has(tbl[t.case + '.' + t.num], t.form), id + ` ${t.form} is not ${t.case} ${t.num} of ${t.key}`);
+          }
           if (ROLE_CASE[t.role] && !(t.role === 'O' && s.spec.fr && s.spec.fr.f.t === 'dat')) ok(t.case === ROLE_CASE[t.role] || (t.role === 'O' && t.case === 'acc'), id + ' role case ' + t.role + ' ' + t.case);
           if (t.role === 'IO') ok(t.case === 'dat', id + ' dative object case');
           if (t.role === 'PP') { const prev = s.laTokens[t.idx[0] - 1] || '', prev2 = s.laTokens[t.idx[0] - 2] || ''; const pc = PREP_CASE[prev] !== undefined ? PREP_CASE[prev] : PREP_CASE[prev2];

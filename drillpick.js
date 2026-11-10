@@ -167,6 +167,14 @@
   function engineCan(c) {
     const [par, key] = splitCombo(c);
     const T = { pres: 1, impf: 1, perf: 1, fut: 1 };
+    if (par === 'pi') {
+      const p = key.split('.');
+      return p.length === 3 && (p[0] === 'm' || p[0] === 'f' || p[0] === 'n') && (p[1] === 'acc' || p[1] === 'dat' || p[1] === 'gen') && (p[2] === 'sg' || p[2] === 'pl');
+    }
+    if (par === 'pr') {
+      const [kase, num] = key.split('.');
+      return (kase === 'acc' || kase === 'dat' || kase === 'abl') && (num === 'sg' || num === 'pl');
+    }
     if (par[0] === 'v') {
       const [mood, voice, tense, pn] = key.split('.');
       return mood === 'ind' && (voice === 'act' || voice === 'pas' || voice === 'dep') && !!T[tense] && /^[123][sp]$/.test(pn || '');
@@ -207,7 +215,7 @@
     return _lex;
   }
   function paradigmsSeen(index, seen) {
-    const s = new Set(['vsum', 'pp']);
+    const s = new Set(['vsum', 'pp', 'pi', 'pr']);
     for (const list of [index.nouns, index.verbs, index.adjs]) for (const w of list) if (seen.has(w.id) && w.par) s.add(w.par);
     return s;
   }
@@ -234,7 +242,9 @@
     try { targets = engine.identifyTargets(sent) || []; } catch (e) { targets = []; }
     for (const t of targets) {
       if (t.kind === 'noun') {
-        if (t.pron) out.push({ c: 'pp|' + t.case + '.' + t.num, target: t });
+        if (t.key === 'pron_se') out.push({ c: 'pr|' + t.case + '.' + t.num, target: t, id: t.id || 495 });
+        else if (t.key === 'pron_is') out.push({ c: 'pi|' + (t.g || 'm') + '.' + t.case + '.' + t.num, target: t, id: t.id || 507 });
+        else if (t.pron) out.push({ c: 'pp|' + t.case + '.' + t.num, target: t });
         else { const n = noun.get(t.key); if (n && n.par) out.push({ c: n.par + '|' + t.case + '.' + t.num, target: t, id: n.id }); }
       } else if (t.kind === 'verb') {
         const v = verb.get(t.key); if (!v || !v.par) continue;
@@ -273,12 +283,15 @@
     } else if (par[0] === 'n' || par === 'pp') {
       const kase = key.split('.')[0];
       names = { nom: ['SV', 'COPULA', 'SOV', 'SV_PP', 'MEANS', 'PASSIVE', 'DAT_VERB', 'DAT_IO', 'SOV_ADJ'], acc: ['SOV', 'SOV_ADJ', 'PRON_OBJ', 'DET', 'ADV', 'COORD'], dat: ['DAT_IO', 'DAT_VERB', 'PRON_OBJ', 'DET', 'ADV'], abl: ['MEANS', 'SV_PP', 'PP_ADJ', 'PASSIVE', 'ADV'] }[kase];
+    } else if (par === 'pi' || par === 'pr') {
+      names = ['PRON_OBJ'];
     } else if (par[0] === 'a' || par === 'pd') {
       const kase = key.split('.')[1];
       names = { nom: ['COPULA', 'SOV_ADJ', 'PP_ADJ'], acc: ['SOV_ADJ', 'PP_ADJ'], dat: ['SOV_ADJ', 'PP_ADJ', 'DAT_IO'], abl: ['PP_ADJ', 'MEANS', 'SV_PP'] }[kase];
     }
     if (!names) return tpls;
     const pref = tpls.filter(t => names.includes(t));
+    if (par === 'pi' || par === 'pr') return pref;
     return pref.length ? pref : tpls;
   }
   function templatesForFilter(df, tpls) {
@@ -300,14 +313,18 @@
     if (type === 'tr') dir = settings.dir === 'el' || settings.dir === 'both' ? (settings.dir === 'both' ? (rnd() < 0.5 ? 'el' : 'le') : 'el') : 'le';
     return { type, dir };
   }
-  function genUntil(engine, rnd, tpls, tense, pred, tries) {
+  function genUntil(engine, rnd, tpls, tense, pred, tries, combo) {
     if (!tpls.length) return null;
     let fails = 0;
+    const pronTarget = combo && (String(combo).startsWith('pi|') || String(combo).startsWith('pr|')) ? combo : null;
     for (let i = 0; i < tries; i++) {
       const tpl = tpls[Math.floor(rnd() * tpls.length)];
       let s = null;
-      try { s = engine.generate(rnd, tense ? { template: tpl, tense: tense } : { template: tpl }); }
-      catch (e) { if (++fails >= 2) return null; continue; }
+      const o = { template: pronTarget ? 'PRON_OBJ' : tpl };
+      if (tense) o.tense = tense;
+      if (pronTarget) o.pronTarget = pronTarget;
+      try { s = engine.generate(rnd, o); }
+      catch (e) { if (++fails >= Math.min(tries, 8)) return null; continue; }
       if (s && !s.rejected && pred(s)) return s;
     }
     return null;
@@ -368,6 +385,20 @@
     }
     const pr = pronMap(engine);
     toks.forEach((t, i) => { if (at(i)) return; const p = pr.get(norm(t)); if (p && !seen.has(p.id)) hints.push({ i, en: p.en }); });
+    const glossAt = (tok, id, en) => {
+      if (!tok || !en || seen.has(id)) return;
+      const i = toks.findIndex((t, k) => !at(k) && norm(t) === norm(tok));
+      if (i >= 0) hints.push({ i, en });
+    };
+    for (const np of [S.obj, S.io, S.pp && S.pp.np, S.subj].filter(Boolean)) {
+      if (np.noun && (np.noun.key === 'pron_se' || np.noun.key === 'pron_is')) {
+        const cum = S.pp && S.pp.np === np && np.noun.cumForm;
+        const std = engine.Morph.standard(np.noun.form(np.case, np.num));
+        const en = cum ? 'with ' + np.noun.gloss : np.case === 'dat' ? 'to ' + np.noun.gloss : np.noun.gloss;
+        glossAt(cum || std, np.noun.id, en);
+      }
+      if (np.poss && np.poss.noun) glossAt(engine.Morph.standard(np.poss.noun.form('gen', np.poss.num)), np.poss.noun.id, np.poss.noun.gloss);
+    }
     const sumId = engine.LEX.verbs.sum && engine.LEX.verbs.sum.id;
     if (typeof sumId === 'number' && !seen.has(sumId)) {
       const last = toks.length - 1, n = norm(toks[last] || '');
@@ -412,7 +443,7 @@
       let sent = null, want = null;
       for (const c of targets) {
         const tense = c[0] === 'v' ? c.split('|')[1].split('.')[2] : null;
-        sent = genUntil(engine, rnd, hintTemplates(c, tpls), tense, s => usable(s, c), 24);
+        sent = genUntil(engine, rnd, hintTemplates(c, tpls), tense, s => usable(s, c), 24, c);
         if (sent) { want = c; break; }
       }
       if (!sent) sent = genUntil(engine, rnd, templatesForFilter(df, tpls), null, s => usable(s, null), 30);

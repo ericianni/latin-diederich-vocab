@@ -117,6 +117,8 @@ ok(offTakes === 0, 'mix never selects a sentence while the setting is off');
     n++;
     if (!['SV', 'COPULA', 'PRONOUN'].includes(item.template)) bad++;
     for (const id of E.sentenceIds(item.sentence)) if (!seen.has(id)) bad++;
+    const S = item.sentence.spec || {};
+    for (const np of [S.subj, S.obj, S.io, S.pp && S.pp.np].filter(Boolean)) if (np.noun && (np.noun.key === 'pron_is' || np.noun.key === 'pron_se' || np.poss)) bad++;
   }
   ok(n >= 4 && bad === 0, 'small pool stays on the shortest templates and inside the pool (' + n + ' sentences)');
 }
@@ -138,6 +140,30 @@ ok(offTakes === 0, 'mix never selects a sentence while the setting is off');
     else if (it.target) matched += 0;
   }
   ok(tried >= 4 && matched === tried, '1st-declension accusative filter: sentence target matches (' + matched + '/' + tried + ')');
+}
+
+// ---------- is and sē: only from the pronoun-object tier, and weak spots can ask for them ----------
+{
+  ok(!P.sentenceTemplates(79, E.TEMPLATES).includes('PRON_OBJ') && P.sentenceTemplates(80, E.TEMPLATES).includes('PRON_OBJ'), 'PRON_OBJ, where is and sē live, unlocks at 80 seen words');
+  const seen = new Set(ALL);
+  const df = Object.assign({}, DF, { stype: 'id' });
+  const weak = (combo, seed) => P.pickDrillSentence(E, { wordsById: byId, seen, df, stats: { [combo]: { r: 0, n: 8, a: 8, ok: 0, t: Date.now(), q: 1 } }, rnd: rng(seed), q: 10 });
+  const eum = weak('pi|m.acc.sg', 21);
+  ok(!!eum && eum.combo === 'pi|m.acc.sg' && eum.sentence.laTokens.includes('eum'), 'weak spot pi|m.acc.sg is identified as eum' + (eum ? ' (' + eum.sentence.la + ' / ' + eum.combo + ')' : ''));
+  const se = weak('pr|acc.sg', 22);
+  ok(!!se && se.combo === 'pr|acc.sg' && se.sentence.laTokens.includes('sē') && !(se.sentence.spec && se.sentence.spec.pron), 'weak spot pr|acc.sg is identified as sē' + (se ? ' (' + se.sentence.la + ')' : ''));
+  const unseen = new Set(ALL);
+  unseen.delete(507); unseen.delete(495);
+  let glossed = null;
+  E.setPool([...seen]);
+  for (let i = 0; i < 30 && !glossed; i++) {
+    try { const s = E.generate(rng(800 + i), { template: 'PRON_OBJ', pronTarget: 'pi|f.acc.sg' }); if (s && s.laTokens.includes('eam')) glossed = s; } catch (e) { /* keep looking */ }
+  }
+  E.setPool(null);
+  const hints = glossed ? P.helperHints(glossed, unseen, E) : [];
+  ok(!!glossed && hints.some(h => glossed.laTokens[h.i] === 'eam' && h.en === 'her'), 'unseen is is glossed' + (glossed ? ' (' + glossed.la + ')' : ''));
+  const quiet = glossed ? P.helperHints(glossed, new Set([...unseen, 507]), E) : [];
+  ok(!!glossed && !quiet.some(h => glossed.laTokens[h.i] === 'eam'), 'a seen is lemma is not glossed');
 }
 
 // ---------- daily goal: one sentence, one count; identify updates that form only ----------

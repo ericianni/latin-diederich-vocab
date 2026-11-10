@@ -29,6 +29,52 @@
     '1p': { acc: 'nōs', dat: 'nōbīs', abl: 'nōbīs', en: 'us', num: 'pl' }, '2p': { acc: 'vōs', dat: 'vōbīs', abl: 'vōbīs', en: 'you', num: 'pl', label: 'you (pl.)', alts: ['you all'] },
   };
   const PRON_KEYS = Object.keys(PRON_NP).map(p => 'pron_' + p);
+  // is (anaphoric him/her/it) and sē (reflexive). Forms come from morph.js so the shown token is Morph.standard
+  // (eī, eīs, eius, eum, …; sē, with sēsē only as an accepted alternate). Not nominative subjects.
+  const IS_ID = 507, SE_ID = 495;
+  let _isMorph = null, _seMorph = null;
+  function wordById(id) { const W = WORDS(); return (W[id] && W[id].id === id) ? W[id] : W.find(w => w.id === id); }
+  function isMorph() { if (!_isMorph) _isMorph = Morph.analyze(wordById(IS_ID)); return _isMorph; }
+  function seMorph() { if (!_seMorph) _seMorph = Morph.analyze(wordById(SE_ID)); return _seMorph; }
+  function isCell(g, c, n) { const t = isMorph().tbl[g + '.' + c + '.' + n]; return t ? t.slice() : null; }
+  function anaphoraOn() { return true; } // inside PRON_OBJ only; that template is the 80+ drill tier
+  const EN_ACC = { m: 'him', f: 'her', n: 'it' }, EN_POSS = { m: 'his', f: 'her', n: 'its' };
+  function makeSe(subj) {
+    const morph = seMorph();
+    const genders = subj && subj.noun && subj.noun.genders && subj.noun.genders.length ? subj.noun.genders : ['m', 'f', 'n'];
+    const g0 = genders.length === 1 ? genders[0] : 'n';
+    const num = subj && subj.num === 'pl' ? 'pl' : 'sg';
+    const uncertain = genders.length !== 1 || g0 === 'n';
+    const canon = num === 'pl' ? 'themselves' : g0 === 'f' ? 'herself' : g0 === 'm' ? 'himself' : 'itself';
+    const alts = num === 'pl' ? ['themselves'] : (uncertain ? ['himself', 'herself', 'itself'] : [canon]);
+    const tbl = {};
+    for (const c of ['acc', 'dat', 'abl']) for (const n of ['sg', 'pl']) { const cell = morph.tbl[c + '.' + n]; if (cell) tbl[c + '.' + n] = cell.slice(); }
+    const info = { key: 'pron_se', pron: 'se', id: SE_ID, cls: 'human', g: g0 === 'f' ? 'f' : g0 === 'n' ? 'n' : 'm', genders: [g0 === 'f' ? 'f' : g0 === 'n' ? 'n' : 'm'], tbl,
+      en: [canon, canon], alts: [alts, alts], nums: ['sg', 'pl'], tags: new Set(['human', '#animate', '#concrete', '#count', '#pron']), cumForm: 'sēcum', gloss: canon, seAlts: alts };
+    info.form = (c, n) => tbl[c + '.' + n] || tbl[c + '.sg'] || null;
+    return info;
+  }
+  function makeIs(spec) {
+    const g = spec.g || 'm', num = spec.num || 'sg', kase = spec.kase || 'acc';
+    let canon, alts;
+    if (kase === 'gen') { if (num === 'pl') { canon = 'their'; alts = ['their']; } else { canon = EN_POSS[g] || 'his'; alts = ['his', 'her', 'its']; } }
+    else if (kase === 'dat') { if (num === 'pl') { canon = 'them'; alts = ['them']; } else { canon = EN_ACC[g] || 'him'; alts = ['him', 'her', 'it']; } }
+    else if (num === 'pl') { canon = 'them'; alts = ['them']; }
+    else { canon = EN_ACC[g] || 'it'; alts = [canon]; }
+    const info = { key: 'pron_is', pron: 'is', id: IS_ID, cls: g === 'n' ? 'thing' : 'human', g, genders: [g], tbl: isMorph().tbl,
+      en: [canon, canon], alts: [alts, alts], nums: ['sg', 'pl'], gloss: canon, isAlts: alts,
+      tags: new Set(['human', 'deity', 'animal', 'thing', 'place', 'abstract', '#animate', '#concrete', '#count', '#pron', '#portable', '#holdable', '#ownable', '#gift']) };
+    info.form = (c, n) => { const cell = isMorph().tbl[g + '.' + c + '.' + n]; return cell ? cell.slice() : null; };
+    return info;
+  }
+  // nominative of is that is spelled the same as this form (so the subject number must not match that reading)
+  function isNomClash(spec) {
+    const std = Morph.standard(isCell(spec.g, spec.kase, spec.num) || []);
+    if (!std) return null;
+    const hit = [];
+    for (const g of ['m', 'f', 'n']) for (const n of ['sg', 'pl']) { const c = isCell(g, 'nom', n); if (c && Morph.standard(c) === std) hit.push(n); }
+    return hit.length === 1 ? hit[0] : (hit.length ? 'both' : null);
+  }
   function pronInfo(key) {
     const p = key.slice(5), d = PRON_NP[p]; const tbl = {};
     for (const c of ['acc', 'dat', 'abl']) tbl[c + '.' + d.num] = [d[c]];
@@ -40,6 +86,8 @@
   const cache = {};
   function nounInfo(key) {
     if (cache['n:' + key]) return cache['n:' + key];
+    if (key === 'pron_se') return makeSe(null);
+    if (key === 'pron_is') return makeIs({ g: 'm', num: 'sg', kase: 'acc' });
     if (key.startsWith('pron_')) return (cache['n:' + key] = pronInfo(key));
     const lx = LEX.nouns[key]; if (!lx) throw new Error('no noun ' + key);
     const r = Morph.analyze(WORDS()[lx.id]); const tbl = JSON.parse(JSON.stringify(r.tbl));
@@ -99,6 +147,7 @@
   // ---------- word pool (Sentences page: "words I've seen" option) ----------
   // POOL = null: all lexicon words. Otherwise a Set of Diederich ids (data/words.json) that content words must come from.
   // Always allowed, whatever the pool: prepositions, personal pronouns (egō, tū, nōs, vōs) and sum (also the perfect-passive helper).
+  // is and sē are glossed helpers too, but only the PRON_OBJ template (the 80+ drill tier) ever uses them.
   let POOL = null;
   function setPool(ids) { POOL = ids ? new Set([...ids].map(Number)) : null; }
   const inPool = id => !POOL || POOL.has(id);
@@ -228,17 +277,39 @@
     const enAlts = (adjEn || ['']).flatMap(ae => en.alts.map(na => (ae ? ae + ' ' : '') + na));
     const label = n.label || (det === 'poss' && a.person[0] === '2' ? 'your (' + (a.person[1] === 's' ? 'sg.' : 'pl.') + ')' : null);
     const enPrompt = n.label ? n.label : label ? enCanon.replace(/^your\b/, label) : enCanon;
+    const std = Morph.standard(forms);
+    const ordered = std ? [std].concat(forms.filter(f => f !== std)) : forms;
     const variants = [];
     const aforms = [];
-    if (!a) for (const f of forms) variants.push([f]);
+    if (!a) for (const f of ordered) variants.push([f]);
     else {
       for (const g of n.genders) for (const af of a.form(g, np.case, np.num)) if (!aforms.includes(af)) aforms.push(af);
       const nFirst = [], aFirst = [];
-      for (const f of forms) for (const af of aforms) { nFirst.push([f, af]); aFirst.push([af, f]); }
+      for (const f of ordered) for (const af of aforms) { nFirst.push([f, af]); aFirst.push([af, f]); }
       // canonical (first) order: demonstratives precede the noun (hic canis); other adjectives and possessives follow it (pater meus)
       variants.push(...(det === 'dem' ? aFirst.concat(nFirst) : nFirst.concat(aFirst)));
     }
-    return { variants, enCanon, enPrompt, enAlts, enNum: en.enNum, adjForms: a ? a.form(n.g, np.case, np.num) : null, adjFormsAll: aforms, nounTok: forms[0], adjTok: a ? aforms[0] : null };
+    return withPoss({ variants, enCanon, enPrompt, enAlts, enNum: en.enNum, adjForms: a ? a.form(n.g, np.case, np.num) : null, adjFormsAll: aforms, nounTok: std || forms[0], adjTok: a ? aforms[0] : null }, np.poss);
+  }
+  // Possessive eius / eōrum / eārum follows the noun. Either order is accepted; the shown order is noun then genitive.
+  function withPoss(built, poss) {
+    if (!poss) return built;
+    const cell = poss.noun.form('gen', poss.num) || [];
+    const std = Morph.standard(cell);
+    const gall = std ? [std].concat(cell.filter(f => f !== std)) : cell.slice();
+    const variants = [], seen = new Set();
+    const add = v => { const k = v.join('\0'); if (!seen.has(k)) { seen.add(k); variants.push(v); } };
+    for (const v of built.variants) add(v.concat([std]));
+    for (const v of built.variants) for (const g of gall) { add(v.concat([g])); add([g].concat(v)); }
+    const bare = built.enCanon.replace(/^(the|a|an) /, '');
+    const words = (poss.noun.isAlts && poss.noun.isAlts.length) ? poss.noun.isAlts : [poss.noun.gloss];
+    const word = poss.noun.gloss || words[0];
+    return Object.assign({}, built, {
+      variants, possTok: std,
+      enCanon: (word + ' ' + bare).replace(/\s+/g, ' ').trim(),
+      enPrompt: (word + ' ' + String(built.enPrompt || built.enCanon).replace(/^(the|a|an) /, '')).replace(/\s+/g, ' ').trim(),
+      enAlts: words.map(w => (w + ' ' + bare).replace(/\s+/g, ' ').trim()),
+    });
   }
   // preposition variants. kind: in/ad/per/sine/cum/ab/ex
   const plain = w => w.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); // keeps v as a consonant (norm() maps v→u)
@@ -349,21 +420,44 @@
   const NO_PRON_OBJ = ['sepelio'];
   const PRON_PROTO = () => nounInfo('pron_1s'); // all personal-pronoun pseudo-nouns share their tags
   const DET_KEYS = () => Object.keys(LEX.adjs).filter(k => LEX.adjs[k].kind && inPool(LEX.adjs[k].id));
+  function specFor(combo) {
+    const key = String(combo).split('|')[1] || '';
+    if (String(combo).startsWith('pr|')) { const [kase, num] = key.split('.'); return { g: 'm', kase, num: num || 'sg' }; }
+    const [g, kase, num] = key.split('.');
+    return { g: g || 'm', kase: kase || 'acc', num: num || 'sg' };
+  }
+  function roleFor(combo) {
+    const spec = specFor(combo);
+    if (String(combo).startsWith('pr|')) return spec.kase === 'dat' ? 'SE_DAT' : spec.kase === 'abl' ? 'SE_CUM' : 'SE_O';
+    if (spec.kase === 'gen') return 'IS_GEN';
+    if (spec.kase === 'dat') return 'IS_DAT';
+    return 'IS_O';
+  }
+  function randomIs(rng, role) {
+    return { g: pick(rng, ['m', 'f', 'n']), num: rng() < 0.62 ? 'sg' : 'pl', kase: role === 'IS_DAT' ? 'dat' : role === 'IS_GEN' ? 'gen' : 'acc' };
+  }
   function generateOne(rng, template, opts) {
     opts = opts || {};
+    if (opts.pronTarget && (String(opts.pronTarget).startsWith('pi|') || String(opts.pronTarget).startsWith('pr|'))) template = 'PRON_OBJ';
     const tense = opts.tense || pick(rng, TENSES);
     const used = new Set();
     let voice = 'act', fr, v, subj = null, pron = null, obj = null, io = null, means = null, pp = null, nocte = false, pred = null;
-    // PRON_OBJ: a personal pronoun as object, indirect object, dative object, "with me/you" or passive agent; DET: a possessive or demonstrative determiner
+    // PRON_OBJ: a personal pronoun, or (from this tier) sē / is, as object, indirect object, dative, sēcum, or passive agent.
+    // DET: a possessive or demonstrative determiner. is is never the subject; sē is only a third-person object.
     let tpl = template, forcePron = null, forceDet = false, coord = null;
-    if (template === 'PRON_OBJ') { forcePron = pick(rng, ['O', 'O', 'IO', 'DAT', 'CUM', 'AGENT']); tpl = { O: 'SOV', IO: 'DAT_IO', DAT: 'DAT_VERB', CUM: 'SV_PP', AGENT: 'PASSIVE' }[forcePron]; }
+    if (template === 'PRON_OBJ') {
+      const roles = ['O', 'O', 'IO', 'DAT', 'CUM', 'AGENT'];
+      if (anaphoraOn()) roles.push('SE_O', 'SE_O', 'SE_DAT', 'SE_CUM', 'IS_O', 'IS_O', 'IS_DAT', 'IS_GEN');
+      forcePron = opts.pronTarget ? roleFor(opts.pronTarget) : pick(rng, roles);
+      tpl = { O: 'SOV', IO: 'DAT_IO', DAT: 'DAT_VERB', CUM: 'SV_PP', AGENT: 'PASSIVE', SE_O: 'SOV', SE_DAT: 'DAT_IO', SE_CUM: 'SV_PP', IS_O: 'SOV', IS_DAT: 'DAT_IO', IS_GEN: 'SOV' }[forcePron];
+    }
     if (template === 'ADV') tpl = pick(rng, ['SV', 'SV', 'SV_PP', 'SOV', 'SOV', 'PASSIVE', 'COPULA', 'DAT_VERB', 'DAT_IO', 'PRONOUN', 'MEANS']);
     if (template === 'DET') { forceDet = true; tpl = pick(rng, ['SV', 'SOV', 'SOV', 'PASSIVE', 'COPULA', 'SV_PP', 'DAT_IO']); }
     const pP = forcePron ? 0 : tpl === 'PRONOUN' ? 0.3 : 0.08;
-    const addAdj = (np, p) => { if (np && !np.adj && !np.noun.pron && rng() < p) { const a = chooseAdj(rng, np.noun, used, np.num, np.case); if (a) np.adj = a; } return np; };
+    const addAdj = (np, p) => { if (np && !np.poss && !np.adj && !np.noun.pron && rng() < p) { const a = chooseAdj(rng, np.noun, used, np.num, np.case); if (a) np.adj = a; } return np; };
     // one determiner or adjective per NP; with a subject pronoun, no clash like *"We love my father" / *"You (sg.) love your (pl.) father"
     const detOK = k => { const a = LEX.adjs[k]; if (a.kind !== 'poss' || !pron) return true; return a.person === pron || a.person[0] !== pron[0]; };
-    const addDet = (np, p) => { if (!np || np.adj || np.noun.pron || rng() >= p) return false;
+    const addDet = (np, p) => { if (!np || np.poss || np.adj || np.noun.pron || rng() >= p) return false;
       const c = DET_KEYS().filter(k => !used.has('adj:' + k) && detOK(k) && adjFits(adjInfo(k), np.noun)); if (!c.length) return false;
       const k = pick(rng, c); used.add('adj:' + k); np.adj = k; return true; };
     const mkNP = (n, kase, num) => ({ noun: n, case: kase, num: num || chooseNum(rng, n) });
@@ -430,34 +524,69 @@
       if (ppT.length && (forced || rng() < 0.3)) { pp = pickPP(ppT); if (forced && !pp) return null; }
     } else {
       let frames;
-      if (tpl === 'SV' || tpl === 'SV_PP' || tpl === 'PP_ADJ') frames = frameList(f => f.t === 'intr' && (forcePron !== 'CUM' || (f.pp || []).some(t => t.replace('!', '') === 'cum')));
-      else if (tpl === 'SOV' || tpl === 'SOV_ADJ') frames = frameList((f, k) => f.t === 'tr' && (forcePron !== 'O' || (matches(P0, f.o) && !NO_PRON_OBJ.includes(k))));
-      else if (tpl === 'DAT_IO') frames = frameList(f => f.t === 'ditr' && (forcePron !== 'IO' || matches(P0, f.io)));
+      const seP = () => makeSe({ num: 'sg', noun: { genders: ['m'] } });
+      const isP = () => makeIs({ g: 'm', num: 'sg', kase: 'acc' });
+      const seNum = opts.pronTarget && String(opts.pronTarget).startsWith('pr|') ? specFor(opts.pronTarget).num : null;
+      const isSpec = (forcePron === 'IS_O' || forcePron === 'IS_DAT') ? (opts.pronTarget ? specFor(opts.pronTarget) : randomIs(rng, forcePron)) : null;
+      if (tpl === 'SV' || tpl === 'SV_PP' || tpl === 'PP_ADJ') frames = frameList(f => f.t === 'intr' && ((forcePron !== 'CUM' && forcePron !== 'SE_CUM') || (f.pp || []).some(t => t.replace('!', '') === 'cum')));
+      else if (tpl === 'SOV' || tpl === 'SOV_ADJ') frames = frameList((f, k) => f.t === 'tr' && (forcePron === 'SE_O' ? matches(seP(), f.o) : forcePron === 'IS_O' ? matches(isP(), f.o) : forcePron === 'IS_GEN' ? true : (forcePron !== 'O' || (matches(P0, f.o) && !NO_PRON_OBJ.includes(k)))));
+      else if (tpl === 'DAT_IO') frames = frameList(f => f.t === 'ditr' && (forcePron === 'SE_DAT' ? matches(seP(), f.io) : forcePron === 'IS_DAT' ? matches(isP(), f.io) : (forcePron !== 'IO' || matches(P0, f.io))));
       else if (tpl === 'DAT_VERB') frames = frameList(f => f.t === 'dat' && (forcePron !== 'DAT' || matches(P0, f.o)));
       else if (tpl === 'MEANS') frames = frameList(f => !!f.instr);
       else if (tpl === 'PRONOUN') frames = frameList(f => (f.t === 'tr' || f.t === 'intr') && f.s.includes('human'));
+      if (!frames.length) return null;
       fr = pick(rng, frames); v = verbInfo(fr.k); used.add(v.key);
       if (tpl === 'PRONOUN') pron = pick(rng, ['1s', '2s', '1p', '2p']);
-      else { const n = chooseNoun(rng, fr.f.s, used, subjFilter); if (!n) return null; used.add(n.key); subj = mkNP(n, 'nom'); }
+      else {
+        const n = chooseNoun(rng, fr.f.s, used, subjFilter); if (!n) return null;
+        let num = null;
+        if (seNum) { if ((seNum === 'pl' && (n.sgOnly || n.mass)) || (seNum === 'sg' && n.plOnly)) return null; num = seNum; }
+        if (isSpec) {
+          const clash = isNomClash(isSpec);
+          if (clash === 'both') return null;
+          if (clash === 'sg') { if (n.sgOnly || n.mass) return null; num = 'pl'; }
+          if (clash === 'pl') { if (n.plOnly) return null; num = 'sg'; }
+        }
+        used.add(n.key); subj = mkNP(n, 'nom', num);
+      }
       if (fr.f.t === 'tr' || fr.f.t === 'ditr') {
-        if (fr.f.t === 'tr' && !NO_PRON_OBJ.includes(v.key) && (forcePron === 'O' || rng() < pP)) obj = pickPron(fr.f.o, 'acc');
-        if (!obj && forcePron === 'O') return null;
-        if (!obj) { const n = chooseNoun(rng, fr.f.o, used); if (!n) return null; used.add(n.key); obj = mkNP(n, 'acc'); } }
+        if (forcePron === 'SE_O') { if (pron || !subj) return null; obj = mkNP(makeSe(subj), 'acc', subj.num); used.add('pronNP'); }
+        else if (forcePron === 'IS_O') { obj = mkNP(makeIs(isSpec), 'acc', isSpec.num); used.add('pronNP'); }
+        else {
+          if (fr.f.t === 'tr' && !NO_PRON_OBJ.includes(v.key) && (forcePron === 'O' || rng() < pP)) obj = pickPron(fr.f.o, 'acc');
+          if (!obj && forcePron === 'O') return null;
+          if (!obj) { const n = chooseNoun(rng, fr.f.o, used); if (!n) return null; used.add(n.key); obj = mkNP(n, 'acc'); }
+        }
+      }
       if (fr.f.t === 'ditr' || fr.f.t === 'dat') {
         const specs = fr.f.t === 'ditr' ? fr.f.io : fr.f.o;
-        if (forcePron === 'IO' || forcePron === 'DAT' || rng() < pP) io = pickPron(specs, 'dat');
-        if (!io && (forcePron === 'IO' || forcePron === 'DAT')) return null;
-        if (!io) { const n = chooseNoun(rng, specs, used, x => !x.noDatAblPl); if (!n) return null; used.add(n.key); io = mkNP(n, 'dat'); } }
+        if (forcePron === 'SE_DAT') { if (pron || !subj) return null; io = mkNP(makeSe(subj), 'dat', subj.num); used.add('pronNP'); }
+        else if (forcePron === 'IS_DAT') { io = mkNP(makeIs(isSpec), 'dat', isSpec.num); used.add('pronNP'); }
+        else {
+          if (forcePron === 'IO' || forcePron === 'DAT' || rng() < pP) io = pickPron(specs, 'dat');
+          if (!io && (forcePron === 'IO' || forcePron === 'DAT')) return null;
+          if (!io) { const n = chooseNoun(rng, specs, used, x => !x.noDatAblPl); if (!n) return null; used.add(n.key); io = mkNP(n, 'dat'); }
+        }
+      }
       if (tpl === 'MEANS') { const m = chooseNoun(rng, fr.f.instr, used); used.add(m.key); means = mkNP(m, 'abl', meansNum(m, subj ? subj.num : (pron[1] === 's' ? 'sg' : 'pl'))); }
       const ppTypes = fr.f.pp || [];
       const forcePP = tpl === 'SV_PP' || tpl === 'PP_ADJ' || ppTypes.some(t => t.endsWith('!'));
-      if (ppTypes.length && (forcePP || rng() < (tpl === 'SV' ? 0.35 : 0.3))) {
+      if (forcePron === 'SE_CUM') { if (pron || !subj) return null; pp = { type: 'cum', np: mkNP(makeSe(subj), 'abl', subj.num) }; used.add('pronNP'); }
+      else if (ppTypes.length && (forcePP || rng() < (tpl === 'SV' ? 0.35 : 0.3))) {
         if (!forcePP && ppTypes.includes('nocte') && inPool(LEX.extras.nox.id) && rng() < 0.3) nocte = true; else pp = pickPP(ppTypes);
         if (forcePP && !pp) return null;
       } else if (ppTypes.includes('nocte') && inPool(LEX.extras.nox.id) && rng() < 0.15) nocte = true;
+      if (forcePron === 'IS_GEN') {
+        const hosts = [subj, obj].filter(x => x && !x.noun.pron);
+        if (!hosts.length) return null;
+        const spec = opts.pronTarget ? specFor(opts.pronTarget) : randomIs(rng, 'IS_GEN');
+        const host = pick(rng, hosts); host.adj = null;
+        host.poss = { noun: makeIs(spec), num: spec.num };
+        used.add('pronNP');
+      }
       if (tpl === 'SOV_ADJ') { if (rng() < 0.5) addAdj(subj, 1); else addAdj(obj, 1); if (!(subj && subj.adj) && !(obj && obj.adj)) return null; }
       else if (tpl === 'PP_ADJ') { if (!pp) return null; addAdj(pp.np, 1); if (!pp.np.adj) return null; }
-      else if (forceDet) { const nps = shuffle(rng, [subj, obj, io, pp && pp.np].filter(x => x && !x.noun.pron)); if (!nps.some(np => addDet(np, 1))) return null; }
+      else if (forceDet) { const nps = shuffle(rng, [subj, obj, io, pp && pp.np].filter(x => x && !x.noun.pron && !x.poss)); if (!nps.some(np => addDet(np, 1))) return null; }
       else { for (const np of [subj, obj, io, pp && pp.np]) addDet(np, 0.07); addAdj(subj, 0.15); addAdj(obj, 0.15); }
     }
     // ADV: one adverb that fits the tense and the verb; no "at night" next to it
@@ -683,6 +812,7 @@
       if (!np) return;
       const fs = np.noun.form(np.case, np.num); if (fs && fs.length) cells.push(fs);
       if (np.adj) { const a = adjInfo(np.adj); for (const g of np.noun.genders) { const af = a.form(g, np.case, np.num); if (af && af.length) cells.push(af); } }
+      if (np.poss) { const ps = np.poss.noun.form('gen', np.poss.num); if (ps && ps.length) cells.push(ps); }
     };
     addNP(S.subj); addNP(S.obj); addNP(S.io); addNP(S.means); if (S.pp) addNP(S.pp.np); if (S.coord) addNP(S.coord.np2);
     if (S.pred && S.subj) { const a = adjInfo(S.pred); for (const g of S.subj.noun.genders) { const af = a.form(g, 'nom', S.subj.num); if (af && af.length) cells.push(af); } }
@@ -725,10 +855,11 @@
       if (a && a.kind === 'poss') for (const o of ['my', 'our', 'your']) if (o !== a.en.default[0]) cands.push({ swap: [a.en.default[0], o] });
       if (a && a.kind === 'dem') { const w = buildNP(np).enCanon.split(' ')[0]; cands.push({ swap: [w, { this: 'that', that: 'this', these: 'those', those: 'these' }[w]] }); }
     }
+    if (S.pron) { const self = { '1s': 'I', '1p': 'we', '2s': 'you', '2p': 'you' }[S.pron]; for (const o of ['I', 'we', 'you']) if (o !== self) cands.push({ swap: [self, o] }); }
     const out = [];
     for (const c of shuffle(rng, cands)) {
       if (out.length >= nDistract || !c.swap[0] || !c.swap[1]) continue;
-      const wrongSent = (' ' + sent.en.replace(/\.$/, '') + ' ').replace(' ' + c.swap[0] + ' ', ' ' + c.swap[1] + ' ');
+      const wrongSent = (' ' + sent.en.replace(/\.$/, '') + ' ').replace(new RegExp(' ' + esc(c.swap[0]) + ' ', 'i'), ' ' + c.swap[1] + ' ');
       if (wrongSent.trim() === sent.en.replace(/\.$/, '') || gradeEnglish(sent, wrongSent)) continue; // never offer a distractor that yields an accepted answer
       for (const t of tokensEn(c.swap[1])) if (!bank.includes(t) && !out.includes(t)) out.push(t);
     }
@@ -743,7 +874,7 @@
     const addAdj = (k, np) => { const a = adjInfo(k); for (const g of ['m', 'f', 'n']) for (const c of ['nom', 'acc', 'abl', 'dat']) { const f = a.form(g, c, np.num)[0]; if (f) cands.push(f); } };
     if (S.coord) for (const f of shuffle(rng, ['et', 'aut', 'vel', 'nec', 'neque', 'atque', 'sed'])) cands.push(f); // other conjunctions (accepted ones are filtered below)
     for (const np of [S.subj, S.coord && S.coord.np2, S.obj, S.io, S.means, S.pp && S.pp.np].filter(Boolean)) {
-      if (np.noun.pron) { for (const d of Object.values(PRON_NP)) cands.push(d[np.case] || d.acc); cands.push(np.noun.form('acc', np.num) ? np.noun.form('acc', np.num)[0] : np.noun.form('dat', np.num)[0], 'cum', 'mēcum', 'tēcum'); continue; }
+      if (np.noun.pron) { for (const d of Object.values(PRON_NP)) cands.push(d[np.case] || d.acc); const acc = np.noun.form('acc', np.num), dat = np.noun.form('dat', np.num); if (acc && acc[0]) cands.push(acc[0]); else if (dat && dat[0]) cands.push(dat[0]); cands.push('cum', 'mēcum', 'tēcum'); if (np.noun.cumForm) cands.push(np.noun.cumForm); continue; }
       addNoun(np); if (np.adj) { addAdj(np.adj, np); const a = LEX.adjs[np.adj]; if (a.kind) for (const k of DET_KEYS()) if (k !== np.adj && LEX.adjs[k].kind === a.kind) addAdj(k, np); } }
     if (S.pred) addAdj(S.pred, S.subj);
     const v = verbInfo(sent.verb);
@@ -759,9 +890,19 @@
   // Build a sentence from an explicit spec (used by golden tests). spec: {verb, frame, tense, voice, subj:{n,num,adj}, pron, obj, io, means, pp:{type,n,num,adj}, nocte, pred}
   function build(sp) {
     const v = verbInfo(sp.verb); const fr = { k: sp.verb, f: v.frames[sp.frame || 0] };
-    const np = (x, c) => x ? { noun: nounInfo(x.n), case: c, num: x.num || 'sg', adj: x.adj } : null;
-    return assemble({ template: sp.template || 'GOLDEN', tense: sp.tense || 'pres', voice: sp.voice || 'act', v, fr, subj: np(sp.subj, 'nom'), pron: sp.pron || null,
-      obj: np(sp.obj, 'acc'), io: np(sp.io, 'dat'), means: np(sp.means, 'abl'), pp: sp.pp ? { type: sp.pp.type, np: np(sp.pp, PP_TYPES[sp.pp.type].case) } : null, nocte: !!sp.nocte, pred: sp.pred || null, adv: sp.adv || null,
+    const np = (x, c, subjNP) => {
+      if (!x) return null;
+      if (x.n === 'pron_se') {
+        const src = subjNP ? { num: x.num || subjNP.num, noun: { genders: x.g ? [x.g] : subjNP.noun.genders } } : { num: x.num || 'sg', noun: { genders: x.g ? [x.g] : ['n'] } };
+        return { noun: makeSe(src), case: c, num: src.num };
+      }
+      if (x.n === 'pron_is') return { noun: makeIs({ g: x.g || 'm', num: x.num || 'sg', kase: c }), case: c, num: x.num || 'sg' };
+      return { noun: nounInfo(x.n), case: c, num: x.num || 'sg', adj: x.adj };
+    };
+    const subj = np(sp.subj, 'nom'), obj = np(sp.obj, 'acc', subj), io = np(sp.io, 'dat', subj);
+    if (sp.poss) { const host = sp.poss.host === 'obj' ? obj : subj; if (host) { const spec = { g: sp.poss.g || 'm', num: sp.poss.num || 'sg', kase: 'gen' }; host.poss = { noun: makeIs(spec), num: spec.num }; } }
+    return assemble({ template: sp.template || 'GOLDEN', tense: sp.tense || 'pres', voice: sp.voice || 'act', v, fr, subj, pron: sp.pron || null,
+      obj, io, means: np(sp.means, 'abl', subj), pp: sp.pp ? { type: sp.pp.type, np: np(sp.pp, PP_TYPES[sp.pp.type].case, subj) } : null, nocte: !!sp.nocte, pred: sp.pred || null, adv: sp.adv || null,
       coord: sp.coord ? { conj: sp.coord.conj, kind: LEX.conjs[sp.coord.conj].kind, role: sp.coord.role || 'S', form: sp.coord.form || LEX.conjs[sp.coord.conj].forms[0], np2: np(sp.coord, sp.coord.role === 'O' ? 'acc' : 'nom') } : null });
   }
   // ---------- Identify mode ----------
@@ -795,8 +936,19 @@
       if (built.some((u, j) => j !== i && normM(u) === normM(t))) return;
       const idx = []; toks.forEach((tk, k) => { if (tk === t || (x.enclitic && tk === t + x.enclitic)) idx.push(k); });
       if (idx.length !== 1) return;
-      out.push({ kind: 'noun', idx, token: toks[idx[0]], form: t, key: x.np.noun.key, role: x.role, case: x.np.case, num: x.np.num, pron: !!x.np.noun.pron });
+      out.push({ kind: 'noun', idx, token: toks[idx[0]], form: t, key: x.np.noun.key, role: x.role, case: x.np.case, num: x.np.num, g: x.np.noun.g, pron: !!x.np.noun.pron });
     });
+    // sēcum is one token; the reflexive cell's standard form is sē, and cum sē is not a spelling this engine uses
+    if (S.pp && S.pp.type === 'cum' && S.pp.np && S.pp.np.noun && S.pp.np.noun.key === 'pron_se') {
+      const t = S.pp.np.noun.cumForm, idx = [];
+      toks.forEach((tk, k) => { if (tk === t) idx.push(k); });
+      if (idx.length === 1) out.push({ kind: 'noun', idx, token: t, form: t, key: 'pron_se', role: 'PP', case: 'abl', num: S.pp.np.num, g: S.pp.np.noun.g, pron: true });
+    }
+    for (const np of [S.subj, S.obj, S.io].filter(x => x && x.poss)) {
+      const t = Morph.standard(np.poss.noun.form('gen', np.poss.num)), idx = [];
+      toks.forEach((tk, k) => { if (tk === t) idx.push(k); });
+      if (idx.length === 1 && !out.some(o => o.token === t)) out.push({ kind: 'noun', idx, token: t, form: t, key: 'pron_is', role: 'GEN', case: 'gen', num: np.poss.num, g: np.poss.noun.g, pron: true });
+    }
     // the verb: its tokens are the last one or two, after an optional nōn
     const vt = verbForms(S.v, S.voice, S.tense, sent.person).find(f => { const w = f.split(' '); return w.every((x, j) => toks[toks.length - w.length + j] === x); });
     if (vt) {
