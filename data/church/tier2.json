@@ -1,0 +1,263 @@
+{
+  "about": {
+    "sources": "<p>Church Latin, tier 2, is five traditional prayers: the Glory Be, the Hail Mary, the Hail Holy Queen through the versicle <i>Ōrā prō nōbīs</i>, the Apostles’ Creed, and the Angelus with its closing collect. The Latin is the public-domain traditional text in the wording of the appendix to the <b>Compendium of the Catechism of the Catholic Church</b> (2005): <i>Et in Spīritum Sānctum</i>, and <i>dēscendit ad īnferōs</i>. The same prayers are witnessed in the traditional collections at preces-latinae.org. Biblical lines were checked against the <b>Clementine Vulgate</b> (Luke 1:28, 1:38, 1:42, and John 1:14) and are not copied word for word from those verses. The English under each line is a new literal translation made for this app. Meal prayers, the Act of Contrition, and the Regina Caeli are not in this pack. From Easter to Pentecost the Angelus is replaced by the Regina Caeli; that prayer is only mentioned, not set out here.</p>"
+  },
+  "overlays": [
+    {"lemma": "verbum", "en": "the Word; a word"},
+    {"lemma": "concipio", "en": "to conceive; to take in, imagine"},
+    {"lemma": "inferus", "en": "those below, the dead (ad īnferōs); low"}
+  ],
+  "words": [
+    {"id": 10076, "la": "avē", "en": "hail", "pos": "indeclinable", "church": true},
+    {"id": 10077, "la": "venter, ventris, m.", "en": "womb; belly", "pos": "noun", "church": true},
+    {"id": 10078, "la": "peccātor, -ōris, m.", "en": "a sinner", "pos": "noun", "church": true},
+    {"id": 10079, "la": "creātor, -ōris, m.", "en": "creator", "pos": "noun", "church": true},
+    {"id": 10080, "la": "commūniō, -ōnis, f.", "en": "communion, a sharing in common", "pos": "noun", "church": true},
+    {"id": 10081, "la": "carō, carnis, f.", "en": "flesh", "pos": "noun", "church": true},
+    {"id": 10082, "la": "dulcēdō, dulcēdinis, f.", "en": "sweetness", "pos": "noun", "church": true},
+    {"id": 10083, "la": "exsul, exsulis, m.", "en": "an exile", "pos": "noun", "church": true},
+    {"id": 10084, "la": "Eva, -ae, f.", "en": "Eve", "pos": "noun", "church": true},
+    {"id": 10085, "la": "suspīrō, -āre, -āvī, -ātum", "en": "to sigh", "pos": "verb", "church": true},
+    {"id": 10086, "la": "gemō, -ere, -uī, -itum", "en": "to groan, lament", "pos": "verb", "church": true},
+    {"id": 10087, "la": "eia", "en": "ah; come, then", "pos": "indeclinable", "church": true},
+    {"id": 10088, "la": "advocāta, -ae, f.", "en": "an advocate", "pos": "noun", "church": true},
+    {"id": 10089, "la": "exsilium, -ī, n.", "en": "exile", "pos": "noun", "church": true},
+    {"id": 10090, "la": "clēmēns, -entis", "en": "merciful, gentle", "pos": "adjective", "church": true},
+    {"id": 10091, "la": "prōmissiō, -ōnis, f.", "en": "a promise", "pos": "noun", "church": true},
+    {"id": 10092, "la": "angelus, -ī, m.", "en": "an angel", "pos": "noun", "church": true},
+    {"id": 10093, "la": "ancilla, -ae, f.", "en": "a handmaid", "pos": "noun", "church": true},
+    {"id": 10094, "la": "īnfundō, īnfundere, īnfūdī, īnfūsum", "en": "to pour in, pour upon", "pos": "verb", "church": true},
+    {"id": 10095, "la": "incarnātiō, -ōnis, f.", "en": "incarnation, becoming flesh", "pos": "noun", "church": true},
+    {"id": 10096, "la": "passiō, -ōnis, f.", "en": "suffering; the Passion", "pos": "noun", "church": true},
+    {"id": 10097, "la": "crux, crucis, f.", "en": "a cross", "pos": "noun", "church": true}
+  ],
+  "texts": [
+    {"id": "gloria-patri", "title": "Glory be", "lines": [
+      {"en": "Glory to the Father, and to the Son, and to the Holy Spirit.", "words": [
+        {"t": "Glōria", "l": "gloria"}, {"t": "Patrī", "l": "pater"}, {"t": "et", "l": "et"}, {"t": "Fīliō", "l": "filius"}, {"t": "et", "l": "et"}, {"t": "Spīrituī", "l": "spiritus"}, {"t": "Sānctō.", "l": "sanctus"}
+      ]},
+      {"en": "As it was in the beginning, and now and always, and unto ages of ages. Amen.", "words": [
+        {"t": "Sīcut", "l": "sicut"}, {"t": "erat", "l": "sum"}, {"t": "in", "l": "in"}, {"t": "prīncipiō,", "l": "principium"}, {"t": "et", "l": "et"}, {"t": "nunc", "l": "nunc"}, {"t": "et", "l": "et"}, {"t": "semper", "l": "semper"}, {"t": "et", "l": "et"}, {"t": "in", "l": "in"}, {"t": "saecula", "l": "saeculum"}, {"t": "saeculōrum.", "l": "saeculum"}, {"t": "Āmēn.", "l": "amen"}
+      ]}
+    ]},
+    {"id": "ave", "title": "The Hail Mary", "lines": [
+      {"en": "Hail, Mary, full of grace, the Lord is with you.", "words": [
+        {"t": "Avē,", "l": "ave"}, {"t": "Māria,", "l": "maria"}, {"t": "grātiā", "l": "gratia"}, {"t": "plēna,", "l": "plenus"}, {"t": "Dominus", "l": "dominus"}, {"t": "tēcum.", "l": "tu"}
+      ]},
+      {"en": "Blessed are you among women, and blessed is the fruit of your womb, Jesus.", "words": [
+        {"t": "Benedicta", "l": "benedico"}, {"t": "tū", "l": "tu"}, {"t": "in", "l": "in"}, {"t": "mulieribus,", "l": "mulier"}, {"t": "et", "l": "et"}, {"t": "benedictus", "l": "benedico"}, {"t": "frūctus", "l": "fructus"}, {"t": "ventris", "l": "venter"}, {"t": "tuī,", "l": "tuus"}, {"t": "Iēsus.", "l": "iesus"}
+      ]},
+      {"en": "Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.", "words": [
+        {"t": "Sāncta", "l": "sanctus"}, {"t": "Māria,", "l": "maria"}, {"t": "Māter", "l": "mater"}, {"t": "Deī,", "l": "deus"}, {"t": "ōrā", "l": "oro"}, {"t": "prō", "l": "pro"}, {"t": "nōbīs", "l": "nos"}, {"t": "peccātōribus,", "l": "peccator"}, {"t": "nunc", "l": "nunc"}, {"t": "et", "l": "et"}, {"t": "in", "l": "in"}, {"t": "hōrā", "l": "hora"}, {"t": "mortis", "l": "mors"}, {"t": "nostrae.", "l": "noster"}, {"t": "Āmēn.", "l": "amen"}
+      ]}
+    ]},
+    {"id": "salve-a", "title": "Hail, Holy Queen: through the valley of tears", "lines": [
+      {"en": "Hail, Queen, mother of mercy; our life, sweetness, and hope, hail.", "words": [
+        {"t": "Salvē,", "l": "salve"}, {"t": "Rēgīna,", "l": "regina"}, {"t": "Māter", "l": "mater"}, {"t": "misericordiae,", "l": "misericordia"}, {"t": "vīta,", "l": "vita"}, {"t": "dulcēdō", "l": "dulcedo"}, {"t": "et", "l": "et"}, {"t": "spēs", "l": "spes"}, {"t": "nostra,", "l": "noster"}, {"t": "salvē.", "l": "salve"}
+      ]},
+      {"en": "To you we cry, exiled children of Eve.", "words": [
+        {"t": "Ad", "l": "ad"}, {"t": "tē", "l": "tu"}, {"t": "clāmāmus,", "l": "clamo"}, {"t": "exsulēs", "l": "exsul"}, {"t": "fīliī", "l": "filius"}, {"t": "Evae.", "l": "eva"}
+      ]},
+      {"en": "To you we sigh, groaning and weeping in this valley of tears.", "words": [
+        {"t": "Ad", "l": "ad"}, {"t": "tē", "l": "tu"}, {"t": "suspīrāmus", "l": "suspiro"}, {"t": "gementēs", "l": "gemo"}, {"t": "et", "l": "et"}, {"t": "flentēs", "l": "fleo"}, {"t": "in", "l": "in"}, {"t": "hāc", "l": "hic"}, {"t": "lacrimārum", "l": "lacrima"}, {"t": "valle.", "l": "valles"}
+      ]}
+    ]},
+    {"id": "salve-b", "title": "Hail, Holy Queen: the ending", "lines": [
+      {"en": "Come then, our advocate, turn those merciful eyes of yours toward us.", "words": [
+        {"t": "Ēia", "l": "eia"}, {"t": "ergō,", "l": "ergo"}, {"t": "advocāta", "l": "advocata"}, {"t": "nostra,", "l": "noster"}, {"t": "illōs", "l": "ille"}, {"t": "tuōs", "l": "tuus"}, {"t": "misericordēs", "l": "misericors"}, {"t": "oculōs", "l": "oculus"}, {"t": "ad", "l": "ad"}, {"t": "nōs", "l": "nos"}, {"t": "converte.", "l": "converto"}
+      ]},
+      {"en": "And after this exile, show to us Jesus, the blessed fruit of your womb.", "words": [
+        {"t": "Et", "l": "et"}, {"t": "Iēsum,", "l": "iesus"}, {"t": "benedictum", "l": "benedico"}, {"t": "frūctum", "l": "fructus"}, {"t": "ventris", "l": "venter"}, {"t": "tuī,", "l": "tuus"}, {"t": "nōbīs,", "l": "nos"}, {"t": "post", "l": "post"}, {"t": "hoc", "l": "hic"}, {"t": "exsilium,", "l": "exsilium"}, {"t": "ostende.", "l": "ostendo"}
+      ]},
+      {"en": "O gentle, O loving, O sweet Virgin Mary.", "words": [
+        {"t": "Ō", "l": "o"}, {"t": "clēmēns,", "l": "clemens"}, {"t": "ō", "l": "o"}, {"t": "pia,", "l": "pius"}, {"t": "ō", "l": "o"}, {"t": "dulcis", "l": "dulcis"}, {"t": "Virgō", "l": "virgo"}, {"t": "Māria.", "l": "maria"}
+      ]}
+    ]},
+    {"id": "versicle", "title": "Pray for us", "lines": [
+      {"en": "Pray for us, holy Mother of God.", "words": [
+        {"t": "Ōrā", "l": "oro"}, {"t": "prō", "l": "pro"}, {"t": "nōbīs,", "l": "nos"}, {"t": "sāncta", "l": "sanctus"}, {"t": "Deī", "l": "deus"}, {"t": "Genetrix.", "l": "genetrix"}
+      ]},
+      {"en": "That we may be made worthy of the promises of Christ.", "words": [
+        {"t": "Ut", "l": "ut"}, {"t": "dignī", "l": "dignus"}, {"t": "efficiāmur", "l": "efficio"}, {"t": "prōmissiōnibus", "l": "promissio"}, {"t": "Chrīstī.", "l": "christus"}
+      ]}
+    ]},
+    {"id": "creed-a", "title": "The Apostles’ Creed: through the judgment", "lines": [
+      {"en": "I believe in God the Father almighty, creator of heaven and earth,", "words": [
+        {"t": "Crēdō", "l": "credo"}, {"t": "in", "l": "in"}, {"t": "Deum", "l": "deus"}, {"t": "Patrem", "l": "pater"}, {"t": "omnipotentem,", "l": "omnipotens"}, {"t": "Creātōrem", "l": "creator"}, {"t": "caelī", "l": "caelum"}, {"t": "et", "l": "et"}, {"t": "terrae,", "l": "terra"}
+      ]},
+      {"en": "and in Jesus Christ, his only Son, our Lord,", "words": [
+        {"t": "et", "l": "et"}, {"t": "in", "l": "in"}, {"t": "Iēsum", "l": "iesus"}, {"t": "Chrīstum,", "l": "christus"}, {"t": "Fīlium", "l": "filius"}, {"t": "eius", "l": "is"}, {"t": "ūnicum,", "l": "unicus"}, {"t": "Dominum", "l": "dominus"}, {"t": "nostrum,", "l": "noster"}
+      ]},
+      {"en": "who was conceived by the Holy Spirit, born of the Virgin Mary,", "words": [
+        {"t": "quī", "l": "qui"}, {"t": "conceptus", "l": "concipio"}, {"t": "est", "l": "sum"}, {"t": "dē", "l": "de"}, {"t": "Spīritū", "l": "spiritus"}, {"t": "Sānctō,", "l": "sanctus"}, {"t": "nātus", "l": "nascor"}, {"t": "ex", "l": "e"}, {"t": "Māriā", "l": "maria"}, {"t": "Virgine,", "l": "virgo"}
+      ]},
+      {"en": "suffered under Pontius Pilate, was crucified, died, and was buried,", "words": [
+        {"t": "passus", "l": "patior"}, {"t": "sub", "l": "sub"}, {"t": "Pontiō", "l": "pontius"}, {"t": "Pīlātō,", "l": "pilatus"}, {"t": "crucifīxus,", "l": "crucifigo"}, {"t": "mortuus,", "l": "mortuus"}, {"t": "et", "l": "et"}, {"t": "sepultus,", "l": "sepelio"}
+      ]},
+      {"en": "descended to the dead below, on the third day rose from the dead,", "words": [
+        {"t": "dēscendit", "l": "descendo"}, {"t": "ad", "l": "ad"}, {"t": "īnferōs,", "l": "inferus"}, {"t": "tertiā", "l": "tertius"}, {"t": "diē", "l": "dies"}, {"t": "resurrēxit", "l": "resurgo"}, {"t": "ā", "l": "a"}, {"t": "mortuīs,", "l": "mortuus"}
+      ]},
+      {"en": "ascended into heaven, and sits at the right hand of God the Father almighty;", "words": [
+        {"t": "ascendit", "l": "ascendo"}, {"t": "ad", "l": "ad"}, {"t": "caelōs,", "l": "caelum"}, {"t": "sedet", "l": "sedeo"}, {"t": "ad", "l": "ad"}, {"t": "dexteram", "l": "dexter"}, {"t": "Deī", "l": "deus"}, {"t": "Patris", "l": "pater"}, {"t": "omnipotentis,", "l": "omnipotens"}
+      ]},
+      {"en": "from there he will come to judge the living and the dead.", "words": [
+        {"t": "inde", "l": "inde"}, {"t": "ventūrus", "l": "venio"}, {"t": "est", "l": "sum"}, {"t": "iūdicāre", "l": "iudico"}, {"t": "vīvōs", "l": "vivus"}, {"t": "et", "l": "et"}, {"t": "mortuōs.", "l": "mortuus"}
+      ]}
+    ]},
+    {"id": "creed-b", "title": "The Apostles’ Creed: the Spirit and the life to come", "lines": [
+      {"en": "And in the Holy Spirit, the holy catholic Church, the communion of saints,", "words": [
+        {"t": "Et", "l": "et"}, {"t": "in", "l": "in"}, {"t": "Spīritum", "l": "spiritus"}, {"t": "Sānctum,", "l": "sanctus"}, {"t": "sānctam", "l": "sanctus"}, {"t": "Ecclēsiam", "l": "ecclesia"}, {"t": "catholicam,", "l": "catholicus"}, {"t": "sānctōrum", "l": "sanctus"}, {"t": "commūniōnem,", "l": "communio"}
+      ]},
+      {"en": "the forgiveness of sins, the resurrection of the flesh, and life everlasting. Amen.", "words": [
+        {"t": "remissiōnem", "l": "remissio"}, {"t": "peccātōrum,", "l": "peccatum"}, {"t": "carnis", "l": "caro"}, {"t": "resurrectiōnem,", "l": "resurrectio"}, {"t": "vītam", "l": "vita"}, {"t": "aeternam.", "l": "aeternus"}, {"t": "Āmēn.", "l": "amen"}
+      ]}
+    ]},
+    {"id": "ang-nuntio", "title": "The Angelus: the angel’s message", "lines": [
+      {"en": "The angel of the Lord announced to Mary.", "words": [
+        {"t": "Angelus", "l": "angelus"}, {"t": "Dominī", "l": "dominus"}, {"t": "nūntiāvit", "l": "nuntio"}, {"t": "Māriae.", "l": "maria"}
+      ]},
+      {"en": "And she conceived by the Holy Spirit.", "words": [
+        {"t": "Et", "l": "et"}, {"t": "concēpit", "l": "concipio"}, {"t": "dē", "l": "de"}, {"t": "Spīritū", "l": "spiritus"}, {"t": "Sānctō.", "l": "sanctus"}
+      ]}
+    ]},
+    {"id": "ang-ecce", "title": "The Angelus: the handmaid", "lines": [
+      {"en": "Behold the handmaid of the Lord. Let it be done to me according to your word.", "words": [
+        {"t": "Ecce", "l": "ecce"}, {"t": "ancilla", "l": "ancilla"}, {"t": "Dominī.", "l": "dominus"}, {"t": "Fīat", "l": "fio"}, {"t": "mihi", "l": "ego"}, {"t": "secundum", "l": "secundum"}, {"t": "verbum", "l": "verbum"}, {"t": "tuum.", "l": "tuus"}
+      ]}
+    ]},
+    {"id": "ang-verbum", "title": "The Angelus: the Word", "lines": [
+      {"en": "And the Word was made flesh.", "words": [
+        {"t": "Et", "l": "et"}, {"t": "Verbum", "l": "verbum"}, {"t": "carō", "l": "caro"}, {"t": "factum", "l": "facio"}, {"t": "est.", "l": "sum"}
+      ]},
+      {"en": "And dwelt among us.", "words": [
+        {"t": "Et", "l": "et"}, {"t": "habitāvit", "l": "habito"}, {"t": "in", "l": "in"}, {"t": "nōbīs.", "l": "nos"}
+      ]}
+    ]},
+    {"id": "ang-collect", "title": "The Angelus: the closing collect", "lines": [
+      {"en": "Let us pray.", "words": [
+        {"t": "Ōrēmus.", "l": "oro"}
+      ]},
+      {"en": "Pour your grace into our minds, we beg, Lord, so that we, to whom the incarnation of Christ your Son was made known as an angel announced it, may be brought by his Passion and cross to the glory of the resurrection.", "words": [
+        {"t": "Grātiam", "l": "gratia"}, {"t": "tuam,", "l": "tuus"}, {"t": "quaesumus,", "l": "quaeso"}, {"t": "Domine,", "l": "dominus"}, {"t": "mentibus", "l": "mens"}, {"t": "nostrīs", "l": "noster"}, {"t": "īnfunde;", "l": "infundo"}, {"t": "ut", "l": "ut"}, {"t": "quī,", "l": "qui"}, {"t": "Angelō", "l": "angelus"}, {"t": "nūntiante,", "l": "nuntio"}, {"t": "Chrīstī", "l": "christus"}, {"t": "Fīliī", "l": "filius"}, {"t": "tuī", "l": "tuus"}, {"t": "incarnātiōnem", "l": "incarnatio"}, {"t": "cognōvimus,", "l": "cognosco"}, {"t": "per", "l": "per"}, {"t": "passiōnem", "l": "passio"}, {"t": "eius", "l": "is"}, {"t": "et", "l": "et"}, {"t": "crucem,", "l": "crux"}, {"t": "ad", "l": "ad"}, {"t": "resurrectiōnis", "l": "resurrectio"}, {"t": "glōriam", "l": "gloria"}, {"t": "perdūcāmur.", "l": "perduco"}
+      ]},
+      {"en": "Through the same Christ our Lord. Amen.", "words": [
+        {"t": "Per", "l": "per"}, {"t": "eundem", "l": "idem"}, {"t": "Chrīstum", "l": "christus"}, {"t": "Dominum", "l": "dominus"}, {"t": "nostrum.", "l": "noster"}, {"t": "Āmēn.", "l": "amen"}
+      ]}
+    ]}
+  ],
+  "lessons": [
+    {
+      "id": "pray-gloria",
+      "sec": "Prayers",
+      "title": "Glory be",
+      "sum": "Glōria Patrī et Fīliō et Spīrituī Sānctō.",
+      "lead": "The Latin is the traditional prayer, with macrons added. The English is a literal translation.",
+      "sections": ["gloria-patri"],
+      "words": ["gloria", "pater", "filius", "spiritus", "sanctus", "principium", "saeculum"],
+      "notes": "<p><i>Glōria</i> is nominative. <i>Patrī, Fīliō, Spīrituī Sānctō</i> are dative: “glory to the Father, to the Son, to the Holy Spirit.” <i>Fīliō</i> is the dative of <i>fīlius</i>. <i>Spīritus</i> is 4th declension, so the dative is <i>spīrituī</i>.</p>\n<p><i>Sīcut erat</i> “as it was”: <i>erat</i> is the imperfect of <i>sum</i>. <i>In prīncipiō</i> and <i>in saecula saeculōrum</i> are “in the beginning” and “unto ages of ages.” This prayer uses no word that is not already in the deck.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Patrī, Fīliō, and Spīrituī are", ["dative", "genitive", "ablative", "accusative"], 0],
+        ["Erat is", ["the imperfect of sum", "the present of eō", "a dative of era", "the imperative of orō"], 0],
+        ["In saecula saeculōrum means", ["unto ages of ages", "in the beginning", "glory to the Father", "and with your spirit"], 0]
+      ]}
+    },
+    {
+      "id": "pray-ave",
+      "sec": "Prayers",
+      "title": "The Hail Mary",
+      "sum": "Avē, Māria, grātiā plēna.",
+      "lead": "The Latin is the traditional prayer, with macrons added. The English is a literal translation.",
+      "sections": ["ave"],
+      "words": ["ave", "maria", "gratia", "venter", "peccator", "iesus", "oro"],
+      "notes": "<p><i>Avē</i> is the greeting “hail.” <i>Grātiā plēna</i> is “full of grace”: <i>grātiā</i> is ablative, and <i>plēna</i> agrees with Mary. <i>Tēcum</i> is <i>tē</i> plus <i>cum</i>, “with you.”</p>\n<p><i>Benedicta</i> and <i>benedictus</i> are from <i>benedīcō</i>. <i>Tū</i> is “you.” <i>Frūctus ventris tuī</i> is “the fruit of your womb”: <i>ventris</i> and <i>tuī</i> are genitive. <i>Iēsus</i> is nominative, naming that fruit.</p>\n<p>The last sentence addresses Mary in the vocative: <i>Sāncta Māria, Māter Deī</i>. <i>Ōrā</i> is the imperative of <i>ōrō</i>. <i>Peccātōribus</i> is ablative plural, “for us sinners,” beside <i>nōbīs</i>. <i>In hōrā mortis nostrae</i> is “at the hour of our death.”</p>",
+      "aside": "The prayer and the Gospel",
+      "diff": "<p>Luke 1:28 in the Clementine Vulgate is <i>Ave grātia plēna: Dominus tēcum: benedicta tū in mulieribus</i>, without the name Mary. Luke 1:42 is <i>benedicta tū inter mulierēs</i>, and it does not add <i>Iēsus</i>. The prayer uses <i>in mulieribus</i>, adds <i>Māria</i> and <i>Iēsus</i>, and then the petition <i>Sāncta Māria… ōrā prō nōbīs</i>.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Grātiā in grātiā plēna is", ["ablative", "nominative", "dative", "genitive"], 0],
+        ["Ventris tuī is", ["genitive, “of your womb”", "dative, “to your father”", "the vocative of venter", "a verb"], 0],
+        ["Ōrā prō nōbīs peccātōribus: ōrā is", ["the imperative of ōrō", "the genitive of ōs", "a form of orior", "the dative of ora"], 0]
+      ]}
+    },
+    {
+      "id": "pray-salve1",
+      "sec": "Prayers",
+      "title": "Hail, Holy Queen, part 1",
+      "sum": "Through in hāc lacrimārum valle.",
+      "lead": "The Latin is the traditional prayer, with macrons added. The English is a literal translation.",
+      "sections": ["salve-a"],
+      "words": ["salve", "regina", "dulcedo", "exsul", "eva", "suspiro", "gemo", "fleo", "lacrima", "valles"],
+      "notes": "<p><i>Salvē</i> is the same greeting as a fixed call, “hail,” said to <i>Rēgīna</i> and <i>Māter</i> in the vocative. <i>Misericordiae</i> is genitive, “of mercy.” <i>Vīta, dulcēdō, et spēs nostra</i> are nominative, in apposition: “our life, sweetness, and hope.”</p>\n<p><i>Exsulēs fīliī Evae</i> “exiled sons of Eve.” <i>Evae</i> is the genitive of <i>Eva</i>. A typed <i>Hevae</i> is accepted; the form that is shown is <i>Evae</i>. <i>Exsulēs</i> is the Church spelling. The spelling without <i>s</i> is still accepted, as with other <i>exs-</i> words, and it is not listed as a second form.</p>\n<p><i>Gementēs et flentēs</i> are present participles, “groaning and weeping,” agreeing with “we.” <i>In hāc lacrimārum valle</i> is ablative: “in this valley of tears.”</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Evae is", ["the genitive of Eva", "the dative of deus", "a verb", "the nominative of eia"], 0],
+        ["Exsulēs fīliī Evae means", ["exiled children of Eve", "the queen of mercy", "a valley of tears", "after this exile"], 0],
+        ["In hāc valle: valle is", ["ablative", "genitive", "dative", "nominative"], 0]
+      ]}
+    },
+    {
+      "id": "pray-salve2",
+      "sec": "Prayers",
+      "title": "Hail, Holy Queen, part 2",
+      "sum": "Ēia ergō, then Ōrā prō nōbīs.",
+      "lead": "The Latin is the traditional prayer, with macrons added. The English is a literal translation.",
+      "sections": ["salve-b", "versicle"],
+      "words": ["eia", "advocata", "misericors", "exsilium", "ostendo", "clemens", "genetrix", "promissio", "dignus"],
+      "notes": "<p><i>Ēia ergō</i> turns the prayer: “come, then.” <i>Advocāta nostra</i> is vocative, “our advocate.” <i>Illōs tuōs misericordēs oculōs</i> is the accusative object of <i>converte</i>, “turn those merciful eyes of yours.” <i>Ad nōs</i> is “toward us.”</p>\n<p><i>Ostende</i> is the imperative of <i>ostendō</i>. <i>Iēsum benedictum frūctum</i> is accusative, “Jesus, the blessed fruit.” <i>Nōbīs</i> is “to us.” <i>Post hoc exsilium</i> is “after this exile,” accusative after <i>post</i>. The shown spelling is <i>exsilium</i>.</p>\n<p><i>Ō clēmēns, ō pia, ō dulcis</i> are vocatives. The versicle is a wish: <i>Ōrā</i> “pray,” then <i>ut dignī efficiāmur</i> “that we may be made worthy,” with <i>prōmissiōnibus Chrīstī</i> in the ablative, “of the promises of Christ.”</p>",
+      "aside": "What this lesson leaves out",
+      "diff": "<p>The same versicle, <i>Ōrā prō nōbīs, sāncta Deī Genetrix</i>, is said again in the Angelus. A longer prayer sometimes printed after the Salve is not part of this lesson.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Converte illōs oculōs: oculōs is", ["accusative", "genitive", "dative", "ablative"], 0],
+        ["Post hoc exsilium: post takes the", ["accusative", "ablative", "genitive", "dative"], 0],
+        ["Ut dignī efficiāmur is", ["a purpose clause, “that we may be made worthy”", "a perfect tense, “we were worthy”", "the genitive of dignus", "an imperative of sum"], 0]
+      ]}
+    },
+    {
+      "id": "pray-creed1",
+      "sec": "Prayers",
+      "title": "The Apostles’ Creed, part 1",
+      "sum": "From Crēdō in Deum through iūdicāre vīvōs et mortuōs.",
+      "lead": "The Latin is the traditional prayer, with macrons added. The English is a literal translation.",
+      "sections": ["creed-a"],
+      "words": ["credo", "creator", "unicus", "concipio", "inferus", "iudico", "resurgo"],
+      "notes": "<p><i>Crēdō in</i> plus the accusative is “I believe in”: <i>Deum, Patrem, Creātōrem, Iēsum Chrīstum</i>. <i>Caelī et terrae</i> are genitive, “of heaven and of earth.” <i>Fīlium eius ūnicum</i> “his only Son”: <i>eius</i> is the genitive of <i>is</i>, not a reflexive.</p>\n<p><i>Conceptus est</i> and <i>nātus</i> are perfect participles, “was conceived,” “born.” <i>Passus, crucifīxus, mortuus, sepultus</i> continue that list. <i>Sub Pontiō Pīlātō</i> is ablative. <i>Dēscendit ad īnferōs</i> is “went down to those below,” the masculine plural of <i>īnferus</i> used as a noun. <i>Tertiā diē</i> is ablative of time.</p>\n<p><i>Ad caelōs</i> is the Church plural “to heaven.” <i>Ad dexteram</i> is “at the right hand,” the Missal’s feminine of <i>dexter</i>. <i>Ventūrus est</i> “he is going to come,” and <i>iūdicāre</i> is the infinitive “to judge.”</p>",
+      "aside": "This Creed and the Mass",
+      "diff": "<p>This is the Apostles’ Creed, not the Nicene Creed in the Mass lessons. The wording here is <i>Et in Spīritum Sānctum</i>, not a second <i>Crēdō</i>, and <i>dēscendit ad īnferōs</i>.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Crēdō in Deum: Deum is", ["accusative", "nominative", "dative", "genitive"], 0],
+        ["Ad īnferōs means", ["to those below, the dead", "into heaven", "from the dead", "at the right hand"], 0],
+        ["Ventūrus est iūdicāre means", ["he will come to judge", "he has judged", "he was conceived", "he sits and judges"], 0]
+      ]}
+    },
+    {
+      "id": "pray-creed2",
+      "sec": "Prayers",
+      "title": "The Apostles’ Creed, part 2",
+      "sum": "Et in Spīritum Sānctum, through vītam aeternam.",
+      "lead": "The Latin is the traditional prayer, with macrons added. The English is a literal translation.",
+      "sections": ["creed-b"],
+      "words": ["spiritus", "ecclesia", "communio", "remissio", "caro", "resurrectio"],
+      "notes": "<p>The sentence still depends on <i>crēdō</i>: “and (I believe) in the Holy Spirit.” <i>Spīritum Sānctum</i> is accusative. Then the objects stay accusative without another <i>in</i>: <i>sānctam Ecclēsiam catholicam, sānctōrum commūniōnem, remissiōnem peccātōrum, carnis resurrectiōnem, vītam aeternam</i>.</p>\n<p><i>Sānctōrum</i> is genitive plural, “of the saints,” with <i>commūniōnem</i>. <i>Peccātōrum</i> is “of sins.” <i>Carnis</i> is the genitive of <i>carō</i>, “of the flesh,” not a separate word for “body.” <i>Vītam aeternam</i> agrees in the feminine accusative.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Et in Spīritum Sānctum still depends on", ["crēdō, “I believe”", "a new verb crēdunt", "the imperative crēde", "sum"], 0],
+        ["Sānctōrum commūniōnem: sānctōrum is", ["genitive plural", "accusative singular", "dative plural", "nominative"], 0],
+        ["Carnis resurrectiōnem means", ["the resurrection of the flesh", "the holy Church", "the forgiveness of sins", "life everlasting"], 0]
+      ]}
+    },
+    {
+      "id": "pray-angelus",
+      "sec": "Prayers",
+      "title": "The Angelus",
+      "sum": "Angelus Dominī, three Hail Marys, and the collect.",
+      "lead": "The Latin is the traditional prayer, with macrons added. The English is a literal translation.",
+      "sections": ["ang-nuntio", "ave", "ang-ecce", "ave", "ang-verbum", "ave", "versicle", "ang-collect", "gloria-patri"],
+      "words": ["angelus", "ancilla", "verbum", "caro", "habito", "infundo", "incarnatio", "passio", "crux", "perduco"],
+      "notes": "<p>The Angelus is three short verses, each followed by the Hail Mary, then the versicle, the collect, and the Glory Be. The Hail Mary and the Glory Be are the prayers you already have; they are not a second card.</p>\n<p><i>Angelus Dominī nūntiāvit Māriae</i>: <i>Māriae</i> is dative, “to Mary.” <i>Concēpit</i> is the perfect of <i>concipiō</i>. <i>Ecce ancilla Dominī</i> and <i>fīat mihi secundum verbum tuum</i> are Mary’s answer. <i>Fīat</i> is the subjunctive of <i>fīō</i>, “let it be done.”</p>\n<p><i>Verbum carō factum est</i>: <i>factum</i> agrees with <i>Verbum</i>, and <i>carō</i> is the nominative of “flesh.” <i>Habitāvit in nōbīs</i> “dwelt among us.” In the collect, <i>īnfunde</i> is the imperative “pour,” <i>mentibus nostrīs</i> “into our minds,” and <i>Angelō nūntiante</i> is an ablative absolute, “as an angel announced.” <i>Perdūcāmur</i> is “may we be brought.”</p>",
+      "aside": "The Gospel lines, and Easter",
+      "diff": "<p>Luke 1:38 is <i>Ecce ancilla Dominī: fīat mihi secundum verbum tuum</i>. John 1:14 goes on, <i>et vīdimus glōriam eius</i>; the Angelus stops at <i>habitāvit in nōbīs</i>.</p>\n<p>From Easter through Pentecost this devotion is replaced by the Regina Caeli. That prayer is not set out in this lesson.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Nūntiāvit Māriae: Māriae is", ["dative", "genitive", "ablative", "vocative"], 0],
+        ["Angelō nūntiante is", ["an ablative absolute", "the subject of īnfunde", "a genitive of angelus", "the dative of the collect"], 0],
+        ["Carō in Verbum carō factum est is", ["nominative of carō, “flesh”", "the ablative of cor", "a form of crēdō", "the genitive of cārus"], 0]
+      ]}
+    }
+  ]
+}

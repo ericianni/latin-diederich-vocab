@@ -171,5 +171,137 @@ const paulA = classical.find(w => key(w.la) === 'paulus' && w.pos === 'adjective
 ok(paulN && paulN.pos === 'noun' && /apostle/.test(paulN.en) && paulN.la.startsWith('Paulus'), 'Paulus the apostle');
 ok(paulA && paulA.la.startsWith('paulus') && /little/.test(paulA.en), 'paulus the adjective');
 
+// --- tier 2: five prayers, seven lessons after the Mass ---
+const tier2 = JSON.parse(fs.readFileSync(path.join(root, 'data/church/tier2.json'), 'utf8'));
+const merged = Church.merge([pack, tier2]);
+ok(merged.lessons.length === pack.lessons.length + 7, 'seven prayer lessons follow the Mass');
+ok(merged.lessons.slice(0, pack.lessons.length).every(l => l.sec === 'The Mass'), 'Mass lessons stay first');
+ok(merged.lessons.slice(pack.lessons.length).every(l => l.sec === 'Prayers'), 'prayer lessons are their own section');
+ok(tier2.words.length === 22 && tier2.overlays.length === 3 && tier2.lessons.length === 7, 'tier 2 counts');
+ok(/Compendium/.test(tier2.about.sources) && /Clementine/.test(tier2.about.sources) && /preces-latinae/.test(tier2.about.sources), 'tier 2 credits');
+ok(/Regina Caeli/.test(tier2.about.sources) && !/Act of Contrition is set/.test(JSON.stringify(tier2.texts)), 'Regina Caeli is mentioned, not taught as a text');
+const tier1Max = Math.max(...pack.words.map(w => w.id));
+const byKey = new Map();
+for (const w of classical.concat(pack.words, tier2.words)) {
+  const k = key(w.la);
+  if (!byKey.has(k)) byKey.set(k, []);
+  byKey.get(k).push(w);
+}
+for (const w of tier2.words) {
+  ok(w.id > tier1Max && w.id >= 10076 && !classicalIds.has(w.id) && !ids.has(w.id), 'tier 2 id ' + w.id);
+  ok(w.church === true && POS.has(w.pos), 'tier 2 word ' + w.la);
+  ids.add(w.id);
+  const a = Morph.analyze(w, { church: true });
+  ok(!a.skip || !/error|not recognized|could not|unrecognized|unusual|Greek/.test(a.skip), 'tier 2 analyze ' + w.la + ' ' + a.skip);
+  if (INFLECTED.has(w.pos)) ok(a.tbl && !a.skip, 'tier 2 paradigm ' + w.la);
+}
+for (const o of tier2.overlays) {
+  const k = plain(o.lemma);
+  ok(classicalKeys.has(k) && !tier2.words.some(w => key(w.la) === k), 'tier 2 overlay ' + k);
+  ok(!pack.overlays.some(x => plain(x.lemma) === k), 'tier 2 overlay collides with tier 1 ' + k);
+}
+function bareTok(s) { return String(s).replace(/[.,;:!?“”"«»()]/g, ''); }
+function grades(form, cell) { return Morph.grade(form, cell, true).ok || Morph.grade(form, cell, false).ok; }
+function ptcAdj(std) {
+  if (!std) return null;
+  if (/us$/.test(std)) return Morph.analyze({ pos: 'adjective', la: std + ', -a, -um' });
+  if (/ēns$/.test(std)) return Morph.analyze({ pos: 'adjective', la: std + ', -entis' });
+  if (/āns$/.test(std)) return Morph.analyze({ pos: 'adjective', la: std + ', -antis' });
+  if (/ns$/.test(std)) return Morph.analyze({ pos: 'adjective', la: std + ', -ntis' });
+  return null;
+}
+function dictAlts(la) {
+  const out = [];
+  const raw = String(la);
+  out.push(raw.split(/[ ,]/)[0]);
+  const m = raw.match(/\(([^)]*)\)/);
+  if (m) m[1].split(/[,/]/).forEach(x => out.push(x.trim()));
+  return out.filter(Boolean);
+}
+function formOk(word, surface) {
+  const form = bareTok(surface);
+  if (!form) return false;
+  const a = Morph.analyze(word, { church: true });
+  const cells = a && a.tbl ? Object.values(a.tbl) : [];
+  if (cells.some(c => grades(form, c))) return true;
+  if (a && a.tbl) for (const k of Object.keys(a.tbl)) if (String(k).startsWith('ptc.')) {
+    const std = Morph.standard(a.tbl[k]);
+    const adj = ptcAdj(std);
+    if (adj && adj.tbl && Object.values(adj.tbl).some(c => grades(form, c))) return true;
+    if (adj && adj.tbl && adj.tbl['m.abl.sg']) {
+      const eform = Morph.standard(adj.tbl['m.abl.sg']).replace(/ī$/, 'e');
+      if (Morph.normM(form) === Morph.normM(eform)) return true;
+    }
+  }
+  if (dictAlts(word.la).some(h => Morph.norm(form) === Morph.norm(h) || Morph.normM(form) === Morph.normM(h))) return true;
+  if (/cum$/i.test(form) && a && a.tbl) {
+    for (const k of ['abl.sg', 'abl.pl']) if (a.tbl[k] && Morph.norm(form) === Morph.norm(Morph.standard(a.tbl[k]) + 'cum')) return true;
+  }
+  return false;
+}
+let t2tokens = 0;
+const gloriaLemmas = new Set();
+for (const tok of Church.tokensOf(tier2)) {
+  t2tokens++;
+  const lemmas = [].concat(tok.lemma);
+  for (const lem of lemmas) {
+    const hits = byKey.get(lem) || [];
+    ok(hits.length > 0, 'tier 2 unresolved ' + tok.section + ' ' + tok.surface + ' -> ' + lem);
+    ok(hits.some(w => formOk(w, tok.surface)), 'tier 2 form ' + tok.section + ' ' + tok.surface + ' -> ' + lem);
+  }
+  if (tok.section === 'gloria-patri') lemmas.forEach(l => { if (tier2.words.some(w => key(w.la) === l)) gloriaLemmas.add(l); });
+}
+ok(t2tokens > 200, 'tier 2 token count ' + t2tokens);
+ok(gloriaLemmas.size === 0, 'Gloria Patri adds no new lemma');
+const prayers = ['gloria-patri', 'ave', 'salve-a', 'salve-b', 'versicle', 'creed-a', 'creed-b', 'ang-nuntio', 'ang-ecce', 'ang-verbum', 'ang-collect'];
+for (const id of prayers) ok(tier2.texts.some(t => t.id === id), 'prayer section ' + id);
+ok(!JSON.stringify(tier2.texts).includes('Rogamus') && !/Deus, cuius Unigenitus/.test(JSON.stringify(tier2)), 'no long Salve collect');
+for (const l of tier2.lessons) {
+  ok(l.quiz && l.quiz.qs.length === 3, 'three checks ' + l.id);
+  for (const sid of l.sections) ok(tier2.texts.some(t => t.id === sid), 'lesson section ' + l.id + ' ' + sid);
+  for (const k of l.words) ok(byKey.has(k), 'lesson word ' + l.id + ' ' + k);
+}
+const eva = Morph.analyze(tier2.words.find(w => w.la.startsWith('Eva')));
+ok(eva.tbl['nom.sg'][0] === 'Eva' && eva.tbl['gen.sg'][0] === 'Evae' && !eva.tbl['gen.sg'].includes('Hevae'), 'Evae is shown, Hevae is not listed');
+ok(Morph.shown(eva.tbl['gen.sg']) === 'Evae', 'chart shows Evae');
+const heva = Morph.grade('Hevae', eva.tbl['gen.sg'], true);
+ok(heva.ok && !heva.alternate && heva.standard === 'Evae', 'Hevae is accepted and not flagged as an alternate');
+ok(Morph.grade('eva', eva.tbl['nom.sg'], true).ok, 'Eva is case-insensitive');
+const exsul = Morph.analyze(tier2.words.find(w => w.la.startsWith('exsul')));
+const exsil = Morph.analyze(tier2.words.find(w => w.la.startsWith('exsilium')));
+ok(exsul.tbl['nom.sg'][0] === 'exsul' && exsul.tbl['nom.pl'][0] === 'exsulēs', 'exsul is the shown spelling');
+const exul = Morph.grade('exul', exsul.tbl['nom.sg'], true);
+ok(exul.ok && !exul.alternate, 'exul is the existing exs- spelling, not a listed alternate');
+ok(Morph.grade('exulēs', exsul.tbl['nom.pl'], true).ok && !Morph.grade('exulēs', exsul.tbl['nom.pl'], true).alternate, 'exulēs accepted');
+ok(exsil.tbl['acc.sg'][0] === 'exsilium', 'exsilium is shown');
+ok(Morph.grade('exilium', exsil.tbl['acc.sg'], true).ok && !Morph.grade('exilium', exsil.tbl['acc.sg'], true).alternate, 'exilium accepted like other exs- spellings');
+const inf = Morph.analyze(classical.find(w => key(w.la) === 'inferus'), { church: true });
+ok(inf.tbl['m.acc.pl'][0] === 'īnferōs', 'ad inferos is the adjective’s masculine accusative');
+const facedInf = Church.faceWord(classical.find(w => key(w.la) === 'inferus'), Church.overlayMap(merged, Morph.plain), true, Morph.plain);
+ok(/those below/.test(facedInf.en) && /low/.test(facedInf.en), 'inferus overlay keeps the classical sense');
+const facedVerb = Church.faceWord(classical.find(w => key(w.la) === 'verbum'), Church.overlayMap(merged, Morph.plain), true, Morph.plain);
+ok(/^the Word/.test(facedVerb.en), 'verbum overlay');
+const caelC = Morph.analyze(classical.find(w => key(w.la) === 'caelum'));
+const caelH = Morph.analyze(classical.find(w => key(w.la) === 'caelum'), { church: true });
+ok(caelC.tbl['acc.pl'][0] === 'caela' && caelC.tbl['nom.pl'][0] === 'caela', 'classical caela');
+ok(caelH.tbl['acc.pl'][0] === 'caelōs' && caelH.tbl['nom.pl'][0] === 'caelī', 'church caelōs / caelī');
+ok(Morph.grade('caela', caelH.tbl['acc.pl'], true).alternate, 'caela stays accepted in church mode');
+const creedB = tier2.texts.find(t => t.id === 'creed-b').lines[0].words.map(w => w.t).join(' ');
+const creedA = tier2.texts.find(t => t.id === 'creed-a').lines.map(l => l.words.map(w => w.t).join(' ')).join(' ');
+ok(creedB.startsWith('Et in Spīritum Sānctum') && /īnferōs/.test(creedA) && !/Crēdō in Spīritum/.test(JSON.stringify(tier2.texts)), 'creed wording');
+const angel = tier2.words.find(w => w.la.startsWith('angelus'));
+ok(Morph.analyze(angel).tbl['nom.sg'][0] === 'angelus', 'angelus is a common noun, not a capitalized name');
+const off2 = Church.activeWords(classical, merged.words, Church.overlayMap(merged, Morph.plain), false, Morph.plain);
+const on2 = Church.activeWords(classical, merged.words, Church.overlayMap(merged, Morph.plain), true, Morph.plain);
+ok(!off2.some(w => w.id === 10076) && on2.some(w => w.id === 10076), 'tier 2 word follows church mode');
+const cards2 = { 'r:10084': { box: 2, due: 0 }, 'p:10084': { box: 1, due: 0 } };
+const snap = JSON.stringify(cards2);
+ok(!Church.dueCardKeys(cards2, off2, 5).some(k => k.endsWith(':10084')) && Church.dueCardKeys(cards2, on2, 5).includes('r:10084'), 'tier 2 card hidden while mode is off');
+ok(JSON.stringify(cards2) === snap, 'tier 2 toggle rewrote a card');
+const weave = Church.newWordKeys(classical.slice(0, 12).concat(tier2.words.slice(0, 6)), {}, 6, true);
+ok(weave.length === 6 && weave.filter(k => Number(k.slice(2)) >= 10076).length >= 1 && weave.filter(k => Number(k.slice(2)) >= 10076).length <= 2, 'tier 2 words use the 1:2 weave');
+ok(!fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('tier2.json') === false, 'tier 2 is in the service worker');
+
 console.log('OK', n);
-console.log('new words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);
+console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);
+console.log('tier2 words', tier2.words.length, 'overlays', tier2.overlays.length, 'tokens', t2tokens, 'lessons', tier2.lessons.length);

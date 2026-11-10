@@ -95,7 +95,7 @@
     }
     return shownLa(w.la).split(/[ ,]/)[0];
   }
-  // Church tier 1. overlay(word) returns { la, en } while Church mode is on.
+  // Church tiers. overlay(word) returns { la, en } while Church mode is on.
   // Card keys stay the word id, so a shared word keeps one Leitner record.
   // The active deck (W / BY) already carries the overlay, and an() reads that copy.
   const ChurchPack = { overlay(w) { return S.set.church && OVERLAYS.size ? Church.faceWord(w, OVERLAYS, true, Morph.plain) : null; } };
@@ -953,7 +953,7 @@
     const list = lessonSet();
     const n = list.filter(l => lessonDone(l.id)).length;
     const secs = [...new Set(list.map(l => l.sec))];
-    const massNote = S.set.church ? ' Church mode adds the Ordinary of the Mass, in order, at the top. Pronunciation is on the About tab.' : '';
+    const massNote = S.set.church ? ' Church mode adds the Ordinary of the Mass, then the basic prayers, at the top. Pronunciation is on the About tab.' : '';
     V().innerHTML = `<div class="card"><div class="prompt-kind">Lessons · about 5–10 minutes each</div>
       <p class="small muted" style="margin:6px 0 10px">What each case, declension, and conjugation does and how to spot it, with endings tables and a short quick check.${massNote} <b>${n}</b> of ${list.length} done.</p>
       <div class="bar"><i style="width:${(100 * n / list.length).toFixed(1)}%"></i></div></div>
@@ -982,8 +982,8 @@
     const keys = (l.words || []).map(wordByKey).filter(Boolean);
     V().innerHTML = `<div class="row"><button class="link" id="lback">‹ All lessons</button><span class="grow"></span>${st ? '<span class="ok small">✓ Done</span>' : ''}</div>
       <div class="card lesson"><div class="prompt-kind">${esc(l.sec)}</div><h2 style="margin:4px 0 8px">${esc(l.title)}</h2>
-      <p class="small muted">The Latin is the older Missal, with macrons added. The English is a literal translation.</p>${body}</div>
-      <div class="card"><h3 style="margin-top:0">Notes</h3>${l.notes || ''}${l.diff ? `<h3>Older Missal and the current Ordinary</h3>${l.diff}` : ''}</div>
+      <p class="small muted">${l.lead ? esc(l.lead) : 'The Latin is the older Missal, with macrons added. The English is a literal translation.'}</p>${body}</div>
+      <div class="card"><h3 style="margin-top:0">Notes</h3>${l.notes || ''}${l.diff ? `<h3>${esc(l.aside || 'Older Missal and the current Ordinary')}</h3>${l.diff}` : ''}</div>
       <div class="card"><h3 style="margin-top:0">Key words</h3>${keys.map(w => `<div class="lex"><span class="latin">${esc(shownLa(faceOf(w).la))}</span><div class="small muted">${esc(faceOf(w).en)}</div></div>`).join('') || '<p class="small muted">None.</p>'}</div>
       <div class="card">${l.quiz ? `<button class="primary big" id="lq">Quick check · ${l.quiz.qs.length} questions</button>` : ''}
         <div class="row" style="margin-top:10px">${st ? '' : '<button class="grow" id="lmark">Mark as done</button>'}${nx ? `<button class="grow" id="lnext">Next: ${esc(nx.title)} ›</button>` : ''}</div>
@@ -1292,11 +1292,12 @@
   Promise.all([
     fetch('data/words.json').then(r => r.json()),
     fetch('data/church/tier1.json').then(r => r.json()),
-  ]).then(([all, pack]) => {
-    PACK = pack;
+    fetch('data/church/tier2.json').then(r => r.json()),
+  ]).then(([all, tier1, tier2]) => {
+    PACK = Church.merge([tier1, tier2]);
     CLASSICAL = all.filter(w => !w.d);
-    CHURCH_WORDS = pack.words || [];
-    OVERLAYS = Church.overlayMap(pack, Morph.plain);
+    CHURCH_WORDS = PACK.words || [];
+    OVERLAYS = Church.overlayMap(PACK, Morph.plain);
     const LW = []; all.forEach(w => { LW[w.id] = w; }); self.LatinWords = LW;   // sentence engine stays on the classical list
     let ps = null; all.sort((a, b) => a.id - b.id).forEach(w => { if (w.s) ps = w.s + '.' + w.ss; w.sec = ps; });   // 3 entries without a section sit inside the one before
     rebuildDeck();

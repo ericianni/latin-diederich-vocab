@@ -494,7 +494,7 @@
   const UBUS = ['arcus', 'lacus'];
   const UBUS_ALSO = ['portus'];                     // portibus is the better form (L&S); portubus also (A&G §92.c)
   const syl = s => (plain(s).match(/[aeiouy]+/g) || []).length;
-  function noun(e) {
+  function noun(e, opt) {
     const { parts, notes } = clean(e.la);
     const nom = parts[0];
     if (nom === 'rēs pūblica') {
@@ -632,6 +632,12 @@
       if (nom === 'cor' || nom === 'os') drop(['gen.pl']);        // §103.g: cordium is late (Vulgate); ossium is late
       if (['mel', 'murmur', 'rūs', 'iūs'].includes(nom)) drop(['gen.pl', 'dat.pl', 'abl.pl']); // §103.g: plural nom/acc only (iūrum is Old Latin)
       if (nom === 'coniūnx') for (const k of ['nom.sg', 'voc.sg']) if (tbl[k] && !tbl[k].includes('coniux')) tbl[k].push('coniux');
+    }
+    // The Sanctus (caelī) and the Apostles' Creed (ad caelōs) use the masculine plural. Neuter caela stays accepted.
+    if (opt && opt.church && nom === 'caelum' && tbl['nom.pl'] && tbl['acc.pl']) {
+      if (!tbl['nom.pl'].includes('caelī')) tbl['nom.pl'] = ['caelī'].concat(tbl['nom.pl']);
+      if (tbl['voc.pl'] && !tbl['voc.pl'].includes('caelī')) tbl['voc.pl'] = ['caelī'].concat(tbl['voc.pl']);
+      if (!tbl['acc.pl'].includes('caelōs')) tbl['acc.pl'] = ['caelōs'].concat(tbl['acc.pl']);
     }
     return { kind: 'noun', decl, g: gender, istem: decl === 3 ? istemOut : false, plOnly, flag: nomFix ? 'nominative -ā shortened to -a (A&G §40)' : null, tbl };
   }
@@ -878,8 +884,8 @@
   }
   function analyze(e, opt) {
     try {
-      if (e.pos === 'verb') return verb(e);
-      if (e.pos === 'noun') return noun(e);
+    if (e.pos === 'verb') return verb(e);
+    if (e.pos === 'noun') return noun(e, opt);
       if (e.pos === 'adjective') return adj(e, opt);
       if (e.pos === 'pronoun') return pronoun(e);
       return { skip: 'not inflected' };
@@ -909,6 +915,8 @@
     let m = a.match(/^(\S+)us( .+)$/); if (m) out.push(m[1] + 'a' + m[2], m[1] + 'um' + m[2]);
     m = a.match(/^(\S+)ī( .+)$/); if (m) out.push(m[1] + 'ae' + m[2], m[1] + 'a' + m[2]);
     if (/^exs/.test(a)) return out.concat(out.map(v => 'ex' + v.slice(3)));   // ex(s)-: exstinguō / extinguō, exspectō / expectō, exsistō / existō (L&S)
+    // Evae is the shown genitive of Eva. Hevae is the same form with a silent h, accepted when typed and not listed.
+    if (a === 'Evae') out.push('Hevae');
     return out;
   }
   function check(input, answers, strict) { const f = strict ? normM : norm, n = f(input); return answers.some(a => variants(a).some(v => f(v) === n)); }

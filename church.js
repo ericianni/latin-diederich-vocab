@@ -1,6 +1,6 @@
-/* Church Latin, tier 1 (the Ordinary of the Mass).
-   Pure helpers shared by the app and tools/test_church.js.
-   The texts, new words, and gloss overlays live in data/church/tier1.json. */
+/* Church Latin helpers shared by the app and tools/test_church.js.
+   Tier 1 (the Ordinary) is data/church/tier1.json. Tier 2 (the basic prayers) is data/church/tier2.json.
+   The app merges the packs and shows both only while Church mode is on. */
 (function (root) {
   'use strict';
   function headKey(la, plain) {
@@ -56,7 +56,23 @@
     }
     return out;
   }
-  const api = { headKey, overlayMap, faceWord, activeWords, newWordKeys, dueCardKeys, tokensOf };
+  // Later packs append: Mass lessons stay first, then the prayers. A repeated overlay lemma keeps the later gloss.
+  function merge(packs) {
+    const list = (packs || []).filter(Boolean);
+    const about = {};
+    const pron = list.map(p => p.about && p.about.pronunciation).filter(Boolean);
+    const src = list.map(p => p.about && p.about.sources).filter(Boolean);
+    if (pron.length) about.pronunciation = pron.join('');
+    if (src.length) about.sources = src.join('');
+    return {
+      about,
+      overlays: list.flatMap(p => p.overlays || []),
+      words: list.flatMap(p => p.words || []),
+      texts: list.flatMap(p => p.texts || []),
+      lessons: list.flatMap(p => p.lessons || []),
+    };
+  }
+  const api = { headKey, overlayMap, faceWord, activeWords, newWordKeys, dueCardKeys, tokensOf, merge };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.Church = api;
 })(typeof window !== 'undefined' ? window : globalThis);
