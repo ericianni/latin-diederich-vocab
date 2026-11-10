@@ -46,6 +46,8 @@ The same app is wrapped as a native Android app (`io.github.ericianni.latin1400`
 
 Download the APK from [Releases](https://github.com/ericianni/latin-diederich-vocab/releases) and install it (allow "install unknown apps"). Progress is stored on the phone, separately from the browser version.
 
+Signing uses the existing debug key on the persistent computer (`~/.android/debug.keystore`). Do not generate a replacement key. The next installable build is versionCode 4, versionName 3.3-android-4.
+
 Build it yourself (Node, JDK 21, Android SDK with platform 36):
 
 ```sh
