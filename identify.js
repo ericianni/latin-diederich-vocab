@@ -109,15 +109,25 @@
     if (at.mood === 'ger' || at.mood === 'sup') return vCaseOk(key, df);
     return true;
   }
-  function index(a) {      // normalized STANDARD form -> every key that shows it (alternates are not readings)
+  function index(a) {      // normalized form -> readings. Alternates are not readings. Co-equal forms (nostrum and nostrī) each are.
     if (a._ix) return a._ix;
     const x = expand(a), ix = new Map();
-    for (const k in x) { const f = M.standard(x[k]); if (!f) continue; const n = M.normM(f); if (!ix.has(n)) ix.set(n, []); if (!ix.get(n).includes(k)) ix.get(n).push(k); }
+    for (const k in x) {
+      const cell = x[k];
+      const forms = cell && cell.coeq ? M.accepts(cell) : [M.standard(cell)];
+      forms.forEach((f, i) => {
+        if (!f) return;
+        const n = M.normM(f);
+        if (!ix.has(n)) ix.set(n, []);
+        const use = cell && cell.coeq ? cell.uses[i] : null;
+        if (!ix.get(n).some(it => it.key === k && it.use === use)) ix.get(n).push({ key: k, use: use });
+      });
+    }
     Object.defineProperty(a, '_ix', { value: ix, enumerable: false });
     return ix;
   }
   function parses(a, w, form, df) {
-    return (index(a).get(M.normM(form)) || []).filter(k => allowed(a, k, df)).map(k => ({ key: k, at: attrs(a, w, k), dep: a.kind === 'verb' && isDep(k) }));
+    return (index(a).get(M.normM(form)) || []).filter(it => allowed(a, it.key, df)).map(it => ({ key: it.key, use: it.use, at: attrs(a, w, it.key), dep: a.kind === 'verb' && isDep(it.key) }));
   }
   // choose a question from one of the typed drills' keys: participles and gerundives get a random gender / case / number
   function pick(a, keys, df, rnd) {
@@ -128,7 +138,9 @@
       const base = key.startsWith('gdv.') ? 'gdv' : key, subs = Object.keys(x).filter(s => s.startsWith(base + ':') && allowed(a, s, df));
       if (subs.length) k = subs[Math.floor(rnd() * subs.length)]; else if (!x[key]) return null;
     }
-    return { key: k, form: M.standard(x[k]) };
+    const cell = x[k];
+    const form = cell && cell.coeq ? cell[Math.floor(rnd() * cell.length)] : M.standard(cell);
+    return { key: k, form: form };
   }
   // typed drills: a participle or gerundive is asked in its nom. sg. (amātus, amanda) when the settings allow that;
   // otherwise in an allowed case and number of the same gender (amātō, amandārum). null = ask the table form as is.
@@ -186,10 +198,12 @@
   }
   function parseLabel(a, p) {
     const [base, sub] = p.key.split(':');
-    if (a.kind === 'noun') return M.label('noun', p.key);
-    if (a.kind === 'adj' || a.kind === 'pron') return M.label(a.kind, p.key);
-    if (sub) return (base === 'gdv' ? 'gerundive' : M.label('verb', base).replace(/\s*\(nom\. masc\. sg\.\)/, '')) + ' · ' + M.label('adj', sub);
-    return M.label('verb', p.key);
+    let s;
+    if (a.kind === 'noun') s = M.label('noun', p.key);
+    else if (a.kind === 'adj' || a.kind === 'pron') s = M.label(a.kind, p.key);
+    else if (sub) s = (base === 'gdv' ? 'gerundive' : M.label('verb', base).replace(/\s*\(nom\. masc\. sg\.\)/, '')) + ' · ' + M.label('adj', sub);
+    else s = M.label('verb', p.key);
+    return p.use ? s + ' (' + p.use + ')' : s;
   }
   const api = { expand, attrs, allowed, vCaseOk, finiteOk, moodPossible, typedSub, parses, pick, rows, grade, parseLabel, genders, L, TITLE, hit, matches, others, andGrade };
   root.Identify = api;

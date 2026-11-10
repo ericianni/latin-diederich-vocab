@@ -60,7 +60,11 @@
   // ---------- data ----------
   let W = [], BY = {}, UNITS = new Map(), CLASSICAL = [], CHURCH_WORDS = [], OVERLAYS = new Map(), PACK = null;
   const AN = {};
-  const an = w => AN[w.id] || (AN[w.id] = ['verb', 'noun', 'adjective', 'pronoun'].includes(w.pos) ? Morph.analyze(w) : { skip: 'not drilled (' + w.pos + ')' });
+  const an = w => {
+    const c = !!(S.set && S.set.church);
+    const ck = w.id + (c ? ':c' : '');
+    return AN[ck] || (AN[ck] = ['verb', 'noun', 'adjective', 'pronoun'].includes(w.pos) ? Morph.analyze(w, c ? { church: true } : undefined) : { skip: 'not drilled (' + w.pos + ')' });
+  };
   const rankTxt = w => w.r ? '#' + w.r : '—';
 
   function heads(la) {
@@ -472,7 +476,7 @@
       rows = Object.keys(a.tbl).filter(x => x.startsWith(pre)).map(x => { const r = x.slice(pre.length); return [NM[r] || r.replace(/^(\d)s$/, '$1 sg').replace(/^(\d)p$/, '$1 pl'), x]; });
     } else if (a.kind === 'noun' || k.length === 2) rows = Morph.CASES_X.map(c => [c, c + '.' + k[1]]);
     else rows = Morph.CASES_X.map(c => [c, k[0] + '.' + c + '.' + k[2]]);
-    return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(Morph.standard(a.tbl[x]))}</td></tr>`).join('')}</table>`;
+    return `<table>${rows.filter(r => a.tbl[r[1]]).map(([l, x]) => `<tr${x === key ? ' class="hl"' : ''}><th>${l}</th><td>${esc(Morph.shown(a.tbl[x]))}</td></tr>`).join('')}</table>`;
   }
   const S_CASE = [['nom', 'Nom.'], ['gen', 'Gen.'], ['dat', 'Dat.'], ['acc', 'Acc.'], ['abl', 'Abl.']];
   const S_NUM = [['sg', 'Singular'], ['pl', 'Plural']];
@@ -554,7 +558,7 @@
     const w = BY[it.id], a = an(w), key = it.key, face = faceOf(w);
     const sub = Identify.typedSub(a, key, S.set.df);   // participle / gerundive in an allowed case and number when nom. sg. is off
     const answers = sub ? sub.forms : a.tbl[key];
-    const std = Morph.standard(answers);
+    const std = Morph.shown(answers);
     const kindTxt = a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : a.kind === 'pron' ? 'Decline the pronoun' : 'Decline the adjective';
     const ctx = csTarget(a, key);
     V().innerHTML = `${sessionHead()}<div class="card"><div class="row"><div class="prompt-kind grow">${kindTxt}</div><button class="link small" id="cs">📖 ${esc(ctx.label)}</button></div>${newTags(it, w)}
@@ -719,7 +723,7 @@
     const P = ['ego', 'nōs', 'tū', 'vōs'].map(h => { const w = findW(h); return w ? an(w) : null; });
     if (P.some(a => !a || a.skip)) return '';
     return `<div class="cst"><div class="forms"><table><tr><th></th><th>I</th><th>we</th><th>you (sg.)</th><th>you (pl.)</th></tr>
-      ${Morph.CASES.map(k => `<tr><th>${k}.</th>${P.map(a => `<td>${a.tbl[k + '.' + a.num] ? esc(Morph.standard(a.tbl[k + '.' + a.num])) : '–'}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
+      ${Morph.CASES.map(k => `<tr><th>${k}.</th>${P.map(a => `<td>${a.tbl[k + '.' + a.num] ? esc(Morph.shown(a.tbl[k + '.' + a.num])) : '–'}</td>`).join('')}</tr>`).join('')}</table></div></div>`;
   }
   function adjTable(h, note) {
     const w = findW(h); if (!w) return ''; const a = an(w); if (a.skip) return '';
@@ -1087,7 +1091,7 @@
           bindNext();
         });
       } else {
-        const { w, a, key } = it, answers = a.tbl[key], std = Morph.standard(answers);
+        const { w, a, key } = it, answers = a.tbl[key], std = Morph.shown(answers);
         V().innerHTML = `${head()}<div class="card"><div class="prompt-kind">${a.kind === 'verb' ? 'Conjugate' : a.kind === 'noun' ? 'Decline' : 'Decline the adjective'}</div>
           ${latinHTML(shownLa(faceOf(w).la), true)}<div class="small muted">${esc(faceOf(w).en.slice(0, 90))}</div>
           <div class="english" style="margin-top:14px"><b>${esc(Morph.label(a.kind, key))}</b>?</div>
@@ -1190,7 +1194,7 @@
     const a = an(w);
     let forms = '';
     if (!a.skip) {
-      const T = (cols, rows, get) => `<table><tr><th></th>${cols.map(c => `<th>${c}</th>`).join('')}</tr>${rows.map(r => `<tr><th>${r}</th>${cols.map(c => { const cell = get(r, c); return `<td>${cell && cell.length ? esc(Morph.standard(cell)) : '–'}</td>`; }).join('')}</tr>`).join('')}</table>`;
+      const T = (cols, rows, get) => `<table><tr><th></th>${cols.map(c => `<th>${c}</th>`).join('')}</tr>${rows.map(r => `<tr><th>${r}</th>${cols.map(c => { const cell = get(r, c); return `<td>${cell && cell.length ? esc(Morph.shown(cell)) : '–'}</td>`; }).join('')}</tr>`).join('')}</table>`;
       if (a.kind === 'verb') forms = verbGroups(a, null, null) + (a.noPassiveWhy ? `<div class="small muted">No passive: ${esc(a.noPassiveWhy)}.</div>` : '') + (a.note ? `<div class="small muted">${esc(a.note)}</div>` : '');
       else if (a.kind === 'noun' || (a.kind === 'pron' && !a.gcase)) forms = T(['sg', 'pl'].filter(n => Morph.CASES_X.some(c => a.tbl[c + '.' + n])), Morph.CASES_X.filter(r => a.tbl[r + '.sg'] || a.tbl[r + '.pl']), (r, c) => a.tbl[r + '.' + c]);
       else forms = ['sg', 'pl'].filter(n => ['m', 'f', 'n'].some(g => Morph.CASES.some(c => a.tbl[g + '.' + c + '.' + n]))).map(n => T(['m', 'f', 'n'].filter(g => Morph.CASES_X.some(c => a.tbl[g + '.' + c + '.' + n])), Morph.CASES_X.filter(r => ['m', 'f', 'n'].some(g => a.tbl[g + '.' + r + '.' + n])), (r, g) => a.tbl[g + '.' + r + '.' + n])).join('<div style="height:6px"></div>');

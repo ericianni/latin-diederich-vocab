@@ -609,6 +609,7 @@ t('edō', 'pres.3s', 'edit'); ok19(M.check('ēst', tb('edō')['ind.act.pres.3s']
     for (const [k, forms] of Object.entries(a.tbl)) {
       if (!forms || forms.length < 2) continue;
       multi++;
+      if (forms.coeq) continue;   // nostrum / nostrī are both standard (A&G §295.b), not an alternate pair
       ok19(M.standard(forms) === forms[0], 'standard is not the first form', e.la, k, forms);
       const g0 = M.grade(forms[0], forms, true);
       ok19(g0.ok && g0.alternate === false && g0.standard === forms[0], 'standard grades as the standard', e.la, k, forms);

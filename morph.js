@@ -176,7 +176,7 @@
   // verbs that take no personal passive (intransitive), even though the source gives a supine
   const INTRANS = new Set(('labōrō quiēscō errō properō festīnō currō concurrō occurrō accurrō fluō veniō adveniō conveniō ēveniō perveniō cēdō accēdō dēcēdō discēdō excēdō prōcēdō incēdō recēdō succēdō ēvādō incumbō surgō stō sedeō resīdō maneō remaneō exsistō crēscō vacō dormiō serviō pugnō taceō vigilō rīdeō studeō faveō noceō pāreō placeō displiceō careō valeō lateō iaceō pateō ārdeō lūceō pendeō appāreō ambulō nāvigō cēnō natō volō convolō vīvō ēmineō obstō īnstō cōnstō exeō ' +
     'haereō abundō parcō doleō ' +
-    'occidō cadō dēsistō resistō cōnsistō īnsistō persistō assurgō cōnsurgō ēnītor nūbō pareō').split(' '));
+    'occidō cadō dēsistō resistō cōnsistō īnsistō persistō assurgō cōnsurgō resurgō ēnītor nūbō pareō').split(' '));
   const FUT_FIX = { 'adsum': 'adfutūrus', 'orior': 'oritūrus', 'exorior': 'exoritūrus', 'morior': 'moritūrus', 'nāscor': 'nāscitūrus', 'iuvō': 'iuvātūrus', 'pariō': 'paritūrus', 'ruō': 'ruitūrus', 'secō': 'secātūrus', 'sonō': 'sonātūrus', 'fruor': 'fruitūrus', 'adiuvō': 'adiūtūrus' };
   const SUP_FIX = { 'quiēscō': 'quiētum', 'quaerō': 'quaesītum', 'requīrō': 'requīsītum', 'contemnō': 'contemptum', 'neglegō': 'neglēctum', 'intellegō': 'intellēctum', 'dēsinō': 'dēsitum' };   // source drops the prefix
   const CONJ_FIX = {};   // pāscō: the source's -āre is corrected in data/words.json (L&S: pasco, 3)
@@ -442,12 +442,19 @@
     if (!T['nom.sg']) return T;
     let v = T['nom.sg'].slice();
     // A&G §49.c: proper names in -ius have vocative -ī. Pontius is the only such name added for the Mass.
-    if (decl === 2 && g !== 'n' && /us$/.test(nom)) v = /^(fīlius|genius|pontius)$/.test(nom) ? [cut(nom, 3) + 'ī'] : [cut(nom, 2) + 'e'];
+    if (decl === 2 && g !== 'n' && /us$/.test(nom)) v = /^(fīlius|genius|Pontius)$/.test(nom) ? [cut(nom, 3) + 'ī'] : [cut(nom, 2) + 'e'];
     T['voc.sg'] = v;
     if (LOC[nom]) T['loc.sg'] = LOC[nom].slice();
     return T;
   }
-  const cells = (sg, pl) => { const o = {}; CASES.forEach((c, i) => { if (sg && sg[i] != null) o[c + '.sg'] = [].concat(sg[i]); if (pl && pl[i] != null) o[c + '.pl'] = [].concat(pl[i]); }); return o; };   // null cell = not drilled
+  // A cell may carry coeq + uses: every form is a real form of that case (not an alternate).
+  function box(v) {
+    const a = [].concat(v);
+    if (v && v.coeq) { a.coeq = true; a.uses = v.uses.slice(); a.useLabel = v.useLabel || 'gen.'; }
+    return a;
+  }
+  const cells = (sg, pl) => { const o = {}; CASES.forEach((c, i) => { if (sg && sg[i] != null) o[c + '.sg'] = box(sg[i]); if (pl && pl[i] != null) o[c + '.pl'] = box(pl[i]); }); return o; };   // null cell = not drilled
+  function coForms(forms, uses) { const a = forms.slice(); a.coeq = true; a.uses = uses; a.useLabel = 'gen.'; return a; }
   const NOUN_IRR = {
     'vīs': cells(['vīs', null, 'vī', 'vim', 'vī'],   // gen. sg. vīs is rare (A&G 79): not drilled
                   ['vīrēs', 'vīrium', 'vīribus', ['vīrēs', 'vīrīs'], 'vīribus']),
@@ -459,11 +466,12 @@
     'iter': cells(['iter', 'itineris', 'itinerī', 'iter', 'itinere'], ['itinera', 'itinerum', 'itineribus', 'itinera', 'itineribus']),
     // Ecclesiastical names. Iēsus has no plural in the liturgy (gen./dat./abl./voc. Iēsū, acc. Iēsum).
     // Andreās is a Greek 1st-declension name (gen. Andreae, acc. Andreām, voc. Andreā); the regular parser skips those.
-    // Lowercase, like every other dictionary line. The Mass text capitalizes them on the page.
-    'iēsus': cells(['iēsus', 'iēsū', 'iēsū', 'iēsum', 'iēsū'], null),
-    'andreās': cells(['andreās', 'andreae', 'andreae', 'andreām', 'andreā'], null),
+    // Proper names are capitalized in every generated form. Singular only.
+    'Iēsus': cells(['Iēsus', 'Iēsū', 'Iēsū', 'Iēsum', 'Iēsū'], null),
+    'Andreās': cells(['Andreās', 'Andreae', 'Andreae', 'Andreām', 'Andreā'], null),
+    'Iōannēs': cells(['Iōannēs', 'Iōannis', 'Iōannī', 'Iōannem', 'Iōanne'], null),
   };
-  const VOC_FIX = { 'iēsus': ['iēsū'], 'andreās': ['andreā'] };
+  const VOC_FIX = { 'Iēsus': ['Iēsū'], 'Andreās': ['Andreā'] };
   // gen. pl. -um, not the i-stem -ium (A&G §78). mēnsis is a mixed i-stem (§71, §78 "sometimes"). parēns leads with parentum.
   const GPL_UM = ['pater', 'māter', 'frāter', 'canis', 'iuvenis', 'senex', 'sēdēs', 'vātēs', 'apis', 'volucris'];
   // both gen. pl. endings. i-stems lead with -ium; the others lead with -um (A&G §71, §78).
@@ -662,7 +670,7 @@
     put('n', 'nom', 'pl', 'plūra'); put('n', 'voc', 'pl', 'plūra'); put('n', 'gen', 'pl', 'plūrium'); put('n', 'dat', 'pl', 'plūribus'); put('n', 'acc', 'pl', 'plūra'); put('n', 'abl', 'pl', 'plūribus');
     return { kind: 'adj', decl: 3, tbl: T };
   }
-  function adj(e) {
+  function adj(e, opt) {
     const { parts, notes } = clean(e.la);
     const nom = parts[0];
     if (/indecl/.test(e.la) || parts.length < 2) return { skip: 'indeclinable / defective' };
@@ -688,8 +696,18 @@
       const mv = nom === 'meus' ? ['mī'] : /ius$/.test(nom) && !ius ? [cut(nom, 3) + 'ie'] : /us$/.test(nom) ? [cut(nom, 2) + 'e'] : [nom];
       adjVoc(T, mv);
       if (plOnly) for (const k of Object.keys(T)) if (k.endsWith('.sg')) delete T[k];
-      // L&S: dexter, -tera, -terum, and more frequently -tra, -trum. dextra stays the form shown.
-      if (nom === 'dexter') for (const k of Object.keys(T)) for (const f0 of T[k].slice()) if (f0.startsWith('dextr')) { const alt = 'dexter' + f0.slice(5); if (alt !== f0 && !T[k].includes(alt)) T[k].push(alt); }
+      // L&S: dexter, -tera, -terum, and more frequently -tra, -trum. Classical shows dextra; the Missal shows dextera.
+      if (nom === 'dexter') for (const k of Object.keys(T)) {
+        for (const f0 of T[k].slice()) if (f0.startsWith('dextr') && !f0.startsWith('dexter')) {
+          const alt = 'dexter' + f0.slice(5);
+          if (alt !== f0 && !T[k].includes(alt)) T[k].push(alt);
+        }
+        if (opt && opt.church && k.startsWith('f.')) {
+          const missal = T[k].filter(f => f.startsWith('dexter'));
+          const shorter = T[k].filter(f => !f.startsWith('dexter'));
+          if (missal.length && shorter.length) T[k] = missal.concat(shorter);
+        }
+      }
       // L&S: prosperus is more frequent than prosper (A&G §111.a: also prosperus). Other cases do not differ.
       if (nom === 'prosper' && T['m.nom.sg']) { T['m.nom.sg'] = ['prosperus', 'prosper']; T['m.voc.sg'] = ['prosperus', 'prosper']; }
       // A&G §111.b: no nominative singular masculine in classical use. Oblique singular is cited (L&S: Cicero, Livy).
@@ -770,9 +788,10 @@
   const PRON = {
     // L&S: ĕgŏ in the poets of the best age; final ō is ante-classical and post-Augustan. mī for mihi is classical prose (Cicero) as well as verse.
     'ego': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 1, blurb: '1st-person personal pronoun, singular', tbl: () => cells(['ego', 'meī', ['mihi', 'mī'], 'mē', 'mē'], null) },
-    'nōs': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 1, blurb: '1st-person personal pronoun, plural', tbl: () => cells(null, ['nōs', ['nostrum', 'nostrī'], 'nōbīs', 'nōs', 'nōbīs']) },
+    // A&G §295.b: nostrum/vestrum are the partitive genitive, nostrī/vestrī the objective. Both are standard.
+    'nōs': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 1, blurb: '1st-person personal pronoun, plural', tbl: () => cells(null, ['nōs', coForms(['nostrum', 'nostrī'], ['partitive', 'objective']), 'nōbīs', 'nōs', 'nōbīs']) },
     'tū': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 2, blurb: '2nd-person personal pronoun, singular', tbl: () => cells(['tū', 'tuī', 'tibi', 'tē', 'tē'], null) },
-    'vōs': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 2, blurb: '2nd-person personal pronoun, plural', tbl: () => cells(null, ['vōs', ['vestrum', 'vestrī'], 'vōbīs', 'vōs', 'vōbīs']) },
+    'vōs': { pron: 'pers', par: 'pp', sheet: 'cs-p-pers', person: 2, blurb: '2nd-person personal pronoun, plural', tbl: () => cells(null, ['vōs', coForms(['vestrum', 'vestrī'], ['partitive', 'objective']), 'vōbīs', 'vōs', 'vōbīs']) },
     // A&G §144. Same forms in both numbers. sēsē is the reduplicated accusative/ablative. No nominative.
     'sē': { pron: 'refl', par: 'pr', sheet: 'cs-p-refl', gcase: false, headKey: null, blurb: 'reflexive pronoun (no nominative; singular and plural are the same)', tbl: () => cells([null, 'suī', 'sibi', ['sē', 'sēsē'], ['sē', 'sēsē']], [null, 'suī', 'sibi', ['sē', 'sēsē'], ['sē', 'sēsē']]) },
     'hic': { pron: 'dem', par: 'pd', sheet: 'cs-p-dem', blurb: 'demonstrative pronoun', tbl: () => pronTbl(
@@ -857,11 +876,11 @@
     const head = P0.headKey !== undefined ? P0.headKey : (gcase ? 'm.nom.sg' : (tbl['nom.sg'] ? 'nom.sg' : (tbl['nom.pl'] ? 'nom.pl' : null)));
     return { kind: 'pron', pron: P0.pron, par: P0.par, person: P0.person || null, head: h, headKey: head, gcase, sheet: P0.sheet, blurb: P0.blurb || '', decl: P0.decl || null, num: P0.pron === 'pers' ? (tbl['nom.sg'] ? 'sg' : 'pl') : null, tbl };
   }
-  function analyze(e) {
+  function analyze(e, opt) {
     try {
       if (e.pos === 'verb') return verb(e);
       if (e.pos === 'noun') return noun(e);
-      if (e.pos === 'adjective') return adj(e);
+      if (e.pos === 'adjective') return adj(e, opt);
       if (e.pos === 'pronoun') return pronoun(e);
       return { skip: 'not inflected' };
     } catch (err) { if (root.DEBUG) throw err; return { skip: 'generator error: ' + err.message }; }
@@ -896,11 +915,25 @@
   // A cell keeps every accepted form. The first is the one standard form; renderers must show only that.
   function accepts(cell) { return cell == null ? [] : [].concat(cell).filter(f => f != null && f !== ''); }
   function standard(cell) { const fs = accepts(cell); return fs.length ? fs[0] : ''; }
+  // Co-equal forms (nostrum and nostrī) are both shown, labeled. Everything else shows the one standard form.
+  function shown(cell) {
+    if (cell && cell.coeq && cell.uses && cell.uses.length === accepts(cell).length) {
+      const lab = cell.useLabel || 'gen.';
+      return cell.map((f, i) => lab + ' (' + cell.uses[i] + ') ' + f).join('; ');
+    }
+    return standard(cell);
+  }
   // Right/wrong grading. alternate: the answer is accepted but is not the standard form
   // (spelling variants of the standard, such as ex(s)- and participle gender, are not alternates).
+  // Co-equal forms are both standard: neither is flagged as an alternate.
   function grade(input, cell, strict) {
     const forms = accepts(cell), std = forms[0] || '';
     if (!input || !forms.length) return { ok: false, alternate: false, standard: std };
+    if (cell && cell.coeq) {
+      const hit = forms.find(f => check(input, [f], strict));
+      if (hit) return { ok: true, alternate: false, standard: hit };
+      return { ok: false, alternate: false, standard: shown(cell) };
+    }
     if (check(input, [std], strict)) return { ok: true, alternate: false, standard: std };
     if (check(input, forms.slice(1), strict)) return { ok: true, alternate: true, standard: std };
     return { ok: false, alternate: false, standard: std };
@@ -922,6 +955,6 @@
       return check(affix ? bare(dash(input)) : input, [affix ? bare(key) : a], strict);
     });
   }
-  const api = { analyze, label, check, checkHead, grade, gradeHead, standard, accepts, variants, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
+  const api = { analyze, label, check, checkHead, grade, gradeHead, standard, shown, accepts, variants, norm, normM, plain, TENSES, CASES, CASES_X, MOODS, VOICES, PERS, P, CASE_N, GEN_N };
   root.Morph = api; if (typeof module !== 'undefined') module.exports = api;
 })(typeof self !== 'undefined' ? self : this);

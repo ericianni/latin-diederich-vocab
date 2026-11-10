@@ -92,11 +92,11 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 - Normal classical alternates may be **accepted** in typed answers but must show amber: `Accepted alternate — standard form: X` (via `Morph.grade` → `alternate`).
 - I-stem adjective accusative plural **shown as `-ēs`** (`omnēs` standard; `omnīs` accepted alternate). Same pattern for nouns like `fīlia`: dat/abl pl standard `fīliīs`, alternate `fīliābus`.
 - Right/wrong grading only (no ease/confidence). US English UI and glosses.
-- **Church Latin, tier 1** (the Ordinary of the Mass) is `data/church/tier1.json` plus `church.js`. `S.set.church` (default off) and `S.set.churchMem` (`season` or `saint`) are unchanged. While Church mode is on, an overlay replaces that word’s gloss (and `la`, if the overlay has one) on the card, in drills, Learn, the cheat sheet, and the word list. `Morph.analyze` reads the overlaid copy. Card keys stay the word id, so a shared word has one Leitner record. Church-only words (`church: true`, ids from 10001) join the deck only while the mode is on; turning it off hides them and does not delete their cards. New Church words use the same daily cap, one Church word after every two new classical words. The sentence engine is not wired to Church-only words. Learn shows nine Mass lessons only in Church mode. `tools/test_church.js` checks tokens, paradigms, and the progress rule.
+- **Church Latin, tier 1** (the Ordinary of the Mass) is `data/church/tier1.json` plus `church.js`. `S.set.church` (default off) and `S.set.churchMem` (`season` or `saint`) are unchanged. While Church mode is on, an overlay replaces that word’s gloss (and `la`, if the overlay has one) on the card, in drills, Learn, the cheat sheet, and the word list. `Morph.analyze` reads the overlaid copy. Card keys stay the word id, so a shared word has one Leitner record. Church-only words (`church: true`, ids from 10001) join the deck only while the mode is on; turning it off hides them and does not delete their cards. New Church words use the same daily cap, one Church word after every two new classical words. The sentence engine is not wired to Church-only words. Learn shows nine Mass lessons only in Church mode. In Church mode the feminine of *dexter* is shown as *dextera* / *dexteram* (*dextra* / *dextram* stays the alternate). Proper names in the Church deck are capitalized in every generated form; *deus* stays lowercase. `tools/test_church.js` checks tokens, paradigms, and the progress rule.
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v40`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v41`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug` (signed with `~/.android/debug.keystore`).
@@ -134,7 +134,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 
 | Headword | `par` | Standard vs alternate |
 |----------|-------|------------------------|
-| ego, tū, nōs, vōs | `pp` | unchanged |
+| ego, tū, nōs, vōs | `pp` | gen. pl. shows both uses, not as alternates: partitive nostrum/vestrum, objective nostrī/vestrī (A&G §295.b). mī remains an alternate of mihi |
 | sē | `pr` | acc/abl `sē`, alternate `sēsē`. No nominative. Same in both numbers |
 | hic, ille | `pd` | unchanged |
 | is, ea, id | `pi` | nom. pl. m. `eī` (`iī`, `ī`); dat./abl. pl. `eīs` (`iīs`, `īs`); dat. sg. `eī` (`ēī`) |

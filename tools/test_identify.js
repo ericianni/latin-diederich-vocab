@@ -138,7 +138,7 @@ eq('mare', 'marī', Object.assign({}, DEF, { cases: ['dat'] }), ['dat.sg']);    
 
 // pronouns: every reading of a form, case / number (personal) or gender / case / number (hic, ille)
 eq('nōs', 'nōs', DEF, ['nom.pl', 'acc.pl']); eq('egō', 'mē', DEF, ['acc.sg', 'abl.sg']); eq('tū', 'tē', DEF, ['acc.sg', 'abl.sg']);
-eq('vōs', 'vestrum', DEF, ['gen.pl']); eq('vōs', 'vestrī', DEF, []); eq('vōs', 'vōbīs', DEF, ['dat.pl', 'abl.pl']); eq('egō', 'mihi', DEF, ['dat.sg']); eq('egō', 'mī', DEF, []);
+eq('vōs', 'vestrum', DEF, ['gen.pl']); eq('vōs', 'vestrī', DEF, ['gen.pl']); eq('vōs', 'vōbīs', DEF, ['dat.pl', 'abl.pl']); eq('egō', 'mihi', DEF, ['dat.sg']); eq('egō', 'mī', DEF, []);
 eq('hic', 'huius', DEF, ['m.gen.sg', 'f.gen.sg', 'n.gen.sg']); eq('hic', 'hīs', DEF, ['m.dat.pl', 'f.dat.pl', 'n.dat.pl', 'm.abl.pl', 'f.abl.pl', 'n.abl.pl']);
 eq('hic', 'haec', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('hic', 'hoc', DEF, ['n.nom.sg', 'n.acc.sg']); eq('hic', 'hōc', DEF, ['m.abl.sg', 'n.abl.sg']);
 eq('ille', 'illī', DEF, ['m.dat.sg', 'f.dat.sg', 'n.dat.sg', 'm.nom.pl']); eq('ille', 'illa', DEF, ['f.nom.sg', 'n.nom.pl', 'n.acc.pl']); eq('ille', 'illud', DEF, ['n.nom.sg', 'n.acc.sg']);
