@@ -2,8 +2,9 @@
    Pure logic (no DOM), shared by app.js and tools/test_identify.js.
    A form can have several valid parses (syncretism); parses() finds every key in the word's own
    paradigm, limited to the current drill settings, whose form matches, and any one of them is accepted.
-   Homographs from other words (amor: noun, or 1st sg. pres. pass. of amō) are not counted: the question names the
-   dictionary word, and macrons are always shown, so rēgī (rēx, dat. sg.) and regī (regō, pres. pass. inf.) stay distinct. */
+   The first answer uses only that word. Homographs of another part of speech (amor the noun, amor from amō)
+   are a separate And…? opt-in, crossParses(). Macrons stay distinct, so rēgī (rēx) and regī (regō) are not one form.
+   Alternates are not readings. Co-equal forms (nostrum and nostrī) each are. */
 (function (root) {
   'use strict';
   const M = root.Morph || (typeof require !== 'undefined' ? require('./morph.js') : null);
@@ -129,6 +130,37 @@
   function parses(a, w, form, df) {
     return (index(a).get(M.normM(form)) || []).filter(it => allowed(a, it.key, df)).map(it => ({ key: it.key, use: it.use, at: attrs(a, w, it.key), dep: a.kind === 'verb' && isDep(it.key) }));
   }
+  function headWord(w) { return String(w && w.la || '').split(/[ ,]/)[0]; }
+  // Other lemmas already studied, in the active deck, and of a different part of speech.
+  // The caller passes analyses it already cached. This does not rebuild a paradigm.
+  function crossPool(items, seen, primaryId, primaryKind) {
+    const out = [], have = new Set();
+    const ids = seen instanceof Set ? seen : new Set(seen || []);
+    for (const item of items || []) {
+      const cw = item && item.w, ca = item && item.a;
+      if (!cw || !ca || ca.skip || !ca.tbl || !ca.kind || ca.kind === primaryKind) continue;
+      if (cw.id == null || !ids.has(cw.id) || cw.id === primaryId || have.has(cw.id)) continue;
+      have.add(cw.id);
+      out.push(item);
+    }
+    return out;
+  }
+  // Readings of this exact spelling (macrons included) on those other lemmas. Same-POS homographs are not included.
+  // A gloss that differs, with no second analysis, is not a reading. Alternates stay out, because parses() uses the index.
+  function crossParses(a, w, form, pool, df) {
+    const out = [], seen = new Set();
+    for (const item of pool || []) {
+      const cw = item.w, ca = item.a;
+      if (!ca || ca.kind === a.kind || (w && cw.id === w.id)) continue;
+      for (const p of parses(ca, cw, form, df)) {
+        const sig = ca.kind + '\0' + p.key + '\0' + (p.use || '') + '\0' + cw.id;
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        out.push(Object.assign({}, p, { wid: cw.id, kind: ca.kind, head: headWord(cw), en: cw.en || '' }));
+      }
+    }
+    return out;
+  }
   // choose a question from one of the typed drills' keys: participles and gerundives get a random gender / case / number
   function pick(a, keys, df, rnd) {
     rnd = rnd || Math.random;
@@ -205,7 +237,7 @@
     else s = M.label('verb', p.key);
     return p.use ? s + ' (' + p.use + ')' : s;
   }
-  const api = { expand, attrs, allowed, vCaseOk, finiteOk, moodPossible, typedSub, parses, pick, rows, grade, parseLabel, genders, L, TITLE, hit, matches, others, andGrade };
+  const api = { expand, attrs, allowed, vCaseOk, finiteOk, moodPossible, typedSub, parses, crossPool, crossParses, pick, rows, grade, parseLabel, genders, L, TITLE, hit, matches, others, andGrade };
   root.Identify = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

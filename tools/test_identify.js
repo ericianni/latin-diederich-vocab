@@ -243,6 +243,55 @@ for (const df of [DEF, ALL, IMP1, PERS]) for (const w of W) {
       const r = I.andGrade(selOf(p), ps, ps.filter(q => q !== p)); r.kind === 'new' && r.p === p ? pass++ : (fail++, console.log('FAIL And…? cannot name', w.la, f, p.key)); }
   }
 }
+// And…? across parts of speech. Off is the parses() of the asked word alone. On adds a different part of speech already studied.
+{
+  const fs = require('fs');
+  const app = fs.readFileSync(require('path').join(__dirname, '../app.js'), 'utf8');
+  ok(/andPos:\s*false/.test(app), 'And…? across parts of speech defaults off');
+  const fresh = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, andPos: false, church: false, churchMem: 'season' }, {});
+  const kept = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, andPos: false, church: false, churchMem: 'season' }, { andPos: true, andMore: false });
+  ok(fresh.andPos === false && kept.andPos === true && kept.andMore === false, 'a saved And…? toggle persists and a new save stays off');
+  const [amorN, aN] = find('amor'), [amo, aV] = find('amō');
+  const own = I.parses(aN, amorN, 'amor', ALL);
+  ok(own.map(p => p.key).sort().join(' ') === 'nom.sg voc.sg', 'amor the noun, toggle off, is only the noun');
+  ok(!own.some(p => p.kind === 'verb'), 'the noun question does not include the verb');
+  const rex = find('rēx'), reg = find('regō');
+  ok(I.crossParses(rex[1], rex[0], 'rēgī', [{ w: reg[0], a: reg[1] }], ALL).length === 0, 'rēgī is not regī');
+  ok(I.parses(aV, amo, 'amāre', ALL).map(p => p.key).sort().join(' ') === 'imp.pas.pres.2s inf.act.pres', 'an alternate spelling is still not an extra reading');
+  const seen = new Set([amorN.id, amo.id]);
+  const pool = I.crossPool([{ w: amorN, a: aN }, { w: amo, a: aV }, { w: amo, a: aV }], seen, amorN.id, aN.kind);
+  ok(pool.length === 1 && pool[0].w.id === amo.id, 'same part of speech and a repeated verb are not extra lemmas');
+  const extra = I.crossParses(aN, amorN, 'amor', pool, ALL);
+  ok(extra.length === 1 && extra[0].key === 'ind.pas.pres.1s' && extra[0].kind === 'verb' && extra[0].head === 'amō', 'amor adds the passive of amō: ' + JSON.stringify(extra.map(p => p.key + '/' + p.head)));
+  ok(I.crossParses(aN, amorN, 'amor', pool, DEF).length === 0, 'passive off: the verb reading stays out');
+  ok(I.crossParses(aN, amorN, 'amor', I.crossPool([{ w: amo, a: aV }], new Set(), amorN.id, aN.kind), ALL).length === 0, 'an unstudied amō is not asked');
+  const church = { id: 10099, la: 'valdē', en: 'greatly', pos: 'adverb', church: true };
+  ok(I.crossPool([{ w: church, a: { kind: 'adj', tbl: {}, skip: false } }], new Set([church.id]), amorN.id, 'noun').length === 1, 'a studied Church word can be eligible when it is in the active list');
+  ok(I.crossPool([{ w: church, a: { kind: 'adj', tbl: {} } }], new Set(), amorN.id, 'noun').length === 0, 'an inactive or unseen Church word is not eligible');
+  const ps = own.concat(extra);
+  const named = [];
+  const first = I.grade(selOf(own.find(p => p.key === 'nom.sg')), own);
+  ok(first.ok && first.best.key === 'nom.sg', 'the first answer is still the noun');
+  named.push(first.best);
+  let guesses = ps.length - 1, rounds = 0;
+  const order = [extra[0], own.find(p => p.key === 'voc.sg')];
+  for (const p of order) {
+    rounds++;
+    const r = I.andGrade(selOf(p), ps, named);
+    ok(r.kind === 'new' && r.p === p, 'round names ' + p.key);
+    if (r.kind === 'dup') continue;
+    guesses--;
+    if (r.kind === 'new') named.push(r.p);
+    if (named.length === ps.length || guesses <= 0) break;
+  }
+  ok(named.length === ps.length && I.others(ps, named).length === 0, 'And…? ends when every reading is named');
+  ok(I.andGrade(selOf(extra[0]), ps, named).kind === 'dup', 'a named verb reading is not asked again');
+  guesses = 1; const wrong = I.andGrade({ mood: 'ind', voice: 'act', tense: 'fut', person: '1', num: 'sg' }, ps, [first.best]);
+  ok(wrong.kind === 'no', 'a different verb form is not a reading of amor');
+  ok(I.parseLabel(aV, extra[0]).length > 0 && extra[0].kind === 'verb' && extra[0].head === 'amō', 'the verb answer carries its lemma and part of speech');
+  const vos = find('vōs'), vg = I.parses(vos[1], vos[0], 'vestrum', ALL).concat(I.parses(vos[1], vos[0], 'vestrī', ALL));
+  ok(vg.some(p => p.use === 'partitive') && vg.some(p => p.use === 'objective'), 'vestrum and vestrī stay separate readings');
+}
 console.log(`${amb} ambiguous form/setting combinations checked for And…?`);
 console.log(`${pass} passed, ${fail} failed (${n} forms swept)`);
 process.exit(fail ? 1 : 0);

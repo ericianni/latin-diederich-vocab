@@ -19,7 +19,7 @@
   function boxFromIvl(c) { const i = c.ivl || 0; if (i <= 0) return c.reps > 0 ? 1 : 0; return i <= 2 ? 1 : i <= 6 ? 2 : i <= 13 ? 3 : i <= 29 ? 4 : i <= 59 ? 5 : i <= 119 ? 6 : 7; }
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
-    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, church: false, churchMem: 'season' }, s.set || {});
+    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, andPos: false, church: false, churchMem: 'season' }, s.set || {});
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
         const c = s.cards[k];
@@ -600,10 +600,17 @@
   // Show a generated form; the user taps one chip per attribute. Any valid parse is accepted (rēgēs: nom. or acc. pl.).
   // After a right answer on an ambiguous form, the optional "And…?" step asks for the other readings (Settings toggle).
   // It is never graded: the card / drill score uses the first answer only; naming every reading just earns a note.
+  function introducedId(id) { return !!(S.cards['r:' + id] || S.cards['p:' + id] || (S.ds && S.ds.w && S.ds.w[id])); }
+  const POS_NAME = { noun: 'noun', verb: 'verb', adj: 'adjective', pron: 'pronoun' };
   function renderIdentify(it) {
     const w = BY[it.id], a = an(w), df = S.set.df, face = faceOf(w);
     const q = Identify.pick(a, [it.key], df); if (!q) return false;
-    const ps = Identify.parses(a, w, q.form, df); if (!ps.length) return false;
+    const own = Identify.parses(a, w, q.form, df); if (!own.length) return false;
+    const head = shownLa(face.la).split(/[ ,]/)[0];
+    for (const p of own) { p.wid = w.id; p.kind = a.kind; p.head = head; }
+    let ps = own;
+    const byId = new Map([[w.id, { w, a }]]);
+    let focusId = w.id;
     const base = q.key.split(':')[0], tkey = base === 'gdv' ? 'gdv.m' : base, ctx = csTarget(a, tkey);
     const sel = {}; let done = false, phase = 'ask', first = null, guesses = 0; const found = [];   // guesses: And…? tries left (one per remaining reading)
     const entry = shownLa(face.la);   // nouns/adjectives show only the headword until answered (genitive/gender would give it away)
@@ -611,19 +618,25 @@
       <div class="latin">${esc(q.form)}</div><div class="small muted">from <b>${esc(a.kind === 'verb' ? entry : entry.split(/[ ,]/)[0])}</b> · ${esc(face.en.slice(0, 80))}</div>
       <div id="idrows"></div><div id="ans"><button class="primary big" id="chk" style="margin-top:14px" disabled>Check</button>
       <div class="small muted center" id="idhint" style="margin-top:6px">Pick one in each row.</div></div>${it.nf ? '<div class="newtip small" id="pretip">New form for you: take your best guess. A refresher link comes with the answer.</div>' : ''}</div>`;
+    const focus = () => byId.get(focusId) || { w, a };
     const draw = () => {
-      const rows = Identify.rows(a, df, sel.mood), keep = new Set(rows.map(r => r[0]));
+      const fa = focus().a;
+      const rows = Identify.rows(fa, df, sel.mood), keep = new Set(rows.map(r => r[0]));
       for (const k of Object.keys(sel)) if (!keep.has(k)) delete sel[k];
       for (const [attr, op] of rows) { if (op.length === 1) sel[attr] = op[0][0]; else if (sel[attr] && !op.some(o => o[0] === sel[attr])) delete sel[attr]; }
-      $('#idrows').innerHTML = rows.map(([attr, op]) => { const lock = op.length === 1;
+      const lemmas = [];
+      if (phase === 'and') for (const p of ps) if (!lemmas.some(x => x.id === p.wid)) lemmas.push({ id: p.wid, head: p.head, kind: p.kind });
+      const wordRow = lemmas.length > 1 ? `<div class="idrow" data-a="word"><div class="small muted chiph">Word</div><div class="chips idc">${lemmas.map(x => `<button type="button" data-wid="${x.id}" class="${focusId === x.id ? 'on' : ''}" aria-pressed="${focusId === x.id}">${esc(x.head)} · ${esc(POS_NAME[x.kind] || x.kind)}</button>`).join('')}</div></div>` : '';
+      $('#idrows').innerHTML = wordRow + rows.map(([attr, op]) => { const lock = op.length === 1;
         return `<div class="idrow${lock ? ' locked' : ''}" data-a="${attr}"><div class="small muted chiph">${Identify.TITLE[attr]}${lock ? ' · set by your drill choices' : ''}</div>
           <div class="chips idc">${op.map(([v, l]) => `<button type="button" data-v="${v}" class="${sel[attr] === v ? 'on' : ''}" aria-pressed="${sel[attr] === v}"${lock ? ' disabled' : ''}>${l}</button>`).join('')}</div></div>`; }).join('');
-      document.querySelectorAll('#idrows .idrow:not(.locked) button').forEach(b => b.onclick = () => { if (done) return; sel[b.closest('.idrow').dataset.a] = b.dataset.v; draw(); });
-      const full = rows.every(([attr]) => sel[attr] != null) && (a.kind !== 'verb' || sel.mood);
+      document.querySelectorAll('#idrows [data-wid]').forEach(b => b.onclick = () => { if (done) return; focusId = +b.dataset.wid; for (const k of Object.keys(sel)) delete sel[k]; draw(); });
+      document.querySelectorAll('#idrows .idrow:not(.locked) button[data-v]').forEach(b => b.onclick = () => { if (done) return; sel[b.closest('.idrow').dataset.a] = b.dataset.v; draw(); });
+      const full = rows.every(([attr]) => sel[attr] != null) && (fa.kind !== 'verb' || sel.mood);
       $('#chk').disabled = !full; $('#idhint').style.visibility = full ? 'hidden' : '';
       if (matchMedia('(hover:hover)').matches) { const nx = full ? $('#chk') : document.querySelector('#idrows .idrow:not(.locked) .chips:not(:has(.on)) button'); if (nx) nx.focus({ preventScroll: true }); }
     };
-    const lbl = p => `<b>${esc(q.form)}</b> = ${esc(Identify.parseLabel(a, p))}`;
+    const lbl = p => { const who = p.head ? (POS_NAME[p.kind] || p.kind) + ' ' + p.head + ' · ' : ''; return `<b>${esc(q.form)}</b> = ${esc(who + Identify.parseLabel(byId.get(p.wid) ? byId.get(p.wid).a : a, p))}`; };
     // the "And…?" step: chips stay live (pre-set to the first answer); Check names one more reading, Skip / Done ends it
     const andStep = msg => {
       const left = ps.length - found.length, gl = guesses;
@@ -646,9 +659,18 @@
         return guesses <= 0 ? finish() : andStep('✗ Wrong — that isn’t a reading of this form. Try again, or skip (no penalty).');
       }
       done = true;
-      const g = Identify.grade(sel, ps); if ($('#pretip')) $('#pretip').remove();
+      const g = Identify.grade(sel, own); if ($('#pretip')) $('#pretip').remove();
       first = g;
-      if (g.ok && ps.length > 1 && S.set.andMore) { phase = 'and'; found.push(g.best); guesses = ps.length - 1; return andStep(''); }
+      if (g.ok && S.set.andMore) {
+        if (S.set.andPos) {
+          const items = [];
+          for (const ow of W) { if (!introducedId(ow.id) || ow.id === w.id) continue; const oa = an(ow); if (oa && !oa.skip && oa.tbl) items.push({ w: ow, a: oa }); }
+          const pool = Identify.crossPool(items, new Set(items.map(x => x.w.id)), w.id, a.kind);
+          for (const c of pool) byId.set(c.w.id, c);
+          ps = own.concat(Identify.crossParses(a, w, q.form, pool, df));
+        }
+        if (ps.length > 1) { phase = 'and'; found.push(g.best); guesses = ps.length - 1; return andStep(''); }
+      }
       finish();
     };
     const finish = () => {
@@ -665,7 +687,7 @@
       $('#ans').innerHTML = `<div class="answer">${g.ok ? '<div class="ok">✓ Right</div>' : `<div class="no">✗ Wrong${offTxt ? ' — check the ' + esc(offTxt) : ''}</div>`}
         ${andDone ? (found.length === ps.length ? `<div class="small andall">★ All ${ps.length} readings. Nice!</div>`
           : `<div class="small muted">You named ${found.length} of ${ps.length} readings. The others are below.</div>`) : ''}
-        <div class="small muted chiph">${many ? `${ps.length} valid answers (any one counts)` : 'The answer'}</div>
+        <div class="small muted chiph">${andDone ? ps.length + ' readings' : many ? `${own.length} valid answers (any one counts)` : 'The answer'}</div>
         <ul class="parses">${ps.map(p => andDone ? `<li class="${found.includes(p) ? 'got' : 'missed'}">${found.includes(p) ? '✓' : '○'} ${lbl(p)}${found.includes(p) ? '' : ' <span class="muted">(missed)</span>'}</li>`
           : `<li${!g.ok && p === g.best ? ' class="near"' : ''}>${lbl(p)}</li>`).join('')}</ul>${lex}
         ${a.tbl[tkey] ? `<div class="forms">${miniTable(a, tkey)}</div>` : ''}
@@ -1249,6 +1271,7 @@
       <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p>
       <div class="small muted" style="margin-top:14px">Identify drills: forms with more than one reading</div><div class="seg" id="sand"><button data-m="1" class="${S.set.andMore ? 'on' : ''}" aria-pressed="${!!S.set.andMore}">Ask “And…?”</button><button data-m="0" class="${S.set.andMore ? '' : 'on'}" aria-pressed="${!S.set.andMore}">Just show them</button></div>
       <p class="small muted">Some forms have several valid parses (puellae: genitive or dative singular, or nominative plural). Any one counts as right. With <b>Ask “And…?”</b> on, a right answer is followed by an optional prompt to name the other readings, with one guess per reading left; skipping costs nothing, and the score uses only your first answer.</p>
+      <div class="switchrow" style="margin-top:10px"><div class="grow"><b>And…? across parts of speech</b><div class="small muted">Also ask when the same spelling is another part of speech you have already studied, such as amor the noun and amor from amō. Off keeps the usual one-word question.</div></div><button type="button" class="switch${S.set.andPos ? ' on' : ''}" id="andpos" role="switch" aria-checked="${S.set.andPos ? 'true' : 'false'}" aria-label="And…? across parts of speech"></button></div>
       <p class="small muted">Drill settings (which forms, questions per set) are on the Drills tab.</p>
       <div class="row wrap" style="margin-top:14px"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
       <input type="file" id="impf" accept="application/json" hidden></div>
@@ -1272,6 +1295,7 @@
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
     document.querySelectorAll('#sand button').forEach(b => b.onclick = () => { S.set.andMore = b.dataset.m === '1'; save(); renderAbout(); });
+    $('#andpos').onclick = () => { S.set.andPos = !S.set.andPos; save(); renderAbout(); };
     $('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'latin1400-progress.json'; a.click(); };
     $('#imp').onclick = () => $('#impf').click();
     $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; S = fix(s); save(); rebuildDeck(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
