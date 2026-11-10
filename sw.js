@@ -1,5 +1,5 @@
 // Offline-first service worker: precache the whole app, serve from cache, refresh in background.
-const CACHE = 'latin1400-v41';
+const CACHE = 'latin1400-v42';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'morph.js', 'lessons.js', 'identify.js', 'drillpick.js', 'liturgical.js', 'church.js', 'sentences.html', 'sentences.js', 'sentences/engine.js', 'sentences/lexicon.js', 'sentences/lexicon_s1.js', 'sentences/lexicon_s2.js', 'sentences/lexicon_s3.js', 'sentences/lexicon_s4.js', 'sentences/lexicon_s5.js', 'sentences/lexicon_s7.js', 'sentences/lexicon_s8.js', 'data/words.json', 'data/church/tier1.json', 'manifest.webmanifest',
   'fonts/cormorant-garamond-500-latin.woff2', 'fonts/cormorant-garamond-500-latinext.woff2', 'fonts/cinzel-500-latin.woff2', 'fonts/eb-garamond-500-latin.woff2', 'fonts/eb-garamond-500-latinext.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png', 'icons/apple-touch-icon.png'];

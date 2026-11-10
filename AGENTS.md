@@ -96,7 +96,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v41`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v42`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug` (signed with `~/.android/debug.keystore`).
@@ -149,7 +149,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 | alius, uter, uterque | `pal`, `pu`, `puq` | gen. `-īus`, dat. `-ī`. alius gen. `alterīus`, neuter `aliud` |
 | nēmō | `pn` | singular only: `nēmō`, `nūllīus`, `nēminī`, `nēminem`, `nūllō` |
 
-`is` and `sē` are sentence-engine helpers from the `PRON_OBJ` tier (80+ seen content words), glossed when that lemma has not been seen. `sē` is only an object, indirect object, or `sēcum` (never `cum sē`), and only with the clause’s own third-person subject (`himself` / `herself` / `itself` / `themselves`). `is` is a non-reflexive direct object (`eum`, `eam`, `id`, `eōs`, `eās`, `ea`), indirect object (`eī`, `eīs`), or possessive genitive (`eius`, `eōrum`, `eārum`), never a nominative subject. Shown forms are `Morph.standard`. `iī` / `ī` are alternates of nominative plural `eī` only; `iīs` / `īs` are alternates of `eīs`. Syncretic English is accepted (`eī` to him/her/it, `eius` his/her/its).
+`is` and `sē` are sentence-engine helpers from the `PRON_OBJ` tier (80+ seen content words), glossed when that lemma has not been seen. `sē` is only an object, indirect object, or `sēcum` (never `cum sē`), and only with the clause’s own third-person subject (`himself` / `herself` / `itself` / `themselves`). `sēcum` is only generated with a verb of carrying, bringing, or taking (`ferō`, `portō`, `dūcō`, and `habeō` in the sense ‘have with oneself’) and only when that subject is third person. `is` is a non-reflexive direct object (`eum`, `eam`, `id`, `eōs`, `eās`, `ea`), indirect object (`eī`, `eīs`), or possessive genitive (`eius`, `eōrum`, `eārum`), never a nominative subject, and never the clause’s own subject (that would be `suus`, which this engine does not generate). Shown forms are `Morph.standard`. `iī` / `ī` are alternates of nominative plural `eī` only; `iīs` / `īs` are alternates of `eīs`. Syncretic English is accepted (`eī` to him/her/it). Singular `eius` accepts his, her, and its; the helper gloss lists `his/her/its`. `eōrum` and `eārum` are their.
 
 ## Sentences in Drills
 

@@ -31,6 +31,8 @@
   const PRON_KEYS = Object.keys(PRON_NP).map(p => 'pron_' + p);
   // is (anaphoric him/her/it) and sē (reflexive). Forms come from morph.js so the shown token is Morph.standard
   // (eī, eīs, eius, eum, …; sē, with sēsē only as an accepted alternate). Not nominative subjects.
+  // sēcum is only 'with him/herself' beside a verb of carrying, bringing, or taking, and only for a third-person subject.
+  // A genitive eius / eōrum / eārum is someone other than this clause's subject (that would be suus).
   const IS_ID = 507, SE_ID = 495;
   let _isMorph = null, _seMorph = null;
   function wordById(id) { const W = WORDS(); return (W[id] && W[id].id === id) ? W[id] : W.find(w => w.id === id); }
@@ -418,6 +420,8 @@
 
   // Section II: verbs whose 'human' object makes no sense with a speaker/addressee object (*"The farmer buries me")
   const NO_PRON_OBJ = ['sepelio'];
+  // sēcum ('with him/herself'): carry, bring, or take. habeō is 'have with oneself', which sēcum supplies.
+  const SECUM_VERBS = new Set(['fero', 'porto', 'duco', 'habeo']);
   const PRON_PROTO = () => nounInfo('pron_1s'); // all personal-pronoun pseudo-nouns share their tags
   const DET_KEYS = () => Object.keys(LEX.adjs).filter(k => LEX.adjs[k].kind && inPool(LEX.adjs[k].id));
   function specFor(combo) {
@@ -443,13 +447,14 @@
     const used = new Set();
     let voice = 'act', fr, v, subj = null, pron = null, obj = null, io = null, means = null, pp = null, nocte = false, pred = null;
     // PRON_OBJ: a personal pronoun, or (from this tier) sē / is, as object, indirect object, dative, sēcum, or passive agent.
+    // sēcum is a transitive carrying verb plus the enclitic, not an intransitive "with herself".
     // DET: a possessive or demonstrative determiner. is is never the subject; sē is only a third-person object.
     let tpl = template, forcePron = null, forceDet = false, coord = null;
     if (template === 'PRON_OBJ') {
       const roles = ['O', 'O', 'IO', 'DAT', 'CUM', 'AGENT'];
       if (anaphoraOn()) roles.push('SE_O', 'SE_O', 'SE_DAT', 'SE_CUM', 'IS_O', 'IS_O', 'IS_DAT', 'IS_GEN');
       forcePron = opts.pronTarget ? roleFor(opts.pronTarget) : pick(rng, roles);
-      tpl = { O: 'SOV', IO: 'DAT_IO', DAT: 'DAT_VERB', CUM: 'SV_PP', AGENT: 'PASSIVE', SE_O: 'SOV', SE_DAT: 'DAT_IO', SE_CUM: 'SV_PP', IS_O: 'SOV', IS_DAT: 'DAT_IO', IS_GEN: 'SOV' }[forcePron];
+      tpl = { O: 'SOV', IO: 'DAT_IO', DAT: 'DAT_VERB', CUM: 'SV_PP', AGENT: 'PASSIVE', SE_O: 'SOV', SE_DAT: 'DAT_IO', SE_CUM: 'SOV', IS_O: 'SOV', IS_DAT: 'DAT_IO', IS_GEN: 'SOV' }[forcePron];
     }
     if (template === 'ADV') tpl = pick(rng, ['SV', 'SV', 'SV_PP', 'SOV', 'SOV', 'PASSIVE', 'COPULA', 'DAT_VERB', 'DAT_IO', 'PRONOUN', 'MEANS']);
     if (template === 'DET') { forceDet = true; tpl = pick(rng, ['SV', 'SOV', 'SOV', 'PASSIVE', 'COPULA', 'SV_PP', 'DAT_IO']); }
@@ -528,8 +533,8 @@
       const isP = () => makeIs({ g: 'm', num: 'sg', kase: 'acc' });
       const seNum = opts.pronTarget && String(opts.pronTarget).startsWith('pr|') ? specFor(opts.pronTarget).num : null;
       const isSpec = (forcePron === 'IS_O' || forcePron === 'IS_DAT') ? (opts.pronTarget ? specFor(opts.pronTarget) : randomIs(rng, forcePron)) : null;
-      if (tpl === 'SV' || tpl === 'SV_PP' || tpl === 'PP_ADJ') frames = frameList(f => f.t === 'intr' && ((forcePron !== 'CUM' && forcePron !== 'SE_CUM') || (f.pp || []).some(t => t.replace('!', '') === 'cum')));
-      else if (tpl === 'SOV' || tpl === 'SOV_ADJ') frames = frameList((f, k) => f.t === 'tr' && (forcePron === 'SE_O' ? matches(seP(), f.o) : forcePron === 'IS_O' ? matches(isP(), f.o) : forcePron === 'IS_GEN' ? true : (forcePron !== 'O' || (matches(P0, f.o) && !NO_PRON_OBJ.includes(k)))));
+      if (tpl === 'SV' || tpl === 'SV_PP' || tpl === 'PP_ADJ') frames = frameList(f => f.t === 'intr' && (forcePron !== 'CUM' || (f.pp || []).some(t => t.replace('!', '') === 'cum')));
+      else if (tpl === 'SOV' || tpl === 'SOV_ADJ') frames = frameList((f, k) => f.t === 'tr' && (forcePron === 'SE_CUM' ? SECUM_VERBS.has(k) : forcePron === 'SE_O' ? matches(seP(), f.o) : forcePron === 'IS_O' ? matches(isP(), f.o) : forcePron === 'IS_GEN' ? true : (forcePron !== 'O' || (matches(P0, f.o) && !NO_PRON_OBJ.includes(k)))));
       else if (tpl === 'DAT_IO') frames = frameList(f => f.t === 'ditr' && (forcePron === 'SE_DAT' ? matches(seP(), f.io) : forcePron === 'IS_DAT' ? matches(isP(), f.io) : (forcePron !== 'IO' || matches(P0, f.io))));
       else if (tpl === 'DAT_VERB') frames = frameList(f => f.t === 'dat' && (forcePron !== 'DAT' || matches(P0, f.o)));
       else if (tpl === 'MEANS') frames = frameList(f => !!f.instr);
@@ -571,7 +576,8 @@
       if (tpl === 'MEANS') { const m = chooseNoun(rng, fr.f.instr, used); used.add(m.key); means = mkNP(m, 'abl', meansNum(m, subj ? subj.num : (pron[1] === 's' ? 'sg' : 'pl'))); }
       const ppTypes = fr.f.pp || [];
       const forcePP = tpl === 'SV_PP' || tpl === 'PP_ADJ' || ppTypes.some(t => t.endsWith('!'));
-      if (forcePron === 'SE_CUM') { if (pron || !subj) return null; pp = { type: 'cum', np: mkNP(makeSe(subj), 'abl', subj.num) }; used.add('pronNP'); }
+      // A noun subject is third person. A first- or second-person subject (pron) is not a referent of sēcum.
+      if (forcePron === 'SE_CUM') { if (pron || !subj || subj.noun.pron) return null; pp = { type: 'cum', np: mkNP(makeSe(subj), 'abl', subj.num) }; used.add('pronNP'); }
       else if (ppTypes.length && (forcePP || rng() < (tpl === 'SV' ? 0.35 : 0.3))) {
         if (!forcePP && ppTypes.includes('nocte') && inPool(LEX.extras.nox.id) && rng() < 0.3) nocte = true; else pp = pickPP(ppTypes);
         if (forcePP && !pp) return null;
@@ -580,7 +586,14 @@
         const hosts = [subj, obj].filter(x => x && !x.noun.pron);
         if (!hosts.length) return null;
         const spec = opts.pronTarget ? specFor(opts.pronTarget) : randomIs(rng, 'IS_GEN');
-        const host = pick(rng, hosts); host.adj = null;
+        // eius on the object, with the subject's gender and number, reads as the subject's own (suus).
+        // Put that genitive on the subject NP instead: "eius pater …" is someone else's father.
+        const subjGs = (subj && subj.noun && subj.noun.genders) || [];
+        const coref = host => host && host !== subj && subj && !subj.noun.pron && spec.num === subj.num && (spec.num === 'pl' || subjGs.includes(spec.g));
+        let host = pick(rng, hosts);
+        if (coref(host)) host = hosts.includes(subj) ? subj : null;
+        if (!host || coref(host)) return null;
+        host.adj = null;
         host.poss = { noun: makeIs(spec), num: spec.num };
         used.add('pronNP');
       }

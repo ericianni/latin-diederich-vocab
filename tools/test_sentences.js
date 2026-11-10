@@ -142,7 +142,12 @@ for (const seed of SEEDS) for (const s of E.generateMany(250, seed)) {
   if (S.pp && S.pp.type === 'agent') ok(E.matches(S.pp.np.noun, f.s), `${id} agent not a valid subject of ${s.verb}`);
   if (S.obj) ok(E.matches(S.obj.noun, f.o), `${id} object ${S.obj.noun.key} not allowed for ${s.verb}`);
   if (S.io) ok(E.matches(S.io.noun, f.t === 'ditr' ? f.io : f.o), `${id} dative ${S.io.noun.key} not allowed for ${s.verb}`);
-  if (S.pp && S.pp.type !== 'agent') ok((f.pp || []).map(x => x.replace('!', '')).includes(S.pp.type), `${id} PP type ${S.pp.type} not allowed for ${s.verb}`);
+  if (S.pp && S.pp.type !== 'agent') {
+    const listed = (f.pp || []).map(x => x.replace('!', '')).includes(S.pp.type);
+    // sēcum is not a free comitative slot: only carry / bring / take, and only the reflexive
+    const secum = S.pp.type === 'cum' && S.pp.np.noun.key === 'pron_se' && ['fero', 'porto', 'duco', 'habeo'].includes(s.verb);
+    ok(listed || secum, `${id} PP type ${S.pp.type} not allowed for ${s.verb}`);
+  }
   const lex = s.lexemes.filter(x => !E.LEX.verbs[x]).map(x => x.replace(/^adj:/, '')); ok(new Set(lex).size === lex.length, `${id} a word is used twice`);
   for (const np of [S.subj, S.io, S.means, S.pp && S.pp.np].filter(Boolean)) if (np.case === 'dat' || np.case === 'abl') ok(!(np.noun.noDatAblPl && np.num === 'pl'), id + ' dea dat/abl pl used');
   // English agreement
@@ -191,14 +196,22 @@ for (const seed of SEEDS) for (const s of E.generateMany(250, seed)) {
   for (const np of anNps) {
     if (np.noun.key === 'pron_is') ok(np.case !== 'nom', id + ' nominative is: ' + s.la);
     if (np.poss) { nIs++; const cell = np.poss.noun.form('gen', np.poss.num); const std = Morph.standard(cell); ok(s.laTokens.includes(std) && std === cell[0], id + ' possessive not the standard form ' + std);
-      if (np.poss.noun.isAlts && np.poss.noun.isAlts.length > 1) for (const a of np.poss.noun.isAlts) ok(E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + np.poss.noun.gloss + '\\b', 'i'), a)), id + ' eius English ' + a + ' rejected: ' + s.en); }
+      if (np.poss.noun.isAlts && np.poss.noun.isAlts.length > 1) for (const a of np.poss.noun.isAlts) ok(E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + np.poss.noun.gloss + '\\b', 'i'), a)), id + ' eius English ' + a + ' rejected: ' + s.en);
+      // eius / eōrum / eārum is not the clause's own subject (that is suus)
+      if (np !== S.subj && S.subj && !S.subj.noun.pron && np.poss.num === S.subj.num) {
+        const gs = S.subj.noun.genders || [];
+        ok(!(np.poss.num === 'pl' || gs.includes(np.poss.noun.g)), id + ' possessive corefers with the subject: ' + s.la + ' / ' + s.en);
+      } }
     if (np.noun.key !== 'pron_se' && np.noun.key !== 'pron_is') continue;
     if (np.noun.key === 'pron_is') nIs++; else nSe++;
     const cell = np.noun.form(np.case, np.num);
     const std = Morph.standard(cell);
     const cum = S.pp && S.pp.np === np && np.noun.cumForm;
     ok(std === cell[0], id + ' cell does not lead with Morph.standard');
-    if (cum) ok(s.laTokens.includes(np.noun.cumForm) && !s.laTokens.includes('cum') && !s.laTokens.includes('sēsē'), id + ' cum sē / sēsē shown');
+    if (cum) {
+      ok(s.laTokens.includes(np.noun.cumForm) && !s.laTokens.includes('cum') && !s.laTokens.includes('sēsē'), id + ' cum sē / sēsē shown');
+      if (np.noun.key === 'pron_se') ok(['fero', 'porto', 'duco', 'habeo'].includes(s.verb) && s.spec.fr.f.t === 'tr' && s.spec.obj, id + ' sēcum is not carry/bring/take: ' + s.verb + ' ' + s.la);
+    }
     else { ok(s.laTokens.includes(std), id + ' standard form ' + std + ' not shown'); for (const alt of cell) if (alt !== std) ok(!s.laTokens.includes(alt), id + ' alternate shown: ' + alt); }
     if (np.noun.key === 'pron_se') {
       ok(!S.pron && s.person[0] === '3', id + ' sē with a first- or second-person subject');
@@ -558,6 +571,45 @@ for (const k of Object.keys(E.LEX.nouns)) { const n = E.nounInfo(k); ok(!!n.form
   ok(eius.la === 'Puella patrem eius amat.' && ['his', 'her', 'its'].every(w => E.gradeEnglish(eius, 'The girl loves ' + w + ' father.')), 'eius accepts his, her, and its: ' + eius.en);
   const earum = E.build({ verb: 'amo', subj: { n: 'puer' }, obj: { n: 'mater' }, poss: { host: 'obj', g: 'f', num: 'pl' } });
   ok(/eārum/.test(earum.la) && earum.en === 'The boy loves their mother.', 'eārum is their: ' + earum.la);
+  ok(!E.gradeEnglish(earum, 'The boy loves his mother.') && !E.gradeEnglish(earum, 'The boy loves her mother.') && !E.gradeEnglish(earum, 'The boy loves its mother.'), 'eārum does not accept his, her, or its');
+  const eorum = E.build({ verb: 'amo', subj: { n: 'puella' }, obj: { n: 'pater' }, poss: { host: 'obj', g: 'm', num: 'pl' } });
+  ok(/eōrum/.test(eorum.la) && eorum.en === 'The girl loves their father.' && !E.gradeEnglish(eorum, 'The girl loves his father.'), 'eōrum is their, not his: ' + eorum.la);
+  // generated eius accepts every gender the form allows, and is not the subject's own possession
+  const SECUM = ['fero', 'porto', 'duco', 'habeo'];
+  let nEius = 0, nPlGen = 0, nSec = 0;
+  for (let i = 0; i < 24; i++) {
+    const s = E.generate(E.mulberry32(8800 + i), { template: 'PRON_OBJ', pronTarget: i % 2 ? 'pi|f.gen.sg' : 'pi|m.gen.sg' });
+    const host = s.spec.obj && s.spec.obj.poss ? s.spec.obj : s.spec.subj;
+    ok(host && host.poss && /eius/.test(s.la), 'generated genitive singular is eius: ' + s.la);
+    const gloss = host.poss.noun.gloss;
+    nEius++;
+    for (const w of ['his', 'her', 'its']) ok(E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + gloss + '\\b', 'i'), w)), 'generated eius rejects ' + w + ': ' + s.en);
+    ok(!E.gradeEnglish(s, s.en.replace(new RegExp('\\b' + gloss + '\\b', 'i'), 'their')), 'generated eius accepts their: ' + s.en);
+    const subj = s.spec.subj;
+    if (host !== subj && subj && !subj.noun.pron && host.poss.num === subj.num) ok(!(subj.noun.genders || []).includes(host.poss.noun.g), 'eius stands for the subject: ' + s.la + ' / ' + s.en);
+  }
+  for (let i = 0; i < 16; i++) {
+    const s = E.generate(E.mulberry32(8900 + i), { template: 'PRON_OBJ', pronTarget: i % 2 ? 'pi|f.gen.pl' : 'pi|n.gen.pl' });
+    ok(/eārum|eōrum/.test(s.la) && /\btheir\b/i.test(s.en), 'plural genitive: ' + s.la + ' / ' + s.en);
+    ok(!E.gradeEnglish(s, s.en.replace(/\btheir\b/i, 'his')) && !E.gradeEnglish(s, s.en.replace(/\btheir\b/i, 'her')) && !E.gradeEnglish(s, s.en.replace(/\btheir\b/i, 'its')), 'plural genitive accepts a singular possessive: ' + s.en);
+    const host = s.spec.obj && s.spec.obj.poss ? s.spec.obj : s.spec.subj;
+    const subj = s.spec.subj;
+    nPlGen++;
+    if (host !== subj && subj && host.poss && host.poss.num === 'pl' && subj.num === 'pl') ok(false, 'eōrum/eārum used for the plural subject: ' + s.la + ' / ' + s.en);
+  }
+  // sēcum only with carry / bring / take, and only a third-person subject
+  for (let i = 0; i < 30; i++) {
+    const s = E.generate(E.mulberry32(9000 + i), { template: 'PRON_OBJ', pronTarget: i % 2 ? 'pr|abl.pl' : 'pr|abl.sg' });
+    nSec++;
+    ok(s.laTokens.includes('sēcum') && !s.laTokens.includes('cum') && !s.laTokens.includes('sē'), 'sēcum token: ' + s.la);
+    ok(SECUM.includes(s.verb) && s.spec.fr.f.t === 'tr' && s.spec.obj, 'sēcum verb ' + s.verb + ': ' + s.la + ' / ' + s.en);
+    ok(!s.spec.pron && s.person[0] === '3', 'sēcum person ' + s.person + ': ' + s.la);
+    ok(!['eo', 'venio', 'curro', 'discedo', 'redeo', 'ambulo', 'fugio'].includes(s.verb), 'sēcum with a verb of motion: ' + s.verb);
+    const self = s.person === '3p' ? 'themselves' : (s.spec.subj.noun.genders.length !== 1 || s.spec.subj.noun.genders[0] === 'n' ? 'itself' : s.spec.subj.noun.genders[0] === 'f' ? 'herself' : 'himself');
+    ok(s.en.toLowerCase().includes('with ' + self), 'sēcum English: ' + s.en);
+    ok(!E.gradeEnglish(s, s.en.replace(/\b(himself|herself|itself|themselves)\b/i, 'myself')), 'sēcum accepts myself: ' + s.en);
+  }
+  ok(nEius === 24 && nPlGen === 16 && nSec === 30, 'eius / plural genitive / sēcum samples all generated');
   const nomPl = Morph.analyze(W[507]).tbl['m.nom.pl'];
   ok(Morph.grade('iī', nomPl, true).alternate && Morph.grade('iī', nomPl, true).standard === 'eī' && Morph.grade('ī', nomPl, true).alternate, 'iī and ī are alternates of nominative plural eī only');
   ok(!Morph.grade('iī', Morph.analyze(W[507]).tbl['m.dat.sg'], true).ok, 'iī is not an alternate of dative eī');

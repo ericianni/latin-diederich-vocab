@@ -397,7 +397,12 @@
         const en = cum ? 'with ' + np.noun.gloss : np.case === 'dat' ? 'to ' + np.noun.gloss : np.noun.gloss;
         glossAt(cum || std, np.noun.id, en);
       }
-      if (np.poss && np.poss.noun) glossAt(engine.Morph.standard(np.poss.noun.form('gen', np.poss.num)), np.poss.noun.id, np.poss.noun.gloss);
+      if (np.poss && np.poss.noun) {
+        const alts = np.poss.noun.isAlts;
+        // eius does not mark gender, so the gloss lists every English the form allows. eōrum / eārum are "their".
+        const en = np.poss.num !== 'pl' && alts && alts.length > 1 ? alts.join('/') : np.poss.noun.gloss;
+        glossAt(engine.Morph.standard(np.poss.noun.form('gen', np.poss.num)), np.poss.noun.id, en);
+      }
     }
     const sumId = engine.LEX.verbs.sum && engine.LEX.verbs.sum.id;
     if (typeof sumId === 'number' && !seen.has(sumId)) {
