@@ -884,13 +884,13 @@
   }
   function renderCheat() {
     setSub('Cheat sheet');
-    V().innerHTML = `<div class="card sheet">${cheatHTML()}</div>`;
+    V().innerHTML = `<div class="card sheetcard"><div class="sheet">${cheatHTML()}</div></div>`;
     bindJump(V());
   }
   function openSheet(id) {
     closeSheet();
     const o = document.createElement('div'); o.id = 'overlay';
-    o.innerHTML = `<div class="ovtop"><b class="grow">Cheat sheet</b><button id="ovx">Back to drill ✕</button></div><div class="ovbody sheet">${cheatHTML()}</div>`;
+    o.innerHTML = `<div class="ovtop"><b class="grow">Cheat sheet</b><button id="ovx">Back to drill ✕</button></div><div class="ovbody"><div class="sheet">${cheatHTML()}</div></div>`;
     document.body.appendChild(o); document.body.style.overflow = 'hidden';
     $('#ovx').onclick = closeSheet; bindJump(o.querySelector('.ovbody'));
     setTimeout(() => gotoAnchor(o.querySelector('.ovbody'), id), 0);
