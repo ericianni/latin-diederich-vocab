@@ -953,7 +953,7 @@
     const list = lessonSet();
     const n = list.filter(l => lessonDone(l.id)).length;
     const secs = [...new Set(list.map(l => l.sec))];
-    const massNote = S.set.church ? ' Church mode adds the Ordinary of the Mass, then the basic prayers, at the top. Pronunciation is on the About tab.' : '';
+    const massNote = S.set.church ? ' Church mode adds the Ordinary of the Mass, then the basic prayers, then six short readings, at the top. Pronunciation is on the About tab.' : '';
     V().innerHTML = `<div class="card"><div class="prompt-kind">Lessons · about 5–10 minutes each</div>
       <p class="small muted" style="margin:6px 0 10px">What each case, declension, and conjugation does and how to spot it, with endings tables and a short quick check.${massNote} <b>${n}</b> of ${list.length} done.</p>
       <div class="bar"><i style="width:${(100 * n / list.length).toFixed(1)}%"></i></div></div>
@@ -1293,8 +1293,9 @@
     fetch('data/words.json').then(r => r.json()),
     fetch('data/church/tier1.json').then(r => r.json()),
     fetch('data/church/tier2.json').then(r => r.json()),
-  ]).then(([all, tier1, tier2]) => {
-    PACK = Church.merge([tier1, tier2]);
+    fetch('data/church/tier3.json').then(r => r.json()),
+  ]).then(([all, tier1, tier2, tier3]) => {
+    PACK = Church.merge([tier1, tier2, tier3]);
     CLASSICAL = all.filter(w => !w.d);
     CHURCH_WORDS = PACK.words || [];
     OVERLAYS = Church.overlayMap(PACK, Morph.plain);

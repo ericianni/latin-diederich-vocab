@@ -302,6 +302,76 @@ const weave = Church.newWordKeys(classical.slice(0, 12).concat(tier2.words.slice
 ok(weave.length === 6 && weave.filter(k => Number(k.slice(2)) >= 10076).length >= 1 && weave.filter(k => Number(k.slice(2)) >= 10076).length <= 2, 'tier 2 words use the 1:2 weave');
 ok(!fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('tier2.json') === false, 'tier 2 is in the service worker');
 
+// --- tier 3: six readings after the prayers ---
+const tier3 = JSON.parse(fs.readFileSync(path.join(root, 'data/church/tier3.json'), 'utf8'));
+const allPacks = Church.merge([pack, tier2, tier3]);
+ok(allPacks.lessons.length === pack.lessons.length + tier2.lessons.length + 6, 'six reading lessons follow the prayers');
+ok(allPacks.lessons.slice(0, pack.lessons.length).every(l => l.sec === 'The Mass'), 'Mass lessons still lead');
+ok(allPacks.lessons.slice(pack.lessons.length, pack.lessons.length + tier2.lessons.length).every(l => l.sec === 'Prayers'), 'prayers stay between the Mass and the readings');
+ok(allPacks.lessons.slice(pack.lessons.length + tier2.lessons.length).every(l => l.sec === 'Reading'), 'readings are their own section');
+ok(tier3.lessons.length === 6 && tier3.lessons.reduce((n, l) => n + l.quiz.qs.length, 0) === 18, 'six lessons, eighteen checks');
+ok(/Migne/.test(tier3.about.sources) && /Leonine/.test(tier3.about.sources) && /Confessiones/.test(tier3.about.sources), 'tier 3 credits');
+const tier2Max = Math.max(...tier2.words.map(w => w.id));
+const byAll = new Map();
+for (const w of classical.concat(pack.words, tier2.words, tier3.words)) {
+  const k = key(w.la);
+  if (!byAll.has(k)) byAll.set(k, []);
+  byAll.get(k).push(w);
+}
+for (const w of tier3.words) {
+  ok(w.id > tier2Max && !classicalIds.has(w.id) && !ids.has(w.id), 'tier 3 id ' + w.id);
+  ok(w.church === true, 'tier 3 flag ' + w.la);
+  ids.add(w.id);
+  const a = Morph.analyze(w, { church: true });
+  ok(!a.skip || !/error|not recognized|could not|unrecognized|unusual|Greek/.test(a.skip), 'tier 3 analyze ' + w.la + ' ' + a.skip);
+  if (INFLECTED.has(w.pos)) ok(a.tbl && !a.skip, 'tier 3 paradigm ' + w.la);
+  ok(byAll.get(key(w.la)).length === 1, 'tier 3 lemma collides ' + w.la);
+}
+for (const o of tier3.overlays) {
+  const k = plain(o.lemma);
+  ok(classicalKeys.has(k) && !tier3.words.some(w => key(w.la) === k), 'tier 3 overlay ' + k);
+  ok(!pack.overlays.some(x => plain(x.lemma) === k) && !tier2.overlays.some(x => plain(x.lemma) === k), 'tier 3 overlay repeats an earlier one ' + k);
+}
+const eru = tier3.words.find(w => w.la.startsWith('ērudiō'));
+ok(Morph.analyze(eru).tbl['inf.act.pres'][0] === 'ērudīre', 'ērudīre is the infinitive');
+let t3tokens = 0;
+for (const tok of Church.tokensOf(tier3)) {
+  t3tokens++;
+  const lemmas = [].concat(tok.lemma);
+  for (const lem of lemmas) {
+    const hits = byAll.get(lem) || [];
+    ok(hits.length > 0, 'tier 3 unresolved ' + tok.section + ' ' + tok.surface + ' -> ' + lem);
+    ok(hits.some(w => formOk(w, tok.surface)), 'tier 3 form ' + tok.section + ' ' + tok.surface + ' -> ' + lem);
+  }
+}
+ok(t3tokens > 80, 'tier 3 token count ' + t3tokens);
+const joined = sec => tier3.texts.find(t => t.id === sec).lines.map(l => l.words.map(w => w.t).join(' ')).join(' ');
+ok(joined('aug-1').startsWith('Magnus es, Domine') && joined('aug-1').endsWith('creātūrae tuae.'), 'Confessions 1.1.1 boundaries');
+ok(joined('aug-2') === 'Tū excitās, ut laudāre tē dēlectet; quia fēcistī nōs ad tē, et inquiētum est cor nostrum, dōnec requiēscat in tē.', 'the next sentence only');
+ok(joined('aug-3').startsWith('Sērō tē amāvī') && joined('aug-3').endsWith('nōn eram.') && !/tenēbant/.test(joined('aug-3')), 'the shorter Sero te amavi cut');
+ok(joined('aq-pro').startsWith('Quia Catholicae vēritātis doctor') && joined('aq-pro').endsWith('incipientium.'), 'the prologue sentence is complete');
+ok(joined('aq-gratia').includes('Cum enim grātia nōn tollat nātūram') && joined('aq-gratia').endsWith('cāritātī.'), 'the grace sentence is the Leonine reply, not the short saying');
+ok(joined('aq-revel').startsWith('Respondeō dīcendum quod necessārium fuit') && joined('aq-revel').endsWith('investīgantur.') && !/Prīmō/.test(joined('aq-revel')), 'the reply stops at investigantur');
+ok(!/Psal\./.test(JSON.stringify(tier3.texts)) && !/Isaiae/.test(JSON.stringify(tier3.texts)), 'editorial citations are not inserted as text');
+for (const l of tier3.lessons) {
+  ok(/not beginner Latin/.test(l.lead), 'difficulty labeled ' + l.id);
+  ok(l.quiz.qs.length === 3, 'three checks ' + l.id);
+  for (const sid of l.sections) ok(tier3.texts.some(t => t.id === sid), 'section ' + sid);
+  for (const k of l.words) ok(byAll.has(k), 'lesson word ' + l.id + ' ' + k);
+}
+const off3 = Church.activeWords(classical, allPacks.words, Church.overlayMap(allPacks, Morph.plain), false, Morph.plain);
+const on3 = Church.activeWords(classical, allPacks.words, Church.overlayMap(allPacks, Morph.plain), true, Morph.plain);
+ok(!off3.some(w => w.id === 10100) && on3.some(w => w.id === 10100), 'a tier 3 word is hidden until Church mode is on');
+const cards3 = { 'r:10100': { box: 5, due: 0 } };
+const snap3 = JSON.stringify(cards3);
+ok(!Church.dueCardKeys(cards3, off3, 3).includes('r:10100') && Church.dueCardKeys(cards3, on3, 3).includes('r:10100'), 'tier 3 review waits for Church mode');
+ok(JSON.stringify(cards3) === snap3, 'a reading word’s card was rewritten');
+const weave3 = Church.newWordKeys(classical.slice(0, 12).concat(tier3.words.slice(0, 6)), {}, 6, true);
+ok(weave3.length === 6 && weave3.filter(k => Number(k.slice(2)) >= 10098).length >= 1 && weave3.filter(k => Number(k.slice(2)) >= 10098).length <= 2, 'tier 3 words use the same 1:2 weave');
+ok(fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('data/church/tier3.json'), 'tier 3 is cached for offline use');
+ok(/S\.lessons\[id\]/.test(fs.readFileSync(path.join(root, 'app.js'), 'utf8')) && !/function markLesson[\s\S]{0,240}S\.cards/.test(fs.readFileSync(path.join(root, 'app.js'), 'utf8')), 'finishing a reading does not write a Leitner card');
+
 console.log('OK', n);
 console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);
 console.log('tier2 words', tier2.words.length, 'overlays', tier2.overlays.length, 'tokens', t2tokens, 'lessons', tier2.lessons.length);
+console.log('tier3 words', tier3.words.length, 'overlays', tier3.overlays.length, 'tokens', t3tokens, 'lessons', tier3.lessons.length);

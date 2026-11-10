@@ -1,5 +1,5 @@
 /* Church Latin helpers shared by the app and tools/test_church.js.
-   Tier 1 (the Ordinary) is data/church/tier1.json. Tier 2 (the basic prayers) is data/church/tier2.json.
+   Tier 1 (the Ordinary) is data/church/tier1.json. Tier 2 (the basic prayers) is data/church/tier2.json. Tier 3 (six readings) is data/church/tier3.json.
    The app merges the packs and shows both only while Church mode is on. */
 (function (root) {
   'use strict';

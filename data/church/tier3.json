@@ -1,0 +1,202 @@
+{
+  "about": {
+    "sources": "<p>Church Latin, tier 3, is six short readings. They are not beginner Latin. Augustine is the public-domain text of the <b>Confessiones</b> in Migne’s 1841 edition: book 1, chapter 1, from <i>Magnus es, Domine</i> through the second <i>aliqua portiō creātūrae tuae</i>, then the next sentence, and book 10, chapter 27, from <i>Sērō tē amāvī</i> through <i>tēcum nōn eram</i>. The parenthetical verse numbers in that edition are the editor’s, so they are not part of these sentences. Thomas Aquinas is the Leonine text (Rome, 1888) of the <b>Summa theologiae</b>: the prologue through <i>ad ērudītiōnem incipientium</i>, First Part, question 1, article 8, reply to the second objection, and the opening sentence of the reply in article 1. The English is a new literal translation made for this app. Macrons follow this app’s spelling; the Leonine <i>tanquam</i> is shown as <i>tamquam</i>. The words themselves are not rewritten, and no biblical sentence has been added.</p>"
+  },
+  "overlays": [
+    {"lemma": "virtus", "en": "power, strength; valor, virtue"},
+    {"lemma": "foris", "en": "outside; out of doors, abroad"},
+    {"lemma": "voluntas", "en": "the will; a wish, desire"}
+  ],
+  "words": [
+    {"id": 10098, "la": "laudābilis, -e", "en": "praiseworthy", "pos": "adjective", "church": true},
+    {"id": 10099, "la": "valdē", "en": "greatly, very", "pos": "adverb", "church": true},
+    {"id": 10100, "la": "portiō, -ōnis, f.", "en": "a portion, share", "pos": "noun", "church": true},
+    {"id": 10101, "la": "creātūra, -ae, f.", "en": "a creature, a created thing", "pos": "noun", "church": true},
+    {"id": 10102, "la": "circumferō, circumferre, circumtulī, circumlātum", "en": "to carry around", "pos": "verb", "church": true},
+    {"id": 10103, "la": "mortālitās, -ātis, f.", "en": "mortality", "pos": "noun", "church": true},
+    {"id": 10104, "la": "testimōnium, -ī, n.", "en": "testimony, evidence", "pos": "noun", "church": true},
+    {"id": 10105, "la": "dēlectō, -āre, -āvī, -ātum", "en": "to delight, please", "pos": "verb", "church": true},
+    {"id": 10106, "la": "inquiētus, -a, -um", "en": "restless", "pos": "adjective", "church": true},
+    {"id": 10107, "la": "requiēscō, requiēscere, requiēvī, requiētum", "en": "to rest", "pos": "verb", "church": true},
+    {"id": 10108, "la": "sērō", "en": "late", "pos": "adverb", "church": true},
+    {"id": 10109, "la": "pulchritūdō, -inis, f.", "en": "beauty", "pos": "noun", "church": true},
+    {"id": 10110, "la": "intus", "en": "inside", "pos": "adverb", "church": true},
+    {"id": 10111, "la": "dēformis, -e", "en": "misshapen, ugly", "pos": "adjective", "church": true},
+    {"id": 10112, "la": "irruō, -ere, irruī", "en": "to rush in or upon", "pos": "verb", "church": true},
+    {"id": 10113, "la": "vēritās, -ātis, f.", "en": "truth", "pos": "noun", "church": true},
+    {"id": 10114, "la": "doctor, -ōris, m.", "en": "a teacher", "pos": "noun", "church": true},
+    {"id": 10115, "la": "prōvehō, prōvehere, prōvexī, prōvectum", "en": "to carry forward; (prōvectus) advanced", "pos": "verb", "church": true},
+    {"id": 10116, "la": "ērudītiō, -ōnis, f.", "en": "instruction, learning", "pos": "noun", "church": true},
+    {"id": 10117, "la": "ērudiō, -īre, -īvī, -ītum", "en": "to teach, instruct", "pos": "verb", "church": true},
+    {"id": 10119, "la": "parvulus, -a, -um", "en": "very small; a little child", "pos": "adjective", "church": true},
+    {"id": 10120, "la": "lac, lactis, n.", "en": "milk", "pos": "noun", "church": true},
+    {"id": 10121, "la": "pōtus, -ūs, m.", "en": "a drink", "pos": "noun", "church": true},
+    {"id": 10122, "la": "esca, -ae, f.", "en": "food", "pos": "noun", "church": true},
+    {"id": 10123, "la": "prōpositum, -ī, n.", "en": "a purpose, plan", "pos": "noun", "church": true},
+    {"id": 10124, "la": "intentiō, -ōnis, f.", "en": "intention, aim", "pos": "noun", "church": true},
+    {"id": 10125, "la": "christiānus, -a, -um", "en": "Christian", "pos": "adjective", "church": true},
+    {"id": 10126, "la": "congruō, -ere, congruī", "en": "to agree, suit", "pos": "verb", "church": true},
+    {"id": 10127, "la": "nātūrālis, -e", "en": "natural", "pos": "adjective", "church": true},
+    {"id": 10128, "la": "subserviō, -īre, -iī, -ītum", "en": "to serve under, be subject to", "pos": "verb", "church": true},
+    {"id": 10129, "la": "inclīnātiō, -ōnis, f.", "en": "an inclination, tendency", "pos": "noun", "church": true},
+    {"id": 10130, "la": "obsequor, obsequī, obsecūtus sum", "en": "to comply with, yield to", "pos": "verb", "church": true},
+    {"id": 10131, "la": "cāritās, -ātis, f.", "en": "charity, love", "pos": "noun", "church": true},
+    {"id": 10132, "la": "necessārius, -a, -um", "en": "necessary", "pos": "adjective", "church": true},
+    {"id": 10133, "la": "doctrīna, -ae, f.", "en": "teaching, doctrine", "pos": "noun", "church": true},
+    {"id": 10134, "la": "revēlātiō, -ōnis, f.", "en": "revelation", "pos": "noun", "church": true},
+    {"id": 10135, "la": "philosophicus, -a, -um", "en": "philosophical", "pos": "adjective", "church": true},
+    {"id": 10136, "la": "investīgō, -āre, -āvī, -ātum", "en": "to track down, investigate", "pos": "verb", "church": true},
+    {"id": 10137, "la": "I", "en": "1, in a biblical citation (not the verb eō)", "pos": "indeclinable", "church": true},
+    {"id": 10138, "la": "III", "en": "3, in a biblical citation", "pos": "indeclinable", "church": true},
+    {"id": 10139, "la": "Corinth", "en": "Corinthians, abbreviated Corinth. in a citation", "pos": "indeclinable", "church": true}
+  ],
+  "texts": [
+    {"id": "aug-1", "title": "Augustine, Confessions 1.1.1", "lines": [
+      {"en": "Great are you, Lord, and greatly to be praised: great is your power, and of your wisdom there is no number.", "words": [
+        {"t": "Magnus", "l": "magnus"}, {"t": "es,", "l": "sum"}, {"t": "Domine,", "l": "dominus"}, {"t": "et", "l": "et"}, {"t": "laudābilis", "l": "laudabilis"}, {"t": "valdē:", "l": "valde"}, {"t": "magna", "l": "magnus"}, {"t": "virtūs", "l": "virtus"}, {"t": "tua,", "l": "tuus"}, {"t": "et", "l": "et"}, {"t": "sapientiae", "l": "sapientia"}, {"t": "tuae", "l": "tuus"}, {"t": "nōn", "l": "non"}, {"t": "est", "l": "sum"}, {"t": "numerus.", "l": "numerus"}
+      ]},
+      {"en": "And a human being, some portion of your creation, wants to praise you; and a human being carrying around his mortality, carrying around the testimony of his sin and the testimony that you resist the proud; and still a human being, some portion of your creation, wants to praise you.", "words": [
+        {"t": "Et", "l": "et"}, {"t": "laudāre", "l": "laudo"}, {"t": "tē", "l": "tu"}, {"t": "vult", "l": "volo"}, {"t": "homō", "l": "homo"}, {"t": "aliqua", "l": "aliquis"}, {"t": "portiō", "l": "portio"}, {"t": "creātūrae", "l": "creatura"}, {"t": "tuae;", "l": "tuus"}, {"t": "et", "l": "et"}, {"t": "homō", "l": "homo"}, {"t": "circumferēns", "l": "circumfero"}, {"t": "mortālitātem", "l": "mortalitas"}, {"t": "suam,", "l": "suus"}, {"t": "circumferēns", "l": "circumfero"}, {"t": "testimōnium", "l": "testimonium"}, {"t": "peccātī", "l": "peccatum"}, {"t": "suī,", "l": "suus"}, {"t": "et", "l": "et"}, {"t": "testimōnium", "l": "testimonium"}, {"t": "quia", "l": "quia"}, {"t": "superbīs", "l": "superbus"}, {"t": "resistis:", "l": "resisto"}, {"t": "et", "l": "et"}, {"t": "tamen", "l": "tamen"}, {"t": "laudāre", "l": "laudo"}, {"t": "tē", "l": "tu"}, {"t": "vult", "l": "volo"}, {"t": "homō,", "l": "homo"}, {"t": "aliqua", "l": "aliquis"}, {"t": "portiō", "l": "portio"}, {"t": "creātūrae", "l": "creatura"}, {"t": "tuae.", "l": "tuus"}
+      ]}
+    ]},
+    {"id": "aug-2", "title": "The next sentence", "lines": [
+      {"en": "You stir us, so that praising you delights us, because you made us for yourself, and our heart is restless until it rests in you.", "words": [
+        {"t": "Tū", "l": "tu"}, {"t": "excitās,", "l": "excito"}, {"t": "ut", "l": "ut"}, {"t": "laudāre", "l": "laudo"}, {"t": "tē", "l": "tu"}, {"t": "dēlectet;", "l": "delecto"}, {"t": "quia", "l": "quia"}, {"t": "fēcistī", "l": "facio"}, {"t": "nōs", "l": "nos"}, {"t": "ad", "l": "ad"}, {"t": "tē,", "l": "tu"}, {"t": "et", "l": "et"}, {"t": "inquiētum", "l": "inquietus"}, {"t": "est", "l": "sum"}, {"t": "cor", "l": "cor"}, {"t": "nostrum,", "l": "noster"}, {"t": "dōnec", "l": "donec"}, {"t": "requiēscat", "l": "requiesco"}, {"t": "in", "l": "in"}, {"t": "tē.", "l": "tu"}
+      ]}
+    ]},
+    {"id": "aug-3", "title": "Augustine, Confessions 10.27.38", "lines": [
+      {"en": "Late have I loved you, beauty so ancient and so new, late have I loved you!", "words": [
+        {"t": "Sērō", "l": "sero"}, {"t": "tē", "l": "tu"}, {"t": "amāvī,", "l": "amo"}, {"t": "pulchritūdō", "l": "pulchritudo"}, {"t": "tam", "l": "tam"}, {"t": "antīqua", "l": "antiquus"}, {"t": "et", "l": "et"}, {"t": "tam", "l": "tam"}, {"t": "nova!", "l": "novus"}, {"t": "sērō", "l": "sero"}, {"t": "tē", "l": "tu"}, {"t": "amāvī!", "l": "amo"}
+      ]},
+      {"en": "And see: you were inside, and I was outside, and there I was looking for you; and upon those beautiful things which you made, I, misshapen, was rushing.", "words": [
+        {"t": "Et", "l": "et"}, {"t": "ecce", "l": "ecce"}, {"t": "intus", "l": "intus"}, {"t": "erās,", "l": "sum"}, {"t": "et", "l": "et"}, {"t": "ego", "l": "ego"}, {"t": "forīs,", "l": "foris"}, {"t": "et", "l": "et"}, {"t": "ibī", "l": "ibi"}, {"t": "tē", "l": "tu"}, {"t": "quaerēbam;", "l": "quaero"}, {"t": "et", "l": "et"}, {"t": "in", "l": "in"}, {"t": "ista", "l": "iste"}, {"t": "fōrmōsa", "l": "formosus"}, {"t": "quae", "l": "qui"}, {"t": "fēcistī,", "l": "facio"}, {"t": "dēformis", "l": "deformis"}, {"t": "irruēbam.", "l": "irruo"}
+      ]},
+      {"en": "You were with me, and I was not with you.", "words": [
+        {"t": "Mēcum", "l": "mecum"}, {"t": "erās,", "l": "sum"}, {"t": "et", "l": "et"}, {"t": "tēcum", "l": "tecum"}, {"t": "nōn", "l": "non"}, {"t": "eram.", "l": "sum"}
+      ]}
+    ]},
+    {"id": "aq-pro", "title": "Aquinas, Summa, prologue", "lines": [
+      {"en": "Because a teacher of Catholic truth ought not only to instruct those who are advanced, but it also belongs to him to teach beginners,", "words": [
+        {"t": "Quia", "l": "quia"}, {"t": "Catholicae", "l": "catholicus"}, {"t": "vēritātis", "l": "veritas"}, {"t": "doctor", "l": "doctor"}, {"t": "nōn", "l": "non"}, {"t": "sōlum", "l": "solus"}, {"t": "prōvectōs", "l": "proveho"}, {"t": "dēbet", "l": "debeo"}, {"t": "īnstruere,", "l": "instruo"}, {"t": "sed", "l": "sed"}, {"t": "ad", "l": "ad"}, {"t": "eum", "l": "is"}, {"t": "pertinet", "l": "pertineo"}, {"t": "etiam", "l": "etiam"}, {"t": "incipientēs", "l": "incipio"}, {"t": "ērudīre,", "l": "erudio"}
+      ]},
+      {"en": "according to that saying of the Apostle, 1 Corinthians 3, “As to little children in Christ, I gave you milk as a drink, not solid food,”", "words": [
+        {"t": "secundum", "l": "secundum"}, {"t": "illud", "l": "ille"}, {"t": "apostolī", "l": "apostolus"}, {"t": "I", "l": "i"}, {"t": "ad", "l": "ad"}, {"t": "Corinth.", "l": "corinth"}, {"t": "III,", "l": "iii"}, {"t": "tamquam", "l": "tamquam"}, {"t": "parvulīs", "l": "parvulus"}, {"t": "in", "l": "in"}, {"t": "Chrīstō,", "l": "christus"}, {"t": "lac", "l": "lac"}, {"t": "vōbīs", "l": "vos"}, {"t": "pōtum", "l": "potus"}, {"t": "dedī,", "l": "do"}, {"t": "nōn", "l": "non"}, {"t": "escam;", "l": "esca"}
+      ]},
+      {"en": "the purpose of our intention in this work is to hand on the things that belong to the Christian religion in the way that suits the instruction of beginners.", "words": [
+        {"t": "prōpositum", "l": "propositum"}, {"t": "nostrae", "l": "noster"}, {"t": "intentiōnis", "l": "intentio"}, {"t": "in", "l": "in"}, {"t": "hōc", "l": "hic"}, {"t": "opere", "l": "opus"}, {"t": "est,", "l": "sum"}, {"t": "ea", "l": "is"}, {"t": "quae", "l": "qui"}, {"t": "ad", "l": "ad"}, {"t": "Christiānam", "l": "christianus"}, {"t": "religiōnem", "l": "religio"}, {"t": "pertinent,", "l": "pertineo"}, {"t": "eō", "l": "is"}, {"t": "modō", "l": "modus"}, {"t": "trādere,", "l": "trado"}, {"t": "secundum", "l": "secundum"}, {"t": "quod", "l": "quod"}, {"t": "congruit", "l": "congruo"}, {"t": "ad", "l": "ad"}, {"t": "ērudītiōnem", "l": "eruditio"}, {"t": "incipientium.", "l": "incipio"}
+      ]}
+    ]},
+    {"id": "aq-gratia", "title": "Summa I, q. 1, a. 8, reply 2", "lines": [
+      {"en": "For since grace does not take away nature, but perfects it, natural reason should serve faith, just as the natural inclination of the will complies with charity.", "words": [
+        {"t": "Cum", "l": "cum"}, {"t": "enim", "l": "enim"}, {"t": "grātia", "l": "gratia"}, {"t": "nōn", "l": "non"}, {"t": "tollat", "l": "tollo"}, {"t": "nātūram,", "l": "natura"}, {"t": "sed", "l": "sed"}, {"t": "perficiat,", "l": "perficio"}, {"t": "oportet", "l": "oportet"}, {"t": "quod", "l": "quod"}, {"t": "nātūrālis", "l": "naturalis"}, {"t": "ratiō", "l": "ratio"}, {"t": "subserviat", "l": "subservio"}, {"t": "fideī;", "l": "fides"}, {"t": "sīcut", "l": "sicut"}, {"t": "et", "l": "et"}, {"t": "nātūrālis", "l": "naturalis"}, {"t": "inclīnātiō", "l": "inclinatio"}, {"t": "voluntātis", "l": "voluntas"}, {"t": "obsequitur", "l": "obsequor"}, {"t": "cāritātī.", "l": "caritas"}
+      ]}
+    ]},
+    {"id": "aq-revel", "title": "Summa I, q. 1, a. 1, the reply", "lines": [
+      {"en": "I answer that it must be said that, for human salvation, there needed to be some teaching according to divine revelation, besides the philosophical disciplines, which are investigated by human reason.", "words": [
+        {"t": "Respondeō", "l": "respondeo"}, {"t": "dīcendum", "l": "dico"}, {"t": "quod", "l": "quod"}, {"t": "necessārium", "l": "necessarius"}, {"t": "fuit", "l": "sum"}, {"t": "ad", "l": "ad"}, {"t": "hūmānam", "l": "humanus"}, {"t": "salūtem,", "l": "salus"}, {"t": "esse", "l": "sum"}, {"t": "doctrīnam", "l": "doctrina"}, {"t": "quandam", "l": "quidam"}, {"t": "secundum", "l": "secundum"}, {"t": "revēlātiōnem", "l": "revelatio"}, {"t": "dīvīnam,", "l": "divinus"}, {"t": "praeter", "l": "praeter"}, {"t": "philosophicās", "l": "philosophicus"}, {"t": "disciplīnās,", "l": "disciplina"}, {"t": "quae", "l": "qui"}, {"t": "ratiōne", "l": "ratio"}, {"t": "hūmāna", "l": "humanus"}, {"t": "investīgantur.", "l": "investigo"}
+      ]}
+    ]}
+  ],
+  "lessons": [
+    {
+      "id": "read-aug1",
+      "sec": "Reading",
+      "title": "Confessions: praise and frailty",
+      "sum": "Harder reading. Magnus es, Domine, through the second aliqua portiō.",
+      "lead": "This is not beginner Latin. The Latin is Augustine’s own sentence, with macrons added. The English is a literal translation.",
+      "sections": ["aug-1"],
+      "words": ["laudabilis", "valde", "virtus", "portio", "creatura", "circumfero", "mortalitas", "testimonium"],
+      "notes": "<p><i>Magnus es</i> and <i>laudābilis</i> describe <i>tū</i>, which the verb <i>es</i> already names. <i>Magna virtūs tua</i> and <i>sapientiae tuae nōn est numerus</i> are two more statements: “great is your power,” and “of your wisdom there is no number.” <i>Sapientiae tuae</i> is genitive.</p>\n<p><i>Laudāre</i> is the infinitive, the object of <i>vult</i>. <i>Homō</i> is “a human being.” <i>Aliqua portiō creātūrae tuae</i> is in apposition with it: “some portion of your creation.” <i>Circumferēns</i> is a present participle agreeing with <i>homō</i>, “carrying around.” <i>Peccātī suī</i> is genitive, “of his own sin.” <i>Superbīs</i> is dative plural, “the proud,” with <i>resistis</i>.</p>",
+      "aside": "The edition",
+      "diff": "<p>Migne prints verse numbers in parentheses after <i>valdē</i>, <i>numerus</i>, and <i>resistis</i>. Those notes are the editor’s. They are not part of this sentence. The passage stops at the second <i>aliqua portiō creātūrae tuae</i>.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Sapientiae tuae is", ["genitive", "nominative", "dative of a person", "an infinitive"], 0],
+        ["Circumferēns agrees with", ["homō", "virtūs", "numerus", "Dominus"], 0],
+        ["Superbīs resistis means", ["you resist the proud", "the proud resist you", "your power is proud", "there is no number of the proud"], 0]
+      ]}
+    },
+    {
+      "id": "read-aug2",
+      "sec": "Reading",
+      "title": "Confessions: our heart is restless",
+      "sum": "Harder reading. The next sentence, Tū excitās.",
+      "lead": "This is not beginner Latin. The Latin is Augustine’s own sentence, with macrons added. The English is a literal translation.",
+      "sections": ["aug-2"],
+      "words": ["excito", "delecto", "inquietus", "requiesco", "cor"],
+      "notes": "<p>This is the next sentence of the same chapter, not a new paragraph of Augustine’s. <i>Excitās</i> is second person: “you stir (us) up.” The <i>ut</i> clause takes the subjunctive <i>dēlectet</i>. Its subject is the infinitive <i>laudāre tē</i>: “so that praising you delights.”</p>\n<p><i>Fēcistī nōs ad tē</i> is “you made us toward yourself,” the ordinary way of saying “for yourself.” <i>Inquiētum est cor nostrum</i> “our heart is restless.” <i>Dōnec requiēscat</i> is “until it rests,” with the subjunctive of <i>requiēscō</i>. <i>In tē</i> is “in you.”</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Dēlectet is", ["present subjunctive", "a perfect indicative", "an infinitive", "a participle"], 0],
+        ["The subject of dēlectet is", ["laudāre tē", "cor nostrum", "Tū", "nōs"], 0],
+        ["Dōnec requiēscat means", ["until it rests", "because it rested", "so that you praise", "you made us"], 0]
+      ]}
+    },
+    {
+      "id": "read-aug3",
+      "sec": "Reading",
+      "title": "Confessions: late have I loved you",
+      "sum": "Harder reading. Sērō tē amāvī through tēcum nōn eram.",
+      "lead": "This is not beginner Latin. The Latin is Augustine’s own sentence, with macrons added. The English is a literal translation.",
+      "sections": ["aug-3"],
+      "words": ["sero", "pulchritudo", "intus", "foris", "deformis", "irruo"],
+      "notes": "<p><i>Sērō</i> is the adverb “late,” not a verb. <i>Pulchritūdō</i> is vocative, addressed as “beauty.” <i>Tam antīqua et tam nova</i> agrees with it. The second <i>sērō tē amāvī</i> repeats the first.</p>\n<p><i>Intus erās</i> “you were inside.” <i>Ego forīs</i> “I was outside.” <i>Forīs</i> is the adverb, not a form of <i>forum</i>. <i>Ibī tē quaerēbam</i> “there I kept looking for you.” <i>In ista fōrmōsa</i> “upon those beautiful things,” with <i>quae fēcistī</i> “which you made.” <i>Dēformis</i> describes <i>ego</i>. <i>Mēcum</i> and <i>tēcum</i> are “with me” and “with you.”</p>",
+      "aside": "Where this cut stops",
+      "diff": "<p>The chapter continues <i>Ea mē tenēbant longē ā tē</i>. That sentence is not part of this lesson. The reading ends at <i>tēcum nōn eram</i>.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Sērō is", ["an adverb, “late”", "a perfect of serō", "the dative of sērus only", "a noun"], 0],
+        ["Forīs here means", ["outside", "of the forum", "with you", "inside"], 0],
+        ["Mēcum erās means", ["you were with me", "I was with you", "I loved you late", "I was looking outside"], 0]
+      ]}
+    },
+    {
+      "id": "read-aq1",
+      "sec": "Reading",
+      "title": "Summa: why this book",
+      "sum": "Harder reading. One sentence, Quia Catholicae vēritātis doctor.",
+      "lead": "This is not beginner Latin. The Latin is Aquinas’s own sentence, with macrons added. The English is a literal translation.",
+      "sections": ["aq-pro"],
+      "words": ["veritas", "doctor", "proveho", "erudio", "tamquam", "parvulus", "lac", "propositum", "intentio", "eruditio"],
+      "notes": "<p>This is one sentence, printed here in three lines so it can be read. <i>Quia</i> gives the reason. <i>Doctor</i> is the subject. <i>Catholicae vēritātis</i> is genitive, “of Catholic truth.” <i>Nōn sōlum prōvectōs</i> “not only the advanced”: <i>prōvectōs</i> is the participle of <i>prōvehō</i>. <i>Dēbet īnstruere</i> “ought to instruct.” Then <i>ad eum pertinet</i> “it belongs to him,” with <i>ērudīre</i> “to teach.”</p>\n<p><i>Secundum illud apostolī</i> “according to that saying of the Apostle.” <i>Apostolī</i> is genitive singular. <i>I ad Corinth. III</i> is the Leonine citation “1 Corinthians 3,” not the verb <i>eō</i> and not the number <i>trēs</i>. <i>Tamquam parvulīs</i> “as to little children,” dative. <i>Lac vōbīs pōtum dedī</i> “I gave you milk as a drink.” The Leonine prints <i>tanquam</i>; this app shows <i>tamquam</i>.</p>\n<p>The main clause is <i>prōpositum nostrae intentiōnis est trādere</i> “the purpose of our intention is to hand on.” <i>Ea quae ad Chrīstiānam religiōnem pertinent</i> is the object. <i>Eō modō</i> “in that way,” both ablative. <i>Incipientium</i> is genitive plural of the participle, “of beginners.”</p>",
+      "aside": "The citation inside the sentence",
+      "diff": "<p>The words <i>I ad Corinth. III</i> and the milk sentence are inside Aquinas’s sentence in the Leonine edition. They are not an extra passage added here. The sentence ends at <i>ad ērudītiōnem incipientium</i>.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Catholicae vēritātis is", ["genitive", "dative", "a verb", "nominative plural of the subject"], 0],
+        ["I ad Corinth. III is", ["the citation 1 Corinthians 3", "the imperative of eō", "the accusative of trēs", "a purpose clause"], 0],
+        ["Incipientium is", ["genitive plural, “of beginners”", "a finite verb", "the object of dedī", "dative singular"], 0]
+      ]}
+    },
+    {
+      "id": "read-aq2",
+      "sec": "Reading",
+      "title": "Summa: grace and nature",
+      "sum": "Harder reading. Cum enim grātia nōn tollat nātūram.",
+      "lead": "This is not beginner Latin. The Latin is Aquinas’s own sentence, with macrons added. The English is a literal translation.",
+      "sections": ["aq-gratia"],
+      "words": ["gratia", "natura", "naturalis", "ratio", "subservio", "fides", "inclinatio", "voluntas", "caritas"],
+      "notes": "<p><i>Cum</i> here means “since,” with the subjunctive <i>tollat</i> and <i>perficiat</i>. <i>Grātia</i> is the subject of both. <i>Nātūram</i> is the object: grace does not take nature away, but perfects it.</p>\n<p><i>Oportet quod</i> “it is necessary that,” with <i>subserviat</i> subjunctive. <i>Nātūrālis ratiō</i> is the subject, “natural reason.” <i>Fideī</i> is dative, “faith.” The comparison is <i>sīcut et</i> “just as also.” <i>Inclīnātiō voluntātis</i> “the inclination of the will,” genitive. <i>Obsequitur cāritātī</i> “complies with charity,” and <i>cāritātī</i> is dative.</p>",
+      "aside": "This sentence, not the short saying",
+      "diff": "<p>The sentence in the Leonine reply is the whole of what is printed here, including <i>enim</i> and <i>sīcut et nātūrālis inclīnātiō voluntātis obsequitur cāritātī</i>. A shorter proverb that drops those words is not this text.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Tollat and perficiat are", ["present subjunctive", "perfect indicative", "infinitives", "participles of tollō"], 0],
+        ["Fideī with subserviat is", ["dative", "genitive of a person", "ablative", "nominative"], 0],
+        ["Voluntātis is", ["genitive, “of the will”", "the subject of tollat", "an adverb", "dative of the comparison"], 0]
+      ]}
+    },
+    {
+      "id": "read-aq3",
+      "sec": "Reading",
+      "title": "Summa: why revelation",
+      "sum": "Harder reading. The opening Respondeō of question 1, article 1.",
+      "lead": "This is not beginner Latin. The Latin is Aquinas’s own sentence, with macrons added. The English is a literal translation.",
+      "sections": ["aq-revel"],
+      "words": ["respondeo", "necessarius", "doctrina", "revelatio", "philosophicus", "disciplina", "investigo", "salus"],
+      "notes": "<p><i>Respondeō dīcendum quod</i> is the ordinary opening of a reply: “I answer that it must be said that.” <i>Dīcendum</i> is the neuter gerundive of <i>dīcō</i>. <i>Necessārium fuit</i> “it was necessary,” with the infinitive <i>esse</i>: “that there be.”</p>\n<p><i>Ad hūmānam salūtem</i> “for human salvation.” <i>Doctrīnam quandam secundum revēlātiōnem dīvīnam</i> “some teaching according to divine revelation.” <i>Praeter philosophicās disciplīnās</i> “besides the philosophical disciplines,” accusative after <i>praeter</i>. <i>Quae ratiōne hūmānā investīgantur</i> “which are investigated by human reason.” <i>Ratiōne hūmānā</i> is ablative.</p>",
+      "aside": "Where this sentence stops",
+      "diff": "<p>The reply continues with <i>Prīmō quidem</i>. That next sentence is not in this lesson. Nothing here is a commentary on the Hail Mary.</p>",
+      "quiz": {"t": "mc", "qs": [
+        ["Dīcendum in Respondeō dīcendum is", ["a neuter gerundive of dīcō", "the perfect of dō", "an adverb", "the genitive of doctor"], 0],
+        ["Praeter philosophicās disciplīnās is", ["accusative after praeter", "a purpose clause", "the subject of fuit", "dative"], 0],
+        ["Ratiōne hūmānā is", ["ablative", "nominative", "the object of esse", "genitive of the teaching"], 0]
+      ]}
+    }
+  ]
+}
