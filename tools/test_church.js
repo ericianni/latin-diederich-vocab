@@ -383,6 +383,27 @@ ok(/Missale Romanum/.test(credits) && /pack === 'church'/.test(credits) && !/Muc
 const how = appSrc.slice(appSrc.indexOf('How it works'), appSrc.indexOf('Sources &amp; credits'));
 ok(/<b>Cards:<\/b> learn a few new words a day/.test(how) && /<b>Learn:<\/b> short grammar lessons/.test(how) && /<b>Drills:<\/b> practice word forms anytime/.test(how) && /<b>Cheat sheet:<\/b> all the endings tables/.test(how) && /Your progress stays on this device/.test(how), 'How it works is the short pack-neutral copy');
 ok(/<b>Church Latin<\/b> adds words and lessons from the Mass, prayers, and readings/.test(how) && !/Leitner boxes/.test(how) && !/Sentences in drills/.test(how), 'the Church Latin line is the only extra, and the old drill essay is gone');
+const bare = [
+  { id: 0, la: 'deus', sec: '1.1', r: 33 },
+  { id: 24, la: 'hiems', sec: '1.2' },
+  { id: 10001, la: 'amen', church: true },
+  { id: 10076, la: 'ave', church: true },
+  { id: 10100, la: 'magnus', church: true },
+];
+let splitThrew = false;
+try {
+  bare.forEach(w => {
+    const g = Church.listGroup(w, 'diederich', 'church');
+    const lab = Church.listLabel(g);
+    if (lab && lab.sec) lab.sec.split('.');
+  });
+} catch (e) { splitThrew = true; }
+ok(!splitThrew && Church.listGroup(bare[2], 'diederich', 'church') === 'pack:Church Latin:Ordinary of the Mass', 'Diederich sort no longer splits a missing section on a pack-only lemma');
+ok(Church.listGroup(bare[3], 'topic', 'church') === 'pack:Church Latin:Prayers' && Church.listGroup(bare[4], 'topic', 'church') === 'pack:Church Latin:Readings', 'Church topic sort uses Mass, Prayers, and Readings');
+ok(Church.listGroup(bare[2], 'rank', 'church') === 'pack:Church Latin' && Church.listGroup(bare[0], 'rank', 'church') === '' && Church.listGroup(bare[0], 'az', 'church') === '', 'frequency groups pack-only words once; A–Z adds no heading');
+const freq = bare.slice().sort((a, b) => Church.compareList(a, b, 'rank')).map(w => w.id).join(',');
+ok(freq === '0,24,10001,10076,10100', 'unranked core words stay ahead of the Church Latin frequency group');
+ok(Church.listGroup(bare[0], 'diederich', 'classical') === 'sec:1.1' && /By topic \/ lesson/.test(appSrc) && !/w\.sec\.split/.test(appSrc), 'classical keeps Diederich sections, and the list no longer splits a raw section');
 
 console.log('OK', n);
 console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);

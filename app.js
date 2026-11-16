@@ -1176,8 +1176,13 @@
   let listQ = '', listSort = 'rank', listN = 100;
   function renderList() {
     setSub(W.length + ' words');
+    if (activePack() === 'church' && listSort === 'diederich') listSort = 'topic';
+    if (activePack() !== 'church' && listSort === 'topic') listSort = 'diederich';
+    const third = activePack() === 'church'
+      ? '<option value="topic">Sort: By topic / lesson</option>'
+      : '<option value="diederich">Sort: Diederich’s order (by topic)</option>';
     V().innerHTML = `<div class="listbar"><input type="search" id="q" placeholder="Search Latin or English" value="${esc(listQ)}">
-      <div class="row" style="margin-top:8px"><select id="srt"><option value="rank">Sort: frequency rank</option><option value="az">Sort: A–Z</option><option value="diederich">Sort: Diederich’s order (by topic)</option></select></div></div>
+      <div class="row" style="margin-top:8px"><select id="srt"><option value="rank">Sort: frequency rank</option><option value="az">Sort: A–Z</option>${third}</select></div></div>
       <ul class="list" id="ul"></ul><div id="moreBox"></div>`;
     $('#srt').value = listSort;
     $('#q').oninput = e => { listQ = e.target.value; listN = 100; fill(); };
@@ -1190,18 +1195,29 @@
     3: ['Verbs Which Express or Affect the Location of the Subject', 'Verbs Which Affect the Location of the Object', 'Verbs Which Express or Affect the State of the Subject', 'Verbs Which Affect the State of the Object', 'Constructive Activities', 'Destructive Activities', 'Verbs Affecting Other Verbs', 'Vocal Activities', 'Mental and Sensory Operations', 'Favor', 'Disfavor'],
     4: ['Size', 'Number', 'Texture – Density', 'Appearance', 'Position', 'Time', 'Favorable', 'Unfavorable', 'Unclassified'], 5: ['Time', 'Place', 'Cause – Manner', 'Adversative'] };
   function secHead(sec, n, first) {
+    if (!sec || String(sec).indexOf('.') < 0) return `<li class="sec"><span class="sec2">${esc(sec || '—')}</span><span class="secn">${n} word${n === 1 ? '' : 's'}</span></li>`;
     const [a, b] = sec.split('.').map(Number), subs = SUBSECT[a];
     return `<li class="sec">${first && subs ? `<span class="sec1">${esc(SECT[a - 1])}</span>` : ''}<span class="sec2">${subs ? esc(b + '. ' + subs[b - 1]) : esc(SECT[a - 1])}</span><span class="secn">${n} word${n === 1 ? '' : 's'}</span></li>`;
+  }
+  function groupHead(lab, n, prevLab) {
+    const count = `<span class="secn">${n} word${n === 1 ? '' : 's'}</span>`;
+    if (lab && 'sec' in lab) return secHead(lab.sec, n, !prevLab || !prevLab.sec || prevLab.sec.split('.')[0] !== lab.sec.split('.')[0]);
+    const first = !(prevLab && prevLab.block === lab.block);
+    if (!lab.head) return `<li class="sec"><span class="sec2">${esc(lab.block)}</span>${count}</li>`;
+    return `<li class="sec">${first ? `<span class="sec1">${esc(lab.block)}</span>` : ''}<span class="sec2">${esc(lab.head)}</span>${count}</li>`;
   }
   function fill() {
     const q = listQ.trim(), nq = Morph.norm(q), lq = q.toLowerCase();
     let rows = q ? W.filter(w => Morph.norm(w.la).includes(nq) || Morph.norm(shownLa(w.la)).includes(nq) || w.en.toLowerCase().includes(lq)) : W.slice();
     if (listSort === 'az') rows.sort((a, b) => Morph.norm(a.la).localeCompare(Morph.norm(b.la)));
-    else if (listSort === 'diederich') rows.sort((a, b) => a.id - b.id);
-    const cnt = {}; if (listSort === 'diederich') rows.forEach(w => { cnt[w.sec] = (cnt[w.sec] || 0) + 1; });
+    else rows.sort((a, b) => Church.compareList(a, b, listSort));
+    const pack = activePack();
+    const cnt = {};
+    rows.forEach(w => { const g = Church.listGroup(w, listSort, pack); if (g) cnt[g] = (cnt[g] || 0) + 1; });
     let prev = null;
     $('#ul').innerHTML = rows.slice(0, listN).map(w => { let h = '';
-      if (listSort === 'diederich' && w.sec !== prev) { h = secHead(w.sec, cnt[w.sec], !prev || prev.split('.')[0] !== w.sec.split('.')[0]); prev = w.sec; }
+      const g = Church.listGroup(w, listSort, pack);
+      if (g && g !== prev) { h = groupHead(Church.listLabel(g), cnt[g], prev ? Church.listLabel(prev) : null); prev = g; }
       const face = faceOf(w);
       return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(shownLa(face.la))}</div><div class="en">${esc(face.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
     const bar = $('#ul').previousElementSibling; if (bar) $('#ul').style.setProperty('--lt', bar.offsetHeight + 'px');

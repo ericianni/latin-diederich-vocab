@@ -79,7 +79,39 @@
     if (s.pack === 'church' || s.pack === 'classical') return s.pack;
     return s.church === true ? 'church' : 'classical';
   }
-  const api = { headKey, overlayMap, faceWord, activeWords, newWordKeys, dueCardKeys, tokensOf, merge, packOf };
+  // Pack-only lemmas have no Diederich section. The id bands are the three
+  // Church tiers: Mass, prayers, readings. A future pack can add its own bands.
+  function topicOf(w) {
+    if (!w || !w.church || w.sec) return null;
+    let head = 'Readings';
+    if (w.id <= 10075) head = 'Ordinary of the Mass';
+    else if (w.id <= 10097) head = 'Prayers';
+    return { block: 'Church Latin', head: head };
+  }
+  // Heading key for the word list. Never reads a missing section.
+  function listGroup(w, sort, pack) {
+    const t = topicOf(w);
+    const topic = pack === 'church' && (sort === 'topic' || sort === 'diederich');
+    if (t && (sort === 'rank' || !sort)) return 'pack:' + t.block;
+    if (t && topic) return 'pack:' + t.block + ':' + t.head;
+    if (topic || sort === 'diederich') return 'sec:' + (w && w.sec ? w.sec : '');
+    return '';
+  }
+  function listLabel(group) {
+    if (!group) return null;
+    if (group.indexOf('pack:') === 0) {
+      const rest = group.slice(5), i = rest.indexOf(':');
+      if (i < 0) return { block: rest, head: '' };
+      return { block: rest.slice(0, i), head: rest.slice(i + 1) };
+    }
+    if (group.indexOf('sec:') === 0) return { sec: group.slice(4) };
+    return null;
+  }
+  function compareList(a, b, sort) {
+    if (sort === 'diederich' || sort === 'topic') return a.id - b.id;
+    return (a.church ? 1 : 0) - (b.church ? 1 : 0) || (a.r || 1e9) - (b.r || 1e9) || a.id - b.id;
+  }
+  const api = { headKey, overlayMap, faceWord, activeWords, newWordKeys, dueCardKeys, tokensOf, merge, packOf, topicOf, listGroup, listLabel, compareList };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.Church = api;
 })(typeof window !== 'undefined' ? window : globalThis);
