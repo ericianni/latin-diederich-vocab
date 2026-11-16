@@ -380,6 +380,9 @@ ok(/function activePack\(\)/.test(appSrc) && /id="pack"/.test(appSrc) && !/Churc
 const credits = appSrc.slice(appSrc.indexOf('Sources &amp; credits'), appSrc.indexOf('How it works') > appSrc.indexOf('Sources') ? appSrc.indexOf('document.querySelectorAll(\'#pack') : appSrc.length);
 ok(/The Frequency of Latin Words and Their Endings/.test(credits) && /Made by Eric Ianni/.test(credits) && /Version 3\.3\.0/.test(credits), 'credits name the word list, the author, and the version');
 ok(/Missale Romanum/.test(credits) && /pack === 'church'/.test(credits) && !/Muccigrosso/.test(appSrc) && !/DWF\.csv/.test(appSrc) && !/PACK\.about\.sources/.test(appSrc), 'church credits are pack-only, and the old blurbs are gone');
+const how = appSrc.slice(appSrc.indexOf('How it works'), appSrc.indexOf('Sources &amp; credits'));
+ok(/<b>Cards:<\/b> learn a few new words a day/.test(how) && /<b>Learn:<\/b> short grammar lessons/.test(how) && /<b>Drills:<\/b> practice word forms anytime/.test(how) && /<b>Cheat sheet:<\/b> all the endings tables/.test(how) && /Your progress stays on this device/.test(how), 'How it works is the short pack-neutral copy');
+ok(/<b>Church Latin<\/b> adds words and lessons from the Mass, prayers, and readings/.test(how) && !/Leitner boxes/.test(how) && !/Sentences in drills/.test(how), 'the Church Latin line is the only extra, and the old drill essay is gone');
 
 console.log('OK', n);
 console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);

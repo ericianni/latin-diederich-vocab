@@ -1260,7 +1260,6 @@
   // ---------- about / settings ----------
   function renderAbout() {
     setSub('About');
-    const drillWords = W.filter(w => !an(w).skip).length;
     const mem = S.set.churchMem === 'saint' ? 'saint' : 'season';
     const pack = activePack();
     V().innerHTML = `<div class="card"><h2 style="margin-top:0">Settings</h2>
@@ -1281,12 +1280,12 @@
       <input type="file" id="impf" accept="application/json" hidden></div>
       ${window.Capacitor ? '' : '<div class="card"><a class="btn" id="sentlink" href="sentences.html" style="display:block;text-align:center;text-decoration:none">Sentences (beta) ›</a></div>'}
       <div class="card"><h2 style="margin-top:0">How it works</h2>
-      <p><b>Today</b> is flashcards: a few new words each day plus whatever is due. Answer <b>Right</b> or <b>Wrong</b> (or type the Latin and it’s checked for you). Cards move through Leitner boxes: each right answer moves a card up a box and spaces it out further (1, 3, 7, 14, 30, 60, 120 days); a wrong answer sends it back to the start and shows it again in a few cards. Latin→English and English→Latin are scheduled separately; the English→Latin card unlocks the day after you first get a word right.</p>
-      <p><b>Drills</b> ask for one form at a time (macrons optional unless you turn on <b>Require macrons</b>) and check your answer. Choose the moods, voices, tenses, cases and numbers you want. Forms are generated from the dictionary entry using standard paradigms; ${drillWords} of ${W.length} words are drillable. Words that can’t be generated reliably (defective, impersonal, indeclinable words, some irregulars) are left out and say so in the word list. If you think the app marked you wrong unfairly, tap <b>Count as correct</b>.</p>
-      <p>Drills have no schedule: practice in short sets and stop anytime. The app keeps a recent-weighted right/wrong score for each form in each paradigm (say, dative plural in the 3rd declension) and asks more often about forms you miss, haven’t tried, or haven’t seen lately, then picks a word with that form, slightly favoring common words and words you know from flashcards. A form you miss comes back a few questions later with a different word. <b>Weak spots</b> on the Drills tab lists your lowest-accuracy forms.</p>
-      <p>Turn on <b>Sentences in drills</b> and about one question in seven is a short sentence built only from words you have already seen, aimed at a form you miss. Translate it, or identify one word. Helper words you have not studied yet show a small gloss. Each sentence counts as one answer.</p>
-      <p>The <b>Cheat sheet</b> has endings tables for every declension and conjugation the drills use, plus the pronouns and the main irregular verbs; open it from any drill question.</p>
-      <p>Your progress stays on this device (localStorage). No account, no tracking; works offline once installed.</p></div>
+      <p><b>Cards:</b> learn a few new words a day and review what’s due. Mark each one Right or Wrong. Right answers come back later and later; wrong ones come back soon.</p>
+      <p><b>Learn:</b> short grammar lessons.</p>
+      <p><b>Drills:</b> practice word forms anytime. The app asks more about the ones you miss.</p>
+      <p><b>Cheat sheet:</b> all the endings tables in one place.</p>
+      <p>Your progress stays on this device. No account needed, and it works offline.</p>
+      ${pack === 'church' ? '<p><b>Church Latin</b> adds words and lessons from the Mass, prayers, and readings.</p>' : ''}</div>
       <div class="card"><h2 style="margin-top:0">Sources &amp; credits</h2>
       <p class="small">Word list: Paul B. Diederich, <i>The Frequency of Latin Words and Their Endings</i> (1939), in the Lodge edition compiled by Carolus Raeticus (<a href="https://hiberna-cr.wikidot.com/" rel="noopener">Hiberna Caroli Raetici</a>), with glosses from Gonzalez Lodge (1922) and J. T. White (1904). That edition is licensed <a href="https://creativecommons.org/licenses/by-sa/3.0/" rel="noopener">CC BY‑SA 3.0</a>; this app’s word data is shared under the same license.</p>
       ${pack === 'church' ? '<p class="small">Church Latin: the Ordinary of the Mass follows the public-domain 1920 <i>Missale Romanum</i>; biblical lines follow the Clementine Vulgate. The prayers use the traditional public-domain wording, as in the appendix to the <i>Compendium of the Catechism</i> (2005). Readings: Augustine, <i>Confessiones</i> (Migne, 1841); Thomas Aquinas, <i>Summa theologiae</i> (Leonine edition, 1888). The English under each line is a new literal translation for this app. Usage was checked against Nunn (1922), Beeson (1925), and Harden (1921).</p>' : ''}
