@@ -294,13 +294,11 @@
     const c = counts();
     const vTot = c.vDue + c.vNew;
     const mins = Math.max(1, Math.round((c.vDue * 8 + c.vNew * 15) / 60));
-    const drillNote = `<div class="row"><span class="grow small muted">Form drills: practice anytime, weighted toward your weak spots</span><button id="godr">Drills ›</button></div>`;
     if (vTot === 0) {
       V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>Flashcards done for today</h2>
         <p class="muted">Nice work. Come back tomorrow — new words and reviews will be waiting.</p>
         ${progressBar()}</div>
-        <div class="card"><div class="row wrap"><button class="grow" id="more">Learn 5 more words</button><button class="grow" id="goquiz">Quick quiz</button></div></div>
-        <div class="card">${drillNote}</div>`;
+        <div class="card"><div class="row wrap"><button class="grow" id="more">Learn 5 more words</button><button class="grow" id="goquiz">Quick quiz</button></div></div>`;
       $('#more').onclick = () => { day().extra = (day().extra || 0) + 5; save(); startSession('vocab'); };
     } else {
       V().innerHTML = `<div class="card">
@@ -311,12 +309,10 @@
         </div>
         <button class="primary big" id="go">Start</button>
         <p class="small muted center" style="margin:10px 0 0">Stop whenever you like — every answer is saved.</p></div>
-        <div class="card">${drillNote}</div>
         <div class="card">${progressBar()}<button class="link" id="goquiz">Quick quiz (doesn’t affect your schedule)</button></div>`;
       $('#go').onclick = () => startSession('vocab');
     }
     $('#goquiz').onclick = () => setTab('quiz');
-    $('#godr').onclick = () => setTab('drills');
   }
 
   // Right / Wrong buttons for flashcards
@@ -353,7 +349,7 @@
       const std = headStandard(w), hs = [std].concat(heads(w.la).filter(h => Morph.normM(h) !== Morph.normM(std)));
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">English → Latin</div>
         <div class="english">${esc(face.en)}</div>${pills}
-        <div id="ans"><input type="text" id="typed" placeholder="Optional: type the Latin to check yourself" aria-label="Optional: type the Latin to check yourself" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
+        <div id="ans"><input type="text" id="typed" placeholder="Type Latin (optional)" aria-label="Type Latin (optional)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
         <button class="primary big" id="show" style="margin-top:10px">Show answer</button></div></div>`;
       const go = () => {
         const v = $('#typed').value.trim();
@@ -410,7 +406,7 @@
         <div class="small muted chiph">Sentences in drills</div><div class="seg" id="dsent"><button data-v="0" class="${DrillPick.sentenceSettings(S.set.df).on ? '' : 'on'}" aria-pressed="${!DrillPick.sentenceSettings(S.set.df).on}">Off</button><button data-v="1" class="${DrillPick.sentenceSettings(S.set.df).on ? 'on' : ''}" aria-pressed="${DrillPick.sentenceSettings(S.set.df).on}">On</button></div>
         <div class="small muted chiph">Sentence type</div><div class="seg" id="dstype">${[['tr', 'Translate'], ['id', 'Identify'], ['both', 'Both']].map(([v, l]) => `<button data-v="${v}" class="${DrillPick.sentenceSettings(S.set.df).type === v ? 'on' : ''}" aria-pressed="${DrillPick.sentenceSettings(S.set.df).type === v}">${l}</button>`).join('')}</div>
         <div class="small muted chiph">Translate direction</div><div class="seg sentset" id="dsdir">${[['le', 'Latin → English'], ['el', 'English → Latin'], ['both', 'Both']].map(([v, l]) => `<button data-v="${v}" class="${DrillPick.sentenceSettings(S.set.df).dir === v ? 'on' : ''}" aria-pressed="${DrillPick.sentenceSettings(S.set.df).dir === v}">${l}</button>`).join('')}</div>
-        <p class="small muted">About one question in seven is a short sentence made from words you have already seen. Helper words you have not studied yet, such as in, sum, and mē, show a short gloss. This stays off until you turn it on.</p>
+        <p class="small muted"><b>Sentences in drills</b> stay off until you turn them on. When they’re on, about one question in seven is a short sentence made from words you’ve already seen. Helper words you haven’t studied yet, such as <i>in</i>, <i>sum</i>, and <i>mē</i>, show a short gloss.</p>
         <div class="small muted chiph">Questions per set</div><div class="seg" id="sdr">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.dlen === n ? 'on' : ''}">${n}</button>`).join('')}</div>
         <button class="primary big" id="tdone" style="margin-top:16px">Done</button>
         <p class="small muted center" style="margin:8px 0 0">Your choices are saved automatically.</p></div>` : ''}

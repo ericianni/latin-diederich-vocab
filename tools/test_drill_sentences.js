@@ -1,5 +1,7 @@
 // Sentences mixed into Drills: defaults, mix ratio, pool, tiers, weak-spot bias, daily-goal count.
 // Run: node tools/test_drill_sentences.js
+const fs = require('fs');
+const path = require('path');
 const P = require('../drillpick.js');
 const E = require('../sentences/engine.js');
 const WORDS = require('../data/words.json');
@@ -184,6 +186,11 @@ ok(offTakes === 0, 'mix never selects a sentence while the setting is off');
   ok(state.dst['v1|ind.act.pres.3s'] && state.dst['v1|ind.act.pres.3s'].a === 2 && state.dst['v1|ind.act.pres.3s'].ok === 1, 'identify records right/wrong on the asked form');
   ok(Object.keys(state.dst).length === 1, 'translate does not write a form stat');
 }
+
+const appSrc = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+ok(/<b>Sentences in drills<\/b> stay off until you turn them on/.test(appSrc) && /<i>in<\/i>, <i>sum<\/i>, and <i>mē<\/i>/.test(appSrc), 'the sentences blurb leads with the bold label and italic examples');
+ok(!/id="godr"/.test(appSrc) && !/practice anytime, weighted toward your weak spots/.test(appSrc), 'the Cards page no longer offers a Form drills row');
+ok(/placeholder="Type Latin \(optional\)"/.test(appSrc) && !/Optional: type the Latin/.test(appSrc), 'the English to Latin card asks to type Latin, optionally');
 
 console.log(fail ? 'FAILED ' + fail + ' / ' + (pass + fail) : 'OK ' + pass);
 if (failures.length) for (const f of failures) console.log(' - ' + f);
