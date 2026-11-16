@@ -72,7 +72,14 @@
       lessons: list.flatMap(p => p.lessons || []),
     };
   }
-  const api = { headKey, overlayMap, faceWord, activeWords, newWordKeys, dueCardKeys, tokensOf, merge };
+  // One additive pack at a time. The classical core is always in the deck.
+  // A saved Church Latin mode switch (church: true) becomes the church pack.
+  function packOf(set) {
+    const s = set || {};
+    if (s.pack === 'church' || s.pack === 'classical') return s.pack;
+    return s.church === true ? 'church' : 'classical';
+  }
+  const api = { headKey, overlayMap, faceWord, activeWords, newWordKeys, dueCardKeys, tokensOf, merge, packOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.Church = api;
 })(typeof window !== 'undefined' ? window : globalThis);

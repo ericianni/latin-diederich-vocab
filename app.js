@@ -20,6 +20,7 @@
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
     s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, andPos: false, church: false, churchMem: 'season' }, s.set || {});
+    s.set.pack = (typeof Church !== 'undefined' && Church.packOf) ? Church.packOf(s.set) : (s.set.church === true ? 'church' : 'classical');
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
         const c = s.cards[k];
@@ -60,8 +61,9 @@
   // ---------- data ----------
   let W = [], BY = {}, UNITS = new Map(), CLASSICAL = [], CHURCH_WORDS = [], OVERLAYS = new Map(), PACK = null;
   const AN = {};
+  function activePack() { return Church.packOf(S.set); }
   const an = w => {
-    const c = !!(S.set && S.set.church);
+    const c = activePack() === 'church';
     const ck = w.id + (c ? ':c' : '');
     return AN[ck] || (AN[ck] = ['verb', 'noun', 'adjective', 'pronoun'].includes(w.pos) ? Morph.analyze(w, c ? { church: true } : undefined) : { skip: 'not drilled (' + w.pos + ')' });
   };
@@ -98,21 +100,21 @@
   // Church tiers. overlay(word) returns { la, en } while Church mode is on.
   // Card keys stay the word id, so a shared word keeps one Leitner record.
   // The active deck (W / BY) already carries the overlay, and an() reads that copy.
-  const ChurchPack = { overlay(w) { return S.set.church && OVERLAYS.size ? Church.faceWord(w, OVERLAYS, true, Morph.plain) : null; } };
+  const ChurchPack = { overlay(w) { return activePack() === 'church' && OVERLAYS.size ? Church.faceWord(w, OVERLAYS, true, Morph.plain) : null; } };
   function faceOf(w) {
     const o = ChurchPack.overlay(w);
     return o ? { la: o.la, en: o.en } : { la: w.la, en: w.en };
   }
   function rebuildDeck() {
     for (const k of Object.keys(AN)) delete AN[k];
-    W = Church.activeWords(CLASSICAL, CHURCH_WORDS, OVERLAYS, !!S.set.church, Morph.plain);
+    W = Church.activeWords(CLASSICAL, CHURCH_WORDS, OVERLAYS, activePack() === 'church', Morph.plain);
     BY = {};
     W.forEach(w => { BY[w.id] = w; });
     UNITS = buildUnits();
   }
   function latinHTML(text, drop) {
     const s = String(text);
-    if (!(drop && S.set.church)) return `<div class="latin">${esc(s)}</div>`;
+    if (!(drop && activePack() === 'church')) return `<div class="latin">${esc(s)}</div>`;
     const chars = Array.from(s);
     let i = 0; while (i < chars.length && !/\p{L}/u.test(chars[i])) i++;
     if (i >= chars.length) return `<div class="latin">${esc(s)}</div>`;
@@ -122,7 +124,7 @@
   }
   function litToday() { return Liturgical.colorFor(new Date(), { memorial: S.set.churchMem === 'saint' ? 'saint' : 'season' }); }
   function applyChrome() {
-    const on = !!S.set.church;
+    const on = activePack() === 'church';
     document.body.classList.toggle('church', on);
     $('#title').textContent = on ? 'Church Latin' : 'Latin 1400';
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -137,7 +139,7 @@
       if (meta) meta.setAttribute('content', '#7a3428');
     }
   }
-  function setSub(label) { $('#sub').textContent = S.set.church ? litToday().celebration : label; }
+  function setSub(label) { $('#sub').textContent = activePack() === 'church' ? litToday().celebration : label; }
 
   // ---------- drill filters ----------
   const conjKey = a => a.conj === 'irr' ? 'irr' : String(a.conj);
@@ -191,7 +193,7 @@
     const t = today();
     return Church.dueCardKeys(S.cards, W, t).filter(k => prefixRe.test(k) && (!allow || allow.has(k))).slice(0, cap);
   }
-  function newWords(n) { return Church.newWordKeys(W, S.cards, n, !!S.set.church); }
+  function newWords(n) { return Church.newWordKeys(W, S.cards, n, activePack() === 'church'); }
   const vNewLeft = () => { const d = day(); return Math.max(0, S.set.newPerDay + (d.extra || 0) - d.nv); };
   function counts() { return { vDue: dueKeys(/^[rp]:/, REVIEW_CAP).length, vNew: newWords(vNewLeft()).length }; }
 
@@ -936,7 +938,7 @@
   const LS = window.LESSONS || [];
   // Mass lessons are part of the list only while Church mode is on. Their done-marks stay either way.
   function lessonSet() {
-    const mass = S.set.church && PACK ? PACK.lessons.map(l => Object.assign({ mass: true }, l)) : [];
+    const mass = activePack() === 'church' && PACK ? PACK.lessons.map(l => Object.assign({ mass: true }, l)) : [];
     return mass.concat(LS);
   }
   const lessonDone = id => !!S.lessons[id];
@@ -975,7 +977,7 @@
     const list = lessonSet();
     const n = list.filter(l => lessonDone(l.id)).length;
     const secs = [...new Set(list.map(l => l.sec))];
-    const massNote = S.set.church ? ' Church mode adds the Ordinary of the Mass, then the basic prayers, then six short readings, at the top. Pronunciation is on the About tab.' : '';
+    const massNote = activePack() === 'church' ? ' Church Latin adds the Ordinary of the Mass, then the basic prayers, then six short readings, at the top. Pronunciation is on the About tab.' : '';
     V().innerHTML = `<div class="card"><div class="prompt-kind">Lessons · about 5–10 minutes each</div>
       <p class="small muted" style="margin:6px 0 10px">What each case, declension, and conjugation does and how to spot it, with endings tables and a short quick check.${massNote} <b>${n}</b> of ${list.length} done.</p>
       <div class="bar"><i style="width:${(100 * n / list.length).toFixed(1)}%"></i></div></div>
@@ -1260,9 +1262,11 @@
     setSub('About');
     const drillWords = W.filter(w => !an(w).skip).length;
     const mem = S.set.churchMem === 'saint' ? 'saint' : 'season';
+    const pack = activePack();
     V().innerHTML = `<div class="card"><h2 style="margin-top:0">Settings</h2>
-      <div class="switchrow"><div class="grow"><b>Church Latin mode</b><div class="small muted">Church meanings for the Mass, the Ordinary in Learn, and liturgical colors.</div></div><button type="button" class="switch${S.set.church ? ' on' : ''}" id="church" role="switch" aria-checked="${S.set.church ? 'true' : 'false'}" aria-label="Church Latin mode"></button></div>
-      <div id="churchopt"${S.set.church ? '' : ' hidden'}>
+      <div class="small muted">Pack</div><div class="seg" id="pack"><button data-v="classical" class="${pack === 'classical' ? 'on' : ''}" aria-pressed="${pack === 'classical'}">Classical</button><button data-v="church" class="${pack === 'church' ? 'on' : ''}" aria-pressed="${pack === 'church'}">Church Latin</button></div>
+      <p class="small muted">The core word list is always included. One added pack can be on at a time.</p>
+      <div id="churchopt"${pack === 'church' ? '' : ' hidden'}>
         <div class="small muted chiph">Optional memorials</div><div class="seg" id="cmem"><button data-v="season" class="${mem === 'season' ? 'on' : ''}" aria-pressed="${mem === 'season'}">Season color</button><button data-v="saint" class="${mem === 'saint' ? 'on' : ''}" aria-pressed="${mem === 'saint'}">Saint’s color</button></div>
         <div class="small muted chiph">Pronunciation</div><div class="small" id="cpron">${PACK ? PACK.about.pronunciation : ''}</div>
       </div>
@@ -1290,7 +1294,7 @@
       ${PACK ? PACK.about.sources : ''}
       <p class="small muted">Made by Eric Ianni. Source code: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>.</p>
       <p class="small muted">Version 3.3.0</p></div>`;
-    $('#church').onclick = () => { S.set.church = !S.set.church; rebuildDeck(); save(); applyChrome(); renderAbout(); };
+    document.querySelectorAll('#pack button').forEach(b => b.onclick = () => { if (S.set.pack === b.dataset.v) return; S.set.pack = b.dataset.v; rebuildDeck(); save(); applyChrome(); renderAbout(); });
     document.querySelectorAll('#cmem button').forEach(b => b.onclick = () => { S.set.churchMem = b.dataset.v; save(); applyChrome(); renderAbout(); });
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });

@@ -371,6 +371,13 @@ ok(weave3.length === 6 && weave3.filter(k => Number(k.slice(2)) >= 10098).length
 ok(fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('data/church/tier3.json'), 'tier 3 is cached for offline use');
 ok(/S\.lessons\[id\]/.test(fs.readFileSync(path.join(root, 'app.js'), 'utf8')) && !/function markLesson[\s\S]{0,240}S\.cards/.test(fs.readFileSync(path.join(root, 'app.js'), 'utf8')), 'finishing a reading does not write a Leitner card');
 
+ok(Church.packOf({ church: true }) === 'church', 'church: true migrates to the church pack');
+ok(Church.packOf({ church: false }) === 'classical' && Church.packOf({}) === 'classical', 'no church switch is the classical pack');
+ok(Church.packOf({ pack: 'classical', church: true }) === 'classical', 'an explicit classical pack wins');
+ok(Church.packOf({ pack: 'church' }) === 'church' && Church.packOf({ pack: 'nope', church: true }) === 'church', 'a saved church pack stays, a bad pack falls through');
+const appSrc = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+ok(/function activePack\(\)/.test(appSrc) && /id="pack"/.test(appSrc) && !/Church Latin mode/.test(appSrc), 'settings use a pack choice, not the old mode switch');
+
 console.log('OK', n);
 console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);
 console.log('tier2 words', tier2.words.length, 'overlays', tier2.overlays.length, 'tokens', t2tokens, 'lessons', tier2.lessons.length);
