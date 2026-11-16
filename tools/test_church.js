@@ -377,6 +377,9 @@ ok(Church.packOf({ pack: 'classical', church: true }) === 'classical', 'an expli
 ok(Church.packOf({ pack: 'church' }) === 'church' && Church.packOf({ pack: 'nope', church: true }) === 'church', 'a saved church pack stays, a bad pack falls through');
 const appSrc = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 ok(/function activePack\(\)/.test(appSrc) && /id="pack"/.test(appSrc) && !/Church Latin mode/.test(appSrc), 'settings use a pack choice, not the old mode switch');
+const credits = appSrc.slice(appSrc.indexOf('Sources &amp; credits'), appSrc.indexOf('How it works') > appSrc.indexOf('Sources') ? appSrc.indexOf('document.querySelectorAll(\'#pack') : appSrc.length);
+ok(/The Frequency of Latin Words and Their Endings/.test(credits) && /Made by Eric Ianni/.test(credits) && /Version 3\.3\.0/.test(credits), 'credits name the word list, the author, and the version');
+ok(/Missale Romanum/.test(credits) && /pack === 'church'/.test(credits) && !/Muccigrosso/.test(appSrc) && !/DWF\.csv/.test(appSrc) && !/PACK\.about\.sources/.test(appSrc), 'church credits are pack-only, and the old blurbs are gone');
 
 console.log('OK', n);
 console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);
