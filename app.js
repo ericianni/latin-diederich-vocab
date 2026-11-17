@@ -49,7 +49,7 @@
   }
   let TEST = null;   // Test mode: { id, snap }. Nothing is saved while it is on; leaving it restores the progress snapshot.
   function save() { if (TEST) return; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage full or private mode */ } }
-  function day() { const t = today(); if (S.day.d !== t) S.day = { d: t, nv: 0, nd: 0, extra: 0, dx: 0, dn: 0 }; return S.day; }
+  function day() { S.day = DrillPick.rollDay(S.day, today()); return S.day; }
   function sched(c, right) {
     const t = today();
     if (!right) { c.box = 0; c.due = t; } else { c.box = Math.min(7, (c.box || 0) + 1); c.due = t + INT[c.box]; }
@@ -225,7 +225,7 @@
     }
     if (item.c) {                              // drill: update the combo's stats; a wrong answer comes back with another word
       S.dq++; S.dst[item.c] = DrillPick.record(S.dst[item.c], right, Date.now(), S.dq);
-      S.ds.w[item.id] = (S.ds.w[item.id] || 0) + 1; d.dn = (d.dn || 0) + 1;
+      S.ds.w[item.id] = (S.ds.w[item.id] || 0) + 1; DrillPick.bumpDay(d);
       save(); Q.done++; if (right) Q.ok++;
       if (!right && !item.redo) { Q.redo.push({ c: item.c, at: Q.done + 3, avoid: item.id }); Q.total++; }   // one re-ask per miss, so a set always ends
       return next();
@@ -294,10 +294,14 @@
     const c = counts();
     const vTot = c.vDue + c.vNew;
     const mins = Math.max(1, Math.round((c.vDue * 8 + c.vNew * 15) / 60));
+    const dn = day().dn || 0, drillGoal = DrillPick.DAILY_DRILLS;
+    const goals = `<div class="card"><div class="prompt-kind">Today’s goals</div>
+      <div class="small" style="margin-top:8px">Drill answers: <b>${Math.min(dn, drillGoal)}</b> / ${drillGoal}</div><div class="bar"><i style="width:${Math.min(100, 100 * dn / drillGoal).toFixed(1)}%"></i></div></div>`;
     if (vTot === 0) {
       V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>Flashcards done for today</h2>
         <p class="muted">Nice work. Come back tomorrow — new words and reviews will be waiting.</p>
         ${progressBar()}</div>
+        ${goals}
         <div class="card"><div class="row wrap"><button class="grow" id="more">Learn 5 more words</button><button class="grow" id="goquiz">Quick quiz</button></div></div>`;
       $('#more').onclick = () => { day().extra = (day().extra || 0) + 5; save(); startSession('vocab'); };
     } else {
@@ -309,6 +313,7 @@
         </div>
         <button class="primary big" id="go">Start</button>
         <p class="small muted center" style="margin:10px 0 0">Stop whenever you like — every answer is saved.</p></div>
+        ${goals}
         <div class="card">${progressBar()}<button class="link" id="goquiz">Quick quiz (doesn’t affect your schedule)</button></div>`;
       $('#go').onclick = () => startSession('vocab');
     }

@@ -463,6 +463,13 @@
       };
     } finally { engine.setPool(null); }
   }
+  const DAILY_DRILLS = 20;
+  // Local-midnight reset for the saved day record. A matching day number keeps the counts.
+  function rollDay(day, t) {
+    if (day && day.d === t) { day.dn = day.dn || 0; return day; }
+    return { d: t, nv: 0, nd: 0, extra: 0, dx: 0, dn: 0 };
+  }
+  function bumpDay(day) { day = day || {}; day.dn = (day.dn || 0) + 1; return day; }
   // One sentence is one daily-drill answer. Identify writes the asked form back into drill stats; translate does not.
   function applySentenceGrade(state, item, right, now) {
     state = state || {};
@@ -478,5 +485,6 @@
     DECAY, record, acc, weight, masses, pickCombo, pickWord, weakest,
     SENT_DF, SENT_GAPS, SENT_TIERS, sentenceSettings, sentenceTier, sentenceTemplates, sentenceGap, sentenceMixStart, sentenceMixNext,
     seenWordIds, paradigmOf, engineCan, comboFits, lexiconIndex, pickDrillSentence, helperHints, applySentenceGrade,
+    DAILY_DRILLS, rollDay, bumpDay,
   };
 });

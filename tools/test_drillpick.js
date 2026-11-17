@@ -1,4 +1,6 @@
 // Tests for drill weighting and selection (drillpick.js). Run: node tools/test_drillpick.js
+const fs = require('fs');
+const path = require('path');
 const P = require('../drillpick.js');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } };
@@ -81,4 +83,17 @@ ok(ws[0] === 'n3|dat.pl' && ws[1] === 'n3|abl.sg', 'weakest sorted by accuracy, 
 ok(P.weakest(stats, 5, new Set(['n3|gen.sg'])).join() === 'n3|gen.sg', 'weakest limited to allowed combos');
 
 ok(P.weakest(stats, 5, null, 0.9).join() === 'n3|dat.pl,n3|abl.sg', 'weakest can drop well-known combos');
+
+// daily drill goal: form answers and sentences share one count, and a new local day clears it
+ok(P.DAILY_DRILLS === 20, 'the daily drill goal is 20');
+let day = P.rollDay({ d: 100, dn: 4, nv: 2, extra: 5 }, 100);
+ok(day.dn === 4 && day.nv === 2 && day.extra === 5, 'the same local day keeps the drill count');
+day = P.bumpDay(day);
+ok(day.dn === 5, 'a form-drill answer counts');
+day = P.applySentenceGrade(day, { ex: 'tr', dir: 'le' }, true, NOW);
+ok(day.dn === 6, 'a sentence answer counts on the same total');
+const next = P.rollDay(day, 101);
+ok(next.d === 101 && next.dn === 0 && next.nv === 0 && next.extra === 0 && day.dn === 6, 'local midnight resets the drill count and leaves the old day alone');
+const appSrc = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+ok(/Today’s goals/.test(appSrc) && /Drill answers:/.test(appSrc) && /DAILY_DRILLS/.test(appSrc) && !/id="godr"/.test(appSrc), 'Cards shows the drill goal and does not link to Drills');
 console.log(`${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

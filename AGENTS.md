@@ -80,7 +80,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 ## Architecture (brief)
 
 - **Cards:** Leitner boxes 0–7 (intervals 0,1,3,7,14,30,60,120 days); separate `r:` (LA→EN) and `p:` (EN→LA) keys; right/wrong only; optional typed EN→LA via `Morph.gradeHead`.
-- **Drills:** Free practice (no due pile). Modes `type` / `id` / `mix`. Weighted toward weak / unseen / stale combos (`DrillPick`). Miss → same combo, different word, ~3 later. Settings chips in `S.set.df`. Optional sentences: see below.
+- **Drills:** Free practice (no due pile). Modes `type` / `id` / `mix`. Weighted toward weak / unseen / stale combos (`DrillPick`). Miss → same combo, different word, ~3 later. Settings chips in `S.set.df`. Optional sentences: see below. Each answer, including a sentence, adds 1 to `S.day.dn`. Cards shows that count against a goal of 20. `day()` clears it at local midnight with the rest of the day record.
 - **And…?:** After a right Identify on an ambiguous form, optional follow-up names other readings (no schedule impact). Toggle `S.set.andMore` (default on).
 - **Learn:** Lessons from `lessons.js`; tables call `Morph.standard`; quick check does not touch SRS; “Practice this in Drills” writes filters.
 - **Cheat sheet / prompts / cards:** Always `Morph.standard(cell)`.
@@ -98,7 +98,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v47`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v48`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): a cloud agent only prepares the wrapper. Set `versionCode` / `versionName` in `android/app/build.gradle` (next local build is versionCode **4**, versionName **3.3-android-4**, package `io.github.ericianni.latin1400`) and refresh `www/` with `npm run build:web`. Do **not** generate a keystore, sign, or publish a GitHub Release from the cloud VM. The debug key stays on the persistent computer (`~/.android/debug.keystore`; public SHA-256 `CD:AE:EE:F3:ED:C6:E2:FD:4D:83:16:68:B1:16:91:D1:BE:3C:E3:28:8B:DF:9C:7E:18:8D:E0:7B:EF:1A:64:13`). On that machine: `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug`.
