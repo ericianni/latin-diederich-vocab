@@ -20,11 +20,13 @@ The Cards page still shows the day’s flashcards (new words and reviews, or a �
 
 ## Today’s goals
 
-On Cards, both before and after the day’s flashcards, a small card is headed “Today’s goals.” Its line reads “Drill answers: N / 20.”
+On Cards, both before and after the day’s flashcards, a small card is headed “Today’s goals.” The first line is “New words: N / goal.” N is how many new flashcards were introduced today: the first time a new card is answered. The goal is the daily new-word setting plus any “learn 5 more” extras. The second line is “Drill answers: N / 20.”
 
-N is how many drill answers were given today. That includes every drill type and sentence questions, right or wrong. The line shows the real count, including after the goal: 27 answers reads “27 / 20 ✓”. The check appears once the count reaches 20. The bar fills only up to the goal. The Drills tab’s “answered today” number is the same real count, not a capped one.
+Both lines show the real count past the goal, with a check once the count reaches the goal. Eight new words against a goal of 5 reads “8 / 5 ✓”. Twenty-seven drill answers reads “27 / 20 ✓”. Each line has its own bar, and the bar fills only up to the goal.
 
-The count is part of the saved progress. It resets at local midnight, together with the other daily counts (new cards started, extra new words, and so on).
+The Drills tab shows the same drill line under the stats, as “Daily goal:”, with its own bar capped at the goal. “Answered today” is that same real total.
+
+Both counts are part of the saved progress. They reset at local midnight, together with the other daily counts.
 
 ## Learn
 

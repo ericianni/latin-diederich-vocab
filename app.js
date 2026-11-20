@@ -315,9 +315,11 @@
     const c = counts();
     const vTot = c.vDue + c.vNew;
     const mins = Math.max(1, Math.round((c.vDue * 8 + c.vNew * 15) / 60));
-    const dn = day().dn || 0, drillGoal = DrillPick.DAILY_DRILLS;
+    const d = day(), newGoal = S.set.newPerDay + (d.extra || 0), dn = d.dn || 0, drillGoal = DrillPick.DAILY_DRILLS;
+    const bar = (n, of) => `<div class="bar"><i style="width:${DrillPick.goalBarPct(n, of).toFixed(1)}%"></i></div>`;
     const goals = `<div class="card"><div class="prompt-kind">Today’s goals</div>
-      <div class="small" style="margin-top:8px">Drill answers: <b>${DrillPick.drillGoalLabel(dn, drillGoal)}</b></div><div class="bar"><i style="width:${Math.min(100, 100 * dn / drillGoal).toFixed(1)}%"></i></div></div>`;
+      <div class="small" style="margin-top:8px">New words: <b>${DrillPick.drillGoalLabel(d.nv, newGoal)}</b></div>${bar(d.nv || 0, newGoal)}
+      <div class="small" style="margin-top:8px">Drill answers: <b>${DrillPick.drillGoalLabel(dn, drillGoal)}</b></div>${bar(dn, drillGoal)}</div>`;
     if (vTot === 0) {
       V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>Flashcards done for today</h2>
         <p class="muted">Nice work. Come back tomorrow — new words and reviews will be waiting.</p>
@@ -415,8 +417,9 @@
     const head = UNITS.size === 0
       ? `<div class="card"><div class="prompt-kind">Form drills</div><p class="no">Nothing matches your choices.</p><p class="small muted">Turn on at least one mood, voice, tense, person, case, or number below (imperatives need present or future).</p></div>`
       : `<div class="card">${fin ? `<div class="prompt-kind">Set done</div><h2 style="margin:4px 0 0">${fin.ok} of ${fin.n} right</h2>` : '<div class="prompt-kind">Form drills · free practice</div>'}
-          <div class="stats two" style="margin:12px 0 14px"><div class="stat"><b>${tried}</b><span>of ${UNITS.size} forms tried</span></div><div class="stat"><b>${d.dn || 0}</b><span>answered today</span></div></div>
-          <button class="primary big" id="dgo">${fin ? 'Keep going' : `Start a set of ${S.set.dlen}`}</button>
+          <div class="stats two" style="margin:12px 0 10px"><div class="stat"><b>${tried}</b><span>of ${UNITS.size} forms tried</span></div><div class="stat"><b>${d.dn || 0}</b><span>answered today</span></div></div>
+          <div class="small muted">Daily goal: ${DrillPick.drillGoalLabel(d.dn || 0, DrillPick.DAILY_DRILLS)}</div><div class="bar"><i style="width:${DrillPick.goalBarPct(d.dn || 0, DrillPick.DAILY_DRILLS).toFixed(1)}%"></i></div>
+          <button class="primary big" id="dgo" style="margin-top:10px">${fin ? 'Keep going' : `Start a set of ${S.set.dlen}`}</button>
           <p class="small muted center" style="margin:10px 0 0">Questions lean toward forms you miss, haven’t tried, or haven’t seen lately. Stop anytime; every answer is saved. ${modeTxt()}${DrillPick.sentenceSettings(S.set.df).on ? ' About one in seven is a short sentence.' : ''}</p></div>
         <div class="card"><div class="row"><h2 class="grow" style="margin:0">Weak spots</h2><button class="link" id="gweak">View ›</button></div>
           <div class="small muted" style="margin-top:4px">${weak.length ? weak.slice(0, 3).map(c => esc(comboLabel(c)) + ' · ' + pct(S.dst[c])).join('<br>') : (Object.keys(S.dst).length ? 'None right now: every form you’ve tried is at 85% or better.' : 'Your lowest-accuracy forms will show up here once you’ve answered a few.')}</div></div>`;
