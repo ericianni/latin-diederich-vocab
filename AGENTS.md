@@ -3,6 +3,10 @@
 Offline PWA that teaches Paul Diederich's high-frequency Latin vocabulary (study deck ≈1,470 entries after dropping 48 cross-refs). Tabs: Cards (Leitner flashcards), Learn (21 lessons), Drills (Type / Identify / Mix), Cheat sheet, Words, About. Live at https://ericianni.github.io/latin-diederich-vocab/. No backend; progress in `localStorage` key `latin1400.v1`.
 Learner-facing behavior, including known gaps, is described in `docs/behavior.md`.
 
+## Keep in sync with Italiano 1500
+
+Latin 1400 and Italiano 1500 (ericianni/italiano-1500) share the same UI, layout, counters, and behavior. Any change to UI, layout, counters, settings, or shared behavior must be made in both apps in the same batch, or the report must say why not. Intended differences are listed in `docs/behavior.md`.
+
 ## File map
 
 | Path | Purpose |

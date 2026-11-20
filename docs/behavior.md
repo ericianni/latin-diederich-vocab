@@ -140,3 +140,16 @@ A Capacitor wrapper is prepared for package `io.github.ericianni.latin1400`, ver
 
 - Author packs beyond Classical and Church Latin
 - Audio
+
+## Intended differences from Italiano 1500
+
+Latin 1400 and Italiano 1500 share the same UI, layout, counters, and settings. These differences are deliberate.
+
+- **Language.** The word list, lessons, drills, and cheat sheet are Latin. Typed answers use macrons. The setting is “Macrons optional” or “Require macrons,” and macrons are optional by default. Italian uses accents, and “Accents count” is the default. Drills practice Latin forms (cases, declensions, conjugations, pronouns). Italian drills practice verb forms, articles, and adjective agreement.
+- **And…? across parts of speech.** Latin only, on the Drills “How to answer” card, off by default. Both apps can ask “And…?” for other readings of the same word.
+- **Church Latin, instead of Dante: Inferno.** One added pack at a time, on top of the core list. While Church Latin is on: optional memorial colors, the pronunciation guide, the US Roman calendar (Ascension and Corpus Christi on Sunday, the practice of most US provinces, including Arlington), the liturgical frame color, the parchment page, the Church tab icons, and the same Chi-Rho in the header and on About. Italian’s added pack is Dante: Inferno, with its descent theme. Latin’s Word packs card lists only the packs that exist. Italian’s also says that Rome & travel is planned.
+- **Light only.** The page is marked light and does not follow a dark system theme. Italian does.
+- **Sentences (beta).** About links to a separate Sentences page. Sentences mixed into Drills are a different path. Italian has sentences in drills only.
+- **Word-list order.** Besides frequency and A–Z, Classical can follow Diederich’s topics, and the Church pack can follow topic and lesson (Mass, prayers, readings). Italian sorts a Dante pack by canto.
+
+A day’s review pile stops at 60, and one flashcard run stops at 30, in both apps. That shared cap is not a difference.
