@@ -1,6 +1,7 @@
 # AGENTS.md — Latin 1400
 
 Offline PWA that teaches Paul Diederich's high-frequency Latin vocabulary (study deck ≈1,470 entries after dropping 48 cross-refs). Tabs: Cards (Leitner flashcards), Learn (21 lessons), Drills (Type / Identify / Mix), Cheat sheet, Words, About. Live at https://ericianni.github.io/latin-diederich-vocab/. No backend; progress in `localStorage` key `latin1400.v1`.
+Learner-facing behavior, including known gaps, is described in `docs/behavior.md`.
 
 ## File map
 
