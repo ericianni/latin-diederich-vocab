@@ -47,6 +47,7 @@ input[type=text]{font-family:var(--serif);font-size:1.35rem}
 .tabs .tab-ico{width:1em;height:1em;vertical-align:-.125em;stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
 .tabs .tab-ico .fill{fill:currentColor;stroke:none}
 .tabs .tab-ico .stem{stroke-width:2.2}
+.tabs .tab-ico[stroke-width="2.2"]{stroke-width:2.2}
 .tabs button.on{color:var(--accent);font-weight:600}
 .done{text-align:center;padding:28px 18px}.done .check{font-size:3rem;color:var(--good)}
 .list{list-style:none;margin:0;padding:0}

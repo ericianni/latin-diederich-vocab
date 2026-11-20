@@ -123,14 +123,14 @@
     return `<div class="latin dropword" aria-label="${esc(s)}"><span class="drop" aria-hidden="true">${esc(initial)}</span><span class="rest" aria-hidden="true">${esc(rest)}</span></div>`;
   }
   function litToday() { return Liturgical.colorFor(new Date(), { memorial: S.set.churchMem === 'saint' ? 'saint' : 'season' }); }
-  // Church tab drawings: inline SVG, currentColor, the small-loop Chi-Rho. Classical tabs keep their glyphs.
+  // Church tab drawings: inline SVG, currentColor. Classical tabs keep their glyphs.
   const CHURCH_TABS = {
     today: '<svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="stem" d="M12 2.2v19.6"/><path class="stem" d="M5.2 7.6h13.6"/></svg>',
     learn: '<svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.4 4.8c3.5-1.1 6.3-.1 8.6 1.15V15.8c-2.2-1.15-5.1-2-8.6-.75V4.8z"/><path d="M20.6 4.8c-3.5-1.1-6.3-.1-8.6 1.15V15.8c2.2-1.15 5.1-2 8.6-.75V4.8z"/><path class="fill" d="M11.05 8.4h1.9v11.6l-.95-1.15L11.05 20z"/></svg>',
     drills: '<svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="fill" d="M12 1.3c-1.15 1.85-2.25 2.75-2.25 4.1 0 1.08.98 1.85 2.25 1.85s2.25-.77 2.25-1.85c0-1.35-1.1-2.25-2.25-4.1z"/><rect x="8.2" y="8.0" width="7.6" height="10.5" rx=".55"/><path d="M6.1 18.5h11.8v2.7H6.1z"/></svg>',
     cheat: '<svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5.3 2.7h13.4"/><path d="M5.3 2.7c.2 6.3 3 8.9 6.7 8.9s6.5-2.6 6.7-8.9"/><path d="M12 11.6v2.6"/><circle cx="12" cy="14.8" r="1.2"/><path d="M12 16v2.3"/><path d="M5.2 20.5h13.6"/><path d="M5.2 20.5v1.5h13.6v-1.5"/></svg>',
     list: '<svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ellipse cx="12" cy="4.15" rx="7.3" ry="1.95"/><path d="M5.6 5.2v12.2"/><path d="M18.4 5.2v12.2"/><path d="M5.6 17.4q3.2 3.6 6.4 0q3.2 3.6 6.4 0"/><path d="M8.4 8.5h7.2"/><path d="M8.4 11.7h7.2"/><path d="M8.4 14.9h5.0"/></svg>',
-    about: '<svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="stem" d="M12 2.2v19.6"/><path class="stem" d="M12 3.1h1.55a2.95 2.95 0 0 1 0 5.9H12"/><path class="stem" d="M6.1 9.4 17.9 21.2"/><path class="stem" d="M17.9 9.4 6.1 21.2"/></svg>',
+    about: '<svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.2v19.6"/><path d="M12 3h1.4a2.5 2.5 0 0 1 0 5H12"/><path d="M6.8 12.4 17.2 21.6"/><path d="M17.2 12.4 6.8 21.6"/></svg>',
   };
   const classicTabIcons = {};
   function applyTabIcons() {

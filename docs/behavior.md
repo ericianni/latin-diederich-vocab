@@ -86,7 +86,7 @@ Settings are on the About tab.
 
 New Church words use the same daily cap as classical words: one Church word after every two new classical words.
 
-With the Church pack on, the six tabs use Church drawings: a Latin cross for Cards, an open missal for Learn, a votive candle for Drills, a chalice for the cheat sheet, a scroll for Words, and a Chi-Rho for About. They take the tab’s own color, so the active tab uses the season color and the others stay muted. Classical mode keeps its original icons. Changing the pack swaps them at once, without a reload. The parchment, the liturgical frame, the header Chi-Rho, and the fonts stay as they are.
+With the Church pack on, the six tabs use Church drawings: a Latin cross for Cards, an open missal for Learn, a votive candle for Drills, a chalice for the cheat sheet, a scroll for Words, and a Chi-Rho for About. The header beside the title uses that same Chi-Rho, at its existing size, in the season color. The tabs take the tab’s own color, so the active tab uses the season color and the others stay muted. Classical mode keeps its original icons. Changing the pack swaps them at once, without a reload. The parchment, the liturgical frame, and the fonts stay as they are.
 
 Two settings appear only for the Church pack: optional memorial colors (the season’s color, or the saint’s color) and a pronunciation guide. The guide is text. There is no audio.
 

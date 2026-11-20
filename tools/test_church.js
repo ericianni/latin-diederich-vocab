@@ -407,7 +407,8 @@ ok(Church.listGroup(bare[0], 'diederich', 'classical') === 'sec:1.1' && /By topi
 const page = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 ok(/<span>☀︎<\/span>Cards/.test(page) && /<span>❦<\/span>Learn/.test(page) && /<span>✎<\/span>Drills/.test(page) && /<span>▤<\/span>Cheat sheet/.test(page) && /<span>≡<\/span>Words/.test(page) && /<span>i<\/span>About/.test(page), 'classical tabs keep their original icons');
 const chrome = appSrc.slice(appSrc.indexOf('function applyChrome'));
-ok(/function applyTabIcons\(/.test(appSrc) && /applyTabIcons\(\)/.test(chrome) && /M12 3\.1h1\.55a2\.95 2\.95 0 0 1 0 5\.9H12/.test(appSrc) && /M11\.05 8\.4h1\.9v11\.6/.test(appSrc) && /M12 1\.3c-1\.15/.test(appSrc) && /M5\.3 2\.7h13\.4/.test(appSrc) && /M5\.6 17\.4q3\.2 3\.6 6\.4 0/.test(appSrc), 'the Church pack swaps in the mockup tab drawings, including the small-loop Chi-Rho');
+ok(/function applyTabIcons\(/.test(appSrc) && /applyTabIcons\(\)/.test(chrome) && /M12 3h1\.4a2\.5 2\.5 0 0 1 0 5H12/.test(appSrc) && /M6\.8 12\.4 17\.2 21\.6/.test(appSrc) && /M11\.05 8\.4h1\.9v11\.6/.test(appSrc) && /M12 1\.3c-1\.15/.test(appSrc) && /M5\.3 2\.7h13\.4/.test(appSrc) && /M5\.6 17\.4q3\.2 3\.6 6\.4 0/.test(appSrc), 'the Church pack swaps in the tab drawings, including the new Chi-Rho');
+ok(/M12 3h1\.4a2\.5 2\.5 0 0 1 0 5H12/.test(page) && !/h9 a8 8 0 0 1 0 16/.test(page), 'the header Chi-Rho is the new drawing');
 const css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
 ok(/\.tab-ico\{[^}]*stroke:currentColor/.test(css) && /stroke-width:1\.65/.test(css) && /stroke-width:2\.2/.test(css), 'church tab icons use currentColor and the mockup stroke');
 
