@@ -470,6 +470,11 @@
     return { d: t, nv: 0, nd: 0, extra: 0, dx: 0, dn: 0 };
   }
   function bumpDay(day) { day = day || {}; day.dn = (day.dn || 0) + 1; return day; }
+  // Shown count is the real total. The goal stays 20; a check marks the goal met.
+  function drillGoalLabel(n, goal) {
+    const shown = n || 0, of = goal == null ? DAILY_DRILLS : goal;
+    return shown + ' / ' + of + (shown >= of ? ' ✓' : '');
+  }
   // One sentence is one daily-drill answer. Identify writes the asked form back into drill stats; translate does not.
   function applySentenceGrade(state, item, right, now) {
     state = state || {};
@@ -485,6 +490,6 @@
     DECAY, record, acc, weight, masses, pickCombo, pickWord, weakest,
     SENT_DF, SENT_GAPS, SENT_TIERS, sentenceSettings, sentenceTier, sentenceTemplates, sentenceGap, sentenceMixStart, sentenceMixNext,
     seenWordIds, paradigmOf, engineCan, comboFits, lexiconIndex, pickDrillSentence, helperHints, applySentenceGrade,
-    DAILY_DRILLS, rollDay, bumpDay,
+    DAILY_DRILLS, rollDay, bumpDay, drillGoalLabel,
   };
 });

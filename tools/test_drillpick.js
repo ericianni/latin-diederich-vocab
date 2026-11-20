@@ -96,4 +96,6 @@ const next = P.rollDay(day, 101);
 ok(next.d === 101 && next.dn === 0 && next.nv === 0 && next.extra === 0 && day.dn === 6, 'local midnight resets the drill count and leaves the old day alone');
 const appSrc = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 ok(/Today’s goals/.test(appSrc) && /Drill answers:/.test(appSrc) && /DAILY_DRILLS/.test(appSrc) && !/id="godr"/.test(appSrc), 'Cards shows the drill goal and does not link to Drills');
+ok(P.drillGoalLabel(19) === '19 / 20' && P.drillGoalLabel(20) === '20 / 20 ✓' && P.drillGoalLabel(27) === '27 / 20 ✓', 'past the goal the line shows the real count and a check');
+ok(!/Math\.min\(dn,\s*drillGoal\)/.test(appSrc) && /drillGoalLabel\(dn,\s*drillGoal\)/.test(appSrc), 'Cards does not cap the displayed drill count at 20');
 console.log(`${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);

@@ -22,7 +22,7 @@ The Cards page still shows the day’s flashcards (new words and reviews, or a �
 
 On Cards, both before and after the day’s flashcards, a small card is headed “Today’s goals.” Its line reads “Drill answers: N / 20.”
 
-N is how many drill answers were given today. That includes every drill type and sentence questions, right or wrong. The number on the line stops at 20, and a bar fills as the count rises. Further answers are still stored; the line stays at 20 / 20.
+N is how many drill answers were given today. That includes every drill type and sentence questions, right or wrong. The line shows the real count, including after the goal: 27 answers reads “27 / 20 ✓”. The check appears once the count reaches 20. The bar fills only up to the goal. The Drills tab’s “answered today” number is the same real count, not a capped one.
 
 The count is part of the saved progress. It resets at local midnight, together with the other daily counts (new cards started, extra new words, and so on).
 
@@ -84,6 +84,8 @@ Settings are on the About tab.
 
 New Church words use the same daily cap as classical words: one Church word after every two new classical words.
 
+With the Church pack on, the six tabs use Church drawings: a Latin cross for Cards, an open missal for Learn, a votive candle for Drills, a chalice for the cheat sheet, a scroll for Words, and a Chi-Rho for About. They take the tab’s own color, so the active tab uses the season color and the others stay muted. Classical mode keeps its original icons. Changing the pack swaps them at once, without a reload. The parchment, the liturgical frame, the header Chi-Rho, and the fonts stay as they are.
+
 Two settings appear only for the Church pack: optional memorial colors (the season’s color, or the saint’s color) and a pronunciation guide. The guide is text. There is no audio.
 
 Also on this tab: new flashcard words per day (5, 10, or 20; the default is 10), macrons optional or required, Ask “And…?” or just show the other readings, and And…? across parts of speech. Progress can be exported, imported, or reset.
@@ -134,6 +136,5 @@ A Capacitor wrapper is prepared for package `io.github.ericianni.latin1400`, ver
 
 ## Not built yet
 
-- A Church Latin theme and icons
 - Author packs beyond Classical and Church Latin
 - Audio

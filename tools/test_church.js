@@ -404,6 +404,12 @@ ok(Church.listGroup(bare[2], 'rank', 'church') === 'pack:Church Latin' && Church
 const freq = bare.slice().sort((a, b) => Church.compareList(a, b, 'rank')).map(w => w.id).join(',');
 ok(freq === '0,24,10001,10076,10100', 'unranked core words stay ahead of the Church Latin frequency group');
 ok(Church.listGroup(bare[0], 'diederich', 'classical') === 'sec:1.1' && /By topic \/ lesson/.test(appSrc) && !/w\.sec\.split/.test(appSrc), 'classical keeps Diederich sections, and the list no longer splits a raw section');
+const page = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+ok(/<span>☀︎<\/span>Cards/.test(page) && /<span>❦<\/span>Learn/.test(page) && /<span>✎<\/span>Drills/.test(page) && /<span>▤<\/span>Cheat sheet/.test(page) && /<span>≡<\/span>Words/.test(page) && /<span>i<\/span>About/.test(page), 'classical tabs keep their original icons');
+const chrome = appSrc.slice(appSrc.indexOf('function applyChrome'));
+ok(/function applyTabIcons\(/.test(appSrc) && /applyTabIcons\(\)/.test(chrome) && /M12 3\.1h1\.55a2\.95 2\.95 0 0 1 0 5\.9H12/.test(appSrc) && /M11\.05 8\.4h1\.9v11\.6/.test(appSrc) && /M12 1\.3c-1\.15/.test(appSrc) && /M5\.3 2\.7h13\.4/.test(appSrc) && /M5\.6 17\.4q3\.2 3\.6 6\.4 0/.test(appSrc), 'the Church pack swaps in the mockup tab drawings, including the small-loop Chi-Rho');
+const css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+ok(/\.tab-ico\{[^}]*stroke:currentColor/.test(css) && /stroke-width:1\.65/.test(css) && /stroke-width:2\.2/.test(css), 'church tab icons use currentColor and the mockup stroke');
 
 console.log('OK', n);
 console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);

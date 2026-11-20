@@ -44,6 +44,9 @@ input[type=text]{font-family:var(--serif);font-size:1.35rem}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(6,1fr);background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
 .tabs button{background:none;border-radius:0;padding:8px 0 10px;font-size:.7rem;white-space:nowrap;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px}
 .tabs button span{font-size:1.15rem;line-height:1.2}
+.tabs .tab-ico{width:1em;height:1em;vertical-align:-.125em;stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.tabs .tab-ico .fill{fill:currentColor;stroke:none}
+.tabs .tab-ico .stem{stroke-width:2.2}
 .tabs button.on{color:var(--accent);font-weight:600}
 .done{text-align:center;padding:28px 18px}.done .check{font-size:3rem;color:var(--good)}
 .list{list-style:none;margin:0;padding:0}
