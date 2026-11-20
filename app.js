@@ -7,7 +7,8 @@
   const today = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000); };
   const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const POS_SHORT = { noun: 'noun', verb: 'verb', adjective: 'adj.', adverb: 'adv.', conjunction: 'conj.', preposition: 'prep.', pronoun: 'pron.', indeclinable: 'indecl.', interjection: 'interj.', prefix: 'prefix' };
-  const REVIEW_CAP = 60;
+  const REVIEW_CAP = 60;   // most reviews offered in one day
+  const SESSION_MAX = 30;   // most cards in one flashcard run
 
   // ---------- state ----------
   // Cards: { box: 0-7, due: local day number }. Leitner boxes: right moves a card up one box, wrong sends it to box 0.
@@ -232,6 +233,7 @@
       const nw = newWords(vNewLeft()).map(k => ({ k, isNew: true }));
       // weave one new card after every two reviews
       while (rev.length || nw.length) { if (rev.length) items.push(rev.shift()); if (rev.length) items.push(rev.shift()); if (nw.length) items.push(nw.shift()); }
+      if (items.length > SESSION_MAX) items.length = SESSION_MAX;
     }
     Q = { kind, items, done: 0, total: items.length };
     next();
@@ -297,6 +299,7 @@
     Q = null; closeSheet(); exitTest(); applyChrome();
     ({ today: renderToday, learn: renderLearn, drills: renderDrills, cheat: renderCheat, quiz: renderQuiz, list: renderList, about: renderAbout })[t]();
     window.scrollTo(0, 0);
+    if ((location.hash || '').slice(1) !== t) history.replaceState(null, '', '#' + t);
   }
 
   function progressBar() {
@@ -314,18 +317,24 @@
     setSub('Flashcards');
     const c = counts();
     const vTot = c.vDue + c.vNew;
-    const mins = Math.max(1, Math.round((c.vDue * 8 + c.vNew * 15) / 60));
+    let leftD = c.vDue, leftN = c.vNew, takeD = 0, takeN = 0, take = 0;
+    while ((leftD || leftN) && take < SESSION_MAX) {
+      if (leftD) { leftD--; takeD++; take++; }
+      if (take < SESSION_MAX && leftD) { leftD--; takeD++; take++; }
+      if (take < SESSION_MAX && leftN) { leftN--; takeN++; take++; }
+    }
+    const mins = Math.max(1, Math.round((takeD * 8 + takeN * 15) / 60));
     const d = day(), newGoal = S.set.newPerDay + (d.extra || 0), dn = d.dn || 0, drillGoal = DrillPick.DAILY_DRILLS;
     const bar = (n, of) => `<div class="bar"><i style="width:${DrillPick.goalBarPct(n, of).toFixed(1)}%"></i></div>`;
     const goals = `<div class="card"><div class="prompt-kind">Today’s goals</div>
       <div class="small" style="margin-top:8px">New words: <b>${DrillPick.drillGoalLabel(d.nv, newGoal)}</b></div>${bar(d.nv || 0, newGoal)}
       <div class="small" style="margin-top:8px">Drill answers: <b>${DrillPick.drillGoalLabel(dn, drillGoal)}</b></div>${bar(dn, drillGoal)}</div>`;
+    const prog = `<div class="card">${progressBar()}</div>`;
     if (vTot === 0) {
       V().innerHTML = `<div class="card done"><div class="check">✓</div><h2>Flashcards done for today</h2>
         <p class="muted">Nice work. Come back tomorrow — new words and reviews will be waiting.</p>
-        ${progressBar()}</div>
-        ${goals}
-        <div class="card"><div class="row wrap"><button class="grow" id="more">Learn 5 more words</button><button class="grow" id="goquiz">Quick quiz</button></div></div>`;
+        <div class="row wrap"><button class="grow" id="more">Learn 5 more words</button><button class="grow" id="goquiz">Quick quiz</button></div></div>
+        ${goals}${prog}`;
       $('#more').onclick = () => { day().extra = (day().extra || 0) + 5; save(); startSession('vocab'); };
     } else {
       V().innerHTML = `<div class="card">
@@ -334,7 +343,7 @@
           <div class="stat"><b>${c.vNew}</b><span>new words</span></div>
           <div class="stat"><b>${c.vDue}</b><span>reviews</span></div>
         </div>
-        <button class="primary big" id="go">Start</button>
+        <button class="primary big" id="go">${vTot > SESSION_MAX ? `Start (${SESSION_MAX} cards)` : 'Start'}</button>
         <p class="small muted center" style="margin:10px 0 0">Stop whenever you like — every answer is saved.</p></div>
         ${goals}
         <div class="card">${progressBar()}<button class="link" id="goquiz">Quick quiz (doesn’t affect your schedule)</button></div>`;
@@ -367,7 +376,7 @@
 
   function renderVocab(it) {
     const [dir, id] = it.k.split(':'); const w = BY[id], face = faceOf(w);
-    const pills = `<span class="pill">${POS_SHORT[w.pos] || w.pos}</span><span class="pill">rank ${rankTxt(w)}</span>${it.isNew ? '<span class="pill">new</span>' : ''}`;
+    const pills = `<span class="pill">${POS_SHORT[w.pos] || w.pos}</span><span class="pill">${rankTxt(w)}</span>${it.isNew ? '<span class="pill">new</span>' : ''}`;
     if (dir === 'r') {
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">Latin → English</div>
         ${latinHTML(shownLa(face.la), true)}${pills}
@@ -378,6 +387,7 @@
       V().innerHTML = `${sessionHead()}<div class="card" id="vc"><div class="prompt-kind">English → Latin</div>
         <div class="english">${esc(face.en)}</div>${pills}
         <div id="ans"><input type="text" id="typed" placeholder="Type Latin (optional)" aria-label="Type Latin (optional)" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:14px">${macKeys()}
+        <div class="small muted" style="margin-top:6px">${macHint()}</div>
         <button class="primary big" id="show" style="margin-top:10px">Show answer</button></div></div>`;
       const go = () => {
         const v = $('#typed').value.trim();
@@ -420,11 +430,15 @@
           <div class="stats two" style="margin:12px 0 10px"><div class="stat"><b>${tried}</b><span>of ${UNITS.size} forms tried</span></div><div class="stat"><b>${d.dn || 0}</b><span>answered today</span></div></div>
           <div class="small muted">Daily goal: ${DrillPick.drillGoalLabel(d.dn || 0, DrillPick.DAILY_DRILLS)}</div><div class="bar"><i style="width:${DrillPick.goalBarPct(d.dn || 0, DrillPick.DAILY_DRILLS).toFixed(1)}%"></i></div>
           <button class="primary big" id="dgo" style="margin-top:10px">${fin ? 'Keep going' : `Start a set of ${S.set.dlen}`}</button>
-          <p class="small muted center" style="margin:10px 0 0">Questions lean toward forms you miss, haven’t tried, or haven’t seen lately. Stop anytime; every answer is saved. ${modeTxt()}${DrillPick.sentenceSettings(S.set.df).on ? ' About one in seven is a short sentence.' : ''}</p></div>
+          <p class="small muted center" style="margin:10px 0 0">Questions lean toward forms you miss, haven’t tried, or haven’t seen lately. Stop anytime; every answer is saved.${DrillPick.sentenceSettings(S.set.df).on ? ' About one in seven is a short sentence.' : ''}</p></div>
         <div class="card"><div class="row"><h2 class="grow" style="margin:0">Weak spots</h2><button class="link" id="gweak">View ›</button></div>
           <div class="small muted" style="margin-top:4px">${weak.length ? weak.slice(0, 3).map(c => esc(comboLabel(c)) + ' · ' + pct(S.dst[c])).join('<br>') : (Object.keys(S.dst).length ? 'None right now: every form you’ve tried is at 85% or better.' : 'Your lowest-accuracy forms will show up here once you’ve answered a few.')}</div></div>`;
     const msg = drillMsg ? `<div class="card small" id="dmsg">${esc(drillMsg)}</div>` : ''; drillMsg = '';
-    const modeCard = `<div class="card"><div class="small muted chiph" style="margin-top:0">How to answer</div><div class="seg" id="dmode">${MODES.map(([m, l]) => `<button data-m="${m}" class="${S.set.dmode === m ? 'on' : ''}" aria-pressed="${S.set.dmode === m}">${l}</button>`).join('')}</div></div>`;
+    const modeCard = `<div class="card"><div class="small muted chiph" style="margin-top:0">How to answer</div><div class="seg" id="dmode">${MODES.map(([m, l]) => `<button data-m="${m}" class="${S.set.dmode === m ? 'on' : ''}" aria-pressed="${S.set.dmode === m}">${l}</button>`).join('')}</div>
+      <p class="small muted" style="margin:8px 0 0">${modeTxt()}</p>
+      <div class="small muted chiph">Identify drills: forms with more than one reading</div><div class="seg" id="sand"><button data-m="1" class="${S.set.andMore ? 'on' : ''}" aria-pressed="${!!S.set.andMore}">Ask “And…?”</button><button data-m="0" class="${S.set.andMore ? '' : 'on'}" aria-pressed="${!S.set.andMore}">Just show them</button></div>
+      <p class="small muted">Some forms have several valid parses (puellae: genitive or dative singular, or nominative plural). Any one counts as right. With <b>Ask “And…?”</b> on, a right answer is followed by an optional prompt to name the other readings. Skipping costs nothing, and the score uses only your first answer.</p>
+      <div class="switchrow" style="margin-top:10px"><div class="grow"><b>And…? across parts of speech</b><div class="small muted">Also ask when the same spelling is another part of speech you have already studied, such as amor the noun and amor from amō. Off keeps the usual one-word question.</div></div><button type="button" class="switch${S.set.andPos ? ' on' : ''}" id="andpos" role="switch" aria-checked="${S.set.andPos ? 'true' : 'false'}" aria-label="And…? across parts of speech"></button></div></div>`;
     V().innerHTML = msg + head + modeCard + `<div class="card"><div class="row"><h2 class="grow" style="margin:0">What to drill</h2><button class="link" id="tset">${showSet ? 'Hide' : 'Change'}</button></div>
       <div class="small muted" style="margin-top:4px">${esc(dfSummary())} · <b>${UNITS.size}</b> forms, <b>${new Set([].concat(...UNITS.values())).size}</b> words match</div>
       <div class="small muted" style="margin-top:2px">Seen in drills so far: ${plur(Object.keys(S.ds.w).length, 'word')} · ${plur(Object.keys(S.dst).length, 'form')}</div>
@@ -453,6 +467,8 @@
     });
     document.querySelectorAll('#sdr button').forEach(b => b.onclick = () => { S.set.dlen = +b.dataset.n; save(); renderDrills(); });
     document.querySelectorAll('#dmode button').forEach(b => b.onclick = () => { S.set.dmode = b.dataset.m; save(); renderDrills(); });
+    document.querySelectorAll('#sand button').forEach(b => b.onclick = () => { S.set.andMore = b.dataset.m === '1'; save(); renderDrills(); });
+    if ($('#andpos')) $('#andpos').onclick = () => { S.set.andPos = !S.set.andPos; save(); renderDrills(); };
     const bindSeg = (id, fn) => { const n = $('#' + id); if (!n) return; n.querySelectorAll('button').forEach(b => b.onclick = () => { fn(b.dataset.v); save(); if (S.set.df.sent) loadSentences(); renderDrills(); }); };
     bindSeg('dsent', v => { S.set.df.sent = v === '1'; });
     bindSeg('dstype', v => { S.set.df.stype = v; });
@@ -1036,7 +1052,7 @@
       <div class="card"><h3 style="margin-top:0">Key words</h3>${keys.map(w => `<div class="lex"><span class="latin">${esc(shownLa(faceOf(w).la))}</span><div class="small muted">${esc(faceOf(w).en)}</div></div>`).join('') || '<p class="small muted">None.</p>'}</div>
       <div class="card">${l.quiz ? `<button class="primary big" id="lq">Quick check · ${l.quiz.qs.length} questions</button>` : ''}
         <div class="row" style="margin-top:10px">${st ? '' : '<button class="grow" id="lmark">Mark as done</button>'}${nx ? `<button class="grow" id="lnext">Next: ${esc(nx.title)} ›</button>` : ''}</div>
-        <p class="small muted center" style="margin:8px 0 0">The quick check doesn’t change your review schedule.</p></div>`;
+        <p class="small muted center" style="margin:8px 0 0">Doesn’t change your flashcards or drill stats.</p></div>`;
     $('#lback').onclick = renderLearn;
     if ($('#lq')) $('#lq').onclick = () => runLessonQuiz(l, quizItems(l));
     if ($('#lmark')) $('#lmark').onclick = () => { markLesson(l.id); openLesson(l.id); };
@@ -1051,12 +1067,12 @@
     const ex = lessonExamples(l);
     V().innerHTML = `<div class="row"><button class="link" id="lback">‹ All lessons</button><span class="grow"></span>${st ? '<span class="ok small">✓ Done</span>' : ''}</div>
       <div class="card lesson"><div class="prompt-kind">${esc(l.sec)}</div><h2 style="margin:4px 0 8px">${esc(l.title)}</h2>${l.body}</div>
-      <div class="card"><h3 style="margin-top:0">${l.tables[0].t === 'rows' || l.tables[0].t === 'cmp' ? 'Forms' : 'Endings'}</h3>${['noun', 'adj', 'verb'].includes(l.tables[0].t) ? '<p class="small muted" style="margin:2px 0 0">Endings are in <b>bold</b>.</p>' : ''}${l.tables.map(lessonTable).join('')}</div>
+      <div class="card"><h3 style="margin-top:0">${l.tables.every(t => t.t === 'noun' || t.t === 'adj' || t.t === 'verb') ? 'Endings' : 'Tables'}</h3>${['noun', 'adj', 'verb'].includes(l.tables[0].t) ? '<p class="small muted" style="margin:2px 0 0">Endings are in <b>bold</b>.</p>' : ''}${l.tables.map(lessonTable).join('')}</div>
       <div class="card"><h3 style="margin-top:0">From your word list</h3>${ex.map(w => `<div class="lex"><span class="latin">${esc(shownLa(w.la))}</span><div class="small muted">${esc(w.en.length > 80 ? w.en.slice(0, 78) + '…' : w.en)}</div></div>`).join('')}</div>
       <div class="card"><button class="primary big" id="lq">Quick check · ${quizItems(l).length} questions</button>
         ${l.drill ? '<button class="big" id="ldr" style="margin-top:10px">Practice this in Drills</button>' : ''}
         <div class="row" style="margin-top:10px">${st ? '' : '<button class="grow" id="lmark">Mark as done</button>'}${nx ? `<button class="grow" id="lnext">Next: ${esc(nx.title)} ›</button>` : ''}</div>
-        <p class="small muted center" style="margin:8px 0 0">The quick check doesn’t change your review schedule.</p></div>`;
+        <p class="small muted center" style="margin:8px 0 0">Doesn’t change your flashcards or drill stats.</p></div>`;
     $('#lback').onclick = renderLearn;
     $('#lq').onclick = () => runLessonQuiz(l, quizItems(l));
     if ($('#ldr')) $('#ldr').onclick = () => practiceLesson(l);
@@ -1198,7 +1214,8 @@
   }
 
   // ---------- word list ----------
-  let listQ = '', listSort = 'rank', listN = 100;
+  let listQ = '', listSort = 'rank', listPos = '', listN = 200;
+  const POS_FILTER = [['noun', 'Nouns'], ['verb', 'Verbs'], ['adjective', 'Adjectives'], ['adverb', 'Adverbs'], ['pronoun', 'Pronouns'], ['preposition', 'Prepositions'], ['conjunction', 'Conjunctions'], ['interjection', 'Interjections'], ['indeclinable', 'Indeclinable'], ['prefix', 'Prefixes']];
   function renderList() {
     setSub(W.length + ' words');
     if (activePack() === 'church' && listSort === 'diederich') listSort = 'topic';
@@ -1207,11 +1224,13 @@
       ? '<option value="topic">Sort: By topic / lesson</option>'
       : '<option value="diederich">Sort: Diederich’s order (by topic)</option>';
     V().innerHTML = `<div class="listbar"><input type="search" id="q" placeholder="Search Latin or English" value="${esc(listQ)}">
-      <div class="row" style="margin-top:8px"><select id="srt"><option value="rank">Sort: frequency rank</option><option value="az">Sort: A–Z</option>${third}</select></div></div>
+      <select id="lpos"><option value="">All types</option>${POS_FILTER.map(([v, l]) => `<option value="${v}"${listPos === v ? ' selected' : ''}>${l}</option>`).join('')}</select>
+      <select id="srt"><option value="rank">Sort: frequency rank</option><option value="az">Sort: A–Z</option>${third}</select></div>
       <ul class="list" id="ul"></ul><div id="moreBox"></div>`;
     $('#srt').value = listSort;
-    $('#q').oninput = e => { listQ = e.target.value; listN = 100; fill(); };
-    $('#srt').onchange = e => { listSort = e.target.value; listN = 100; fill(); };
+    $('#q').oninput = e => { listQ = e.target.value; listN = 200; fill(); };
+    $('#lpos').onchange = e => { listPos = e.target.value; listN = 200; fill(); };
+    $('#srt').onchange = e => { listSort = e.target.value; listN = 200; fill(); };
     fill();
   }
   // Diederich's own section titles, as listed in the Hiberna Caroli Raetici 'Lodge' edition (sections I–VIII and sub-sections)
@@ -1234,6 +1253,7 @@
   function fill() {
     const q = listQ.trim(), nq = Morph.norm(q), lq = q.toLowerCase();
     let rows = q ? W.filter(w => Morph.norm(w.la).includes(nq) || Morph.norm(shownLa(w.la)).includes(nq) || w.en.toLowerCase().includes(lq)) : W.slice();
+    if (listPos) rows = rows.filter(w => w.pos === listPos);
     if (listSort === 'az') rows.sort((a, b) => Morph.norm(a.la).localeCompare(Morph.norm(b.la)));
     else rows.sort((a, b) => Church.compareList(a, b, listSort));
     const pack = activePack();
@@ -1244,9 +1264,9 @@
       const g = Church.listGroup(w, listSort, pack);
       if (g && g !== prev) { h = groupHead(Church.listLabel(g), cnt[g], prev ? Church.listLabel(prev) : null); prev = g; }
       const face = faceOf(w);
-      return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(shownLa(face.la))}</div><div class="en">${esc(face.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
+      return h + `<li data-id="${w.id}"><span class="rk">${rankTxt(w)}</span><div class="la">${esc(shownLa(face.la))} <span class="pill">${esc(POS_SHORT[w.pos] || w.pos)}</span></div><div class="en">${esc(face.en)}</div><div class="det"></div></li>`; }).join('') || '<li class="muted">No matches.</li>';
     const bar = $('#ul').previousElementSibling; if (bar) $('#ul').style.setProperty('--lt', bar.offsetHeight + 'px');
-    $('#moreBox').innerHTML = rows.length > listN ? `<button class="big" id="lm" style="margin-top:10px">Show more (${rows.length - listN})</button>` : '';
+    $('#moreBox').innerHTML = rows.length > listN ? `<button class="big" id="lm" style="margin-top:10px">Show more (${rows.length - listN} left)</button>` : '';
     if ($('#lm')) $('#lm').onclick = () => { listN += 200; fill(); };
     document.querySelectorAll('#ul li[data-id]').forEach(li => li.onclick = e => {
       if (e.target.closest('.det')) return;
@@ -1288,7 +1308,7 @@
         <div class="row wrap"><button class="grow" id="tf-r">Latin → English</button><button class="grow" id="tf-p">English → Latin</button></div>
         <div class="small muted chiph">Form drills${UNITS.size ? ` (${UNITS.size} forms)` : ''}</div>
         ${why ? `<p class="small muted" id="tnod">${esc(why)}</p>` : `<div class="row wrap">${MODES.map(([m, l]) => `<button class="grow" data-tm="${m}">${l.replace(' the form', '')}</button>`).join('')}</div>
-        <p class="small muted" style="margin:6px 0 0">Uses your drill settings and the “And…?” setting on the About tab.</p>`}
+        <p class="small muted" style="margin:6px 0 0">Uses your drill settings and the “And…?” setting on the Drills tab.</p>`}
         ${window.Capacitor ? '' : `<div class="small muted chiph">Sentences</div><a class="btn" id="tsent" href="sentences.html?word=${w.id}" style="display:block;text-align:center;text-decoration:none">Sentences with this word ›</a>`}</div>
       <div class="center"><button class="link" id="texit">Exit test mode</button></div>`;
     $('#tf-r').onclick = () => { Q = { kind: 'vocab', items: [{ k: 'r:' + w.id }], done: 0, total: 1 }; next(); };
@@ -1300,47 +1320,44 @@
 
   // ---------- about / settings ----------
   function renderAbout() {
-    setSub('About');
+    setSub('About & settings');
     const mem = S.set.churchMem === 'saint' ? 'saint' : 'season';
     const pack = activePack();
     V().innerHTML = `<div class="card"><h2 style="margin-top:0">Settings</h2>
-      <div class="small muted">Pack</div><div class="seg" id="pack"><button data-v="classical" class="${pack === 'classical' ? 'on' : ''}" aria-pressed="${pack === 'classical'}">Classical</button><button data-v="church" class="${pack === 'church' ? 'on' : ''}" aria-pressed="${pack === 'church'}">Church Latin</button></div>
+      <div class="small muted">Pack</div><select id="pack"><option value="classical"${pack === 'classical' ? ' selected' : ''}>Classical</option><option value="church"${pack === 'church' ? ' selected' : ''}>Church Latin</option></select>
       <p class="small muted">The core word list is always included. One added pack can be on at a time.</p>
       <div id="churchopt"${pack === 'church' ? '' : ' hidden'}>
         <div class="small muted chiph">Optional memorials</div><div class="seg" id="cmem"><button data-v="season" class="${mem === 'season' ? 'on' : ''}" aria-pressed="${mem === 'season'}">Season color</button><button data-v="saint" class="${mem === 'saint' ? 'on' : ''}" aria-pressed="${mem === 'saint'}">Saint’s color</button></div>
         <div class="small muted chiph">Pronunciation</div><div class="small" id="cpron">${PACK ? PACK.about.pronunciation : ''}</div>
       </div>
-      <div class="small muted" style="margin-top:14px">New flashcard words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
+      <div class="small muted" style="margin-top:14px">New words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
-      <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p>
-      <div class="small muted" style="margin-top:14px">Identify drills: forms with more than one reading</div><div class="seg" id="sand"><button data-m="1" class="${S.set.andMore ? 'on' : ''}" aria-pressed="${!!S.set.andMore}">Ask “And…?”</button><button data-m="0" class="${S.set.andMore ? '' : 'on'}" aria-pressed="${!S.set.andMore}">Just show them</button></div>
-      <p class="small muted">Some forms have several valid parses (puellae: genitive or dative singular, or nominative plural). Any one counts as right. With <b>Ask “And…?”</b> on, a right answer is followed by an optional prompt to name the other readings, with one guess per reading left; skipping costs nothing, and the score uses only your first answer.</p>
-      <div class="switchrow" style="margin-top:10px"><div class="grow"><b>And…? across parts of speech</b><div class="small muted">Also ask when the same spelling is another part of speech you have already studied, such as amor the noun and amor from amō. Off keeps the usual one-word question.</div></div><button type="button" class="switch${S.set.andPos ? ' on' : ''}" id="andpos" role="switch" aria-checked="${S.set.andPos ? 'true' : 'false'}" aria-label="And…? across parts of speech"></button></div>
-      <p class="small muted">Drill settings (which forms, questions per set) are on the Drills tab.</p>
-      <div class="row wrap" style="margin-top:14px"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
+      <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p></div>
+      <div class="card"><h2 style="margin-top:0">Your progress</h2><p class="small muted" style="margin-top:0">Progress is stored only on this device. Export it to back up or move to another device.</p>
+      <div class="row wrap"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
       <input type="file" id="impf" accept="application/json" hidden></div>
-      ${window.Capacitor ? '' : '<div class="card"><a class="btn" id="sentlink" href="sentences.html" style="display:block;text-align:center;text-decoration:none">Sentences (beta) ›</a></div>'}
       <div class="card"><h2 style="margin-top:0">How it works</h2>
-      <p><b>Cards:</b> learn a few new words a day and review what’s due. Mark each one Right or Wrong. Right answers come back later and later; wrong ones come back soon.</p>
-      <p><b>Learn:</b> short grammar lessons.</p>
-      <p><b>Drills:</b> practice word forms anytime. The app asks more about the ones you miss.</p>
-      <p><b>Cheat sheet:</b> all the endings tables in one place.</p>
-      <p>Your progress stays on this device. No account needed, and it works offline.</p>
-      ${pack === 'church' ? '<p><b>Church Latin</b> adds words and lessons from the Mass, prayers, and readings.</p>' : ''}</div>
+      <p class="small"><b>Cards:</b> learn a few new words a day and review what’s due. Mark each one Right or Wrong. Right answers come back later and later; wrong ones come back soon.</p>
+      <p class="small"><b>Learn:</b> short grammar lessons.</p>
+      <p class="small"><b>Drills:</b> practice word forms anytime. The app asks more about the ones you miss.</p>
+      <p class="small"><b>Cheat sheet:</b> all the endings tables in one place.</p>
+      <p class="small"><b>Words:</b> search the list, or tap a word to test it.</p>
+      <p class="small">Your progress stays on this device. No account needed, and it works offline.</p>
+      ${pack === 'church' ? '<p class="small"><b>Church Latin</b> adds words and lessons from the Mass, prayers, and readings.</p>' : ''}</div>
+      <div class="card"><h2 style="margin-top:0">Word packs</h2><ul class="small" style="padding-left:18px"><li><b>Classical</b> · ${CLASSICAL.length} words<div class="small muted">The core list, always included.</div></li><li><b>Church Latin</b> · ${CHURCH_WORDS.length} words<div class="small muted">Adds the Ordinary of the Mass, five prayers, and six readings.</div></li></ul></div>
       <div class="card"><h2 style="margin-top:0">Sources &amp; credits</h2>
       <p class="small">Word list: Paul B. Diederich, <i>The Frequency of Latin Words and Their Endings</i> (1939), in the Lodge edition compiled by Carolus Raeticus (<a href="https://hiberna-cr.wikidot.com/" rel="noopener">Hiberna Caroli Raetici</a>), with glosses from Gonzalez Lodge (1922) and J. T. White (1904). That edition is licensed <a href="https://creativecommons.org/licenses/by-sa/3.0/" rel="noopener">CC BY‑SA 3.0</a>; this app’s word data is shared under the same license.</p>
       ${pack === 'church' ? '<p class="small">Church Latin: the Ordinary of the Mass follows the public-domain 1920 <i>Missale Romanum</i>; biblical lines follow the Clementine Vulgate. The prayers use the traditional public-domain wording, as in the appendix to the <i>Compendium of the Catechism</i> (2005). Readings: Augustine, <i>Confessiones</i> (Migne, 1841); Thomas Aquinas, <i>Summa theologiae</i> (Leonine edition, 1888). The English under each line is a new literal translation for this app. Usage was checked against Nunn (1922), Beeson (1925), and Harden (1921).</p>' : ''}
-      <p class="small muted">Made by Eric Ianni. Source: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>. Version 3.3.0</p></div>`;
-    document.querySelectorAll('#pack button').forEach(b => b.onclick = () => { if (S.set.pack === b.dataset.v) return; S.set.pack = b.dataset.v; rebuildDeck(); save(); applyChrome(); renderAbout(); });
+      <p class="small muted">Made by Eric Ianni. Source: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>. Version 3.3.0</p></div>
+      ${window.Capacitor ? '' : '<div class="card"><a class="btn" id="sentlink" href="sentences.html" style="display:block;text-align:center;text-decoration:none">Sentences (beta) ›</a></div>'}`;
+    $('#pack').onchange = () => { if (S.set.pack === $('#pack').value) return; S.set.pack = $('#pack').value; rebuildDeck(); save(); applyChrome(); renderAbout(); };
     document.querySelectorAll('#cmem button').forEach(b => b.onclick = () => { S.set.churchMem = b.dataset.v; save(); applyChrome(); renderAbout(); });
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
-    document.querySelectorAll('#sand button').forEach(b => b.onclick = () => { S.set.andMore = b.dataset.m === '1'; save(); renderAbout(); });
-    $('#andpos').onclick = () => { S.set.andPos = !S.set.andPos; save(); renderAbout(); };
     $('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'latin1400-progress.json'; a.click(); };
     $('#imp').onclick = () => $('#impf').click();
-    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; S = fix(s); save(); rebuildDeck(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
-    $('#rst').onclick = () => { if (confirm('Erase all progress on this device?')) { S = fix({}); save(); rebuildDeck(); renderAbout(); } };
+    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; if (!confirm('Replace the progress on this device with the imported file?')) return; S = fix(s); save(); rebuildDeck(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
+    $('#rst').onclick = () => { if (confirm('Erase all progress on this device? This can’t be undone (export first to keep a copy).')) { S = fix({}); save(); rebuildDeck(); applyChrome(); renderAbout(); } };
   }
 
   // ---------- boot ----------
@@ -1372,5 +1389,17 @@
     setTab(['learn', 'drills', 'cheat', 'quiz', 'list', 'about'].includes(t) ? t : 'today');
   }).catch(() => { V().innerHTML = '<p class="card">Could not load the word list. Check your connection and reload.</p>'; });
   // No service worker inside the Capacitor WebView: assets are already bundled in the APK.
-  if ('serviceWorker' in navigator && !window.Capacitor) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.Capacitor) {
+    const sw = navigator.serviceWorker; let had = !!sw.controller, reloading = false, lastCheck = Date.now();
+    const reload = () => { if (!reloading) { reloading = true; location.reload(); } };
+    sw.addEventListener('controllerchange', () => {
+      if (!had) { had = true; return; }
+      if (!Q) return reload();
+      if (!$('#upd')) document.body.insertAdjacentHTML('beforeend', '<div id="upd" class="upd" role="status">A new version is ready. <button class="link" id="updgo">Reload</button></div>');
+      $('#updgo').onclick = reload;
+    });
+    window.addEventListener('load', () => sw.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastCheck > 60000) { lastCheck = Date.now(); reg.update().catch(() => {}); } });
+    }).catch(() => {}));
+  }
 })();

@@ -50,6 +50,7 @@ input[type=text]{font-family:var(--serif);font-size:1.35rem}
 .tabs .tab-ico[stroke-width="2.2"]{stroke-width:2.2}
 .tabs button.on{color:var(--accent);font-weight:600}
 .done{text-align:center;padding:28px 18px}.done .check{font-size:3rem;color:var(--good)}
+.done .row{margin-top:12px}.done .row button{flex:1 1 40%;min-width:0}
 .list{list-style:none;margin:0;padding:0}
 .list li{border-bottom:1px solid var(--line);padding:10px 2px;cursor:pointer}
 .list .la{font-family:var(--serif);font-size:1.2rem;font-weight:500}.list .rk{float:right;color:var(--muted);font-size:.8rem}
@@ -146,6 +147,9 @@ body.church .latin.dropword{display:flex;align-items:flex-end;gap:12px;text-tran
 body.church .drop{flex:none;width:1.28em;height:1.28em;font-size:3.5rem;line-height:1;display:grid;place-items:center;background:var(--lit,#1e6b3a);color:#f7f1e2;border:2px solid color-mix(in srgb,var(--lit,#1e6b3a) 72%,#1a1208);font-family:"EB Garamond",Georgia,serif;text-transform:uppercase}
 body.church .rest{font-family:"EB Garamond",Georgia,serif;font-size:1.9rem;line-height:1;padding-bottom:.12em;text-transform:lowercase}
 .listbar{position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:2}
+.listbar select{display:block;margin-top:8px}
+.upd{position:fixed;left:12px;right:12px;bottom:76px;z-index:50;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.upd button.link{color:inherit;font-weight:600;margin-left:6px}
 
 /* Wide screens. Everything above this line is the phone layout and stays as it is. */
 @media (min-width:720px) and (max-width:1179px){

@@ -16,7 +16,7 @@ Latin → English and English → Latin are separate cards for the same word. Th
 
 On an English → Latin card the learner may type the Latin. The placeholder says “Type Latin (optional).” Macrons are optional unless Require macrons is on in Settings. With that on, a missing or wrong macron counts as wrong.
 
-The Cards page still shows the day’s flashcards (new words and reviews, or a “done for today” message), how many words have been started, and a quick quiz. The quiz does not change the review schedule. When the day’s cards are finished, the learner can ask for five more new words. The tab bar is the way to open Drills. Cards does not add a second link there.
+The Cards page still shows the day’s flashcards (new words and reviews, or a “done for today” message), how many words have been started, and a quick quiz. The quiz does not change the review schedule. One run is at most 30 cards. When more than 30 are waiting, the button reads “Start (30 cards).” Up to 60 reviews can still be due that day; the next run picks up the rest. The time estimate is for the run you are about to start. On an English → Latin card, the line under the box says “Macrons optional” or “Macrons required.” The rank pill reads “#12.” When the day’s cards are finished, “Learn 5 more words” and Quick quiz sit side by side on the done card, then the goals, then words started on their own card. The tab bar is the way to open Drills. Cards does not add a second link there.
 
 ## Today’s goals
 
@@ -30,7 +30,7 @@ Both counts are part of the saved progress. They reset at local midnight, togeth
 
 ## Learn
 
-Learn is short grammar lessons. The classical set is 21 lessons. Tables show the one standard form. A quick check does not move a flashcard. “Practice this in Drills” writes the drill filters for that lesson.
+Learn is short grammar lessons. The classical set is 21 lessons. Tables show the one standard form. The tables card is headed “Tables,” or “Endings” when the lesson is only an endings chart. The footer says the quick check doesn’t change flashcards or drill stats. “Practice this in Drills” writes the drill filters for that lesson.
 
 With the Church pack on, Learn adds nine lessons from the Ordinary of the Mass, then seven from the basic prayers, then six short readings. The readings are not beginner Latin. They are from Augustine’s *Confessiones* and Thomas Aquinas’s *Summa theologiae*. Finishing a reading, including its quick check, only marks the lesson done. It does not move a Leitner card or mark a word as learned.
 
@@ -38,7 +38,7 @@ With the Church pack on, Learn adds nine lessons from the Ordinary of the Mass, 
 
 Drills are free practice. There is no due pile and no daily cap on how many you may do. The modes are Type, Identify, and Mix.
 
-The app asks more often about forms you miss, have not tried, or have not seen lately, then picks a word that has that form. A miss comes back a few questions later as the same form on a different word. Weak spots lists the lowest-accuracy forms. The filters (word type, mood, voice, tense, case, number, and the rest) are on the Drills tab.
+The app asks more often about forms you miss, have not tried, or have not seen lately, then picks a word that has that form. A miss comes back a few questions later as the same form on a different word. Weak spots lists the lowest-accuracy forms. The filters (word type, mood, voice, tense, case, number, and the rest) are on the Drills tab. Under How to answer, the app says whether you will type, identify, or mix, and whether macrons count. Ask “And…?” and And…? across parts of speech live on that same card.
 
 A typed answer that the app marks wrong can be counted as correct. An accepted alternate uses the same amber note as on cards.
 
@@ -60,7 +60,7 @@ A separate Sentences (beta) page is linked from About on the web. That page is n
 
 Some forms have more than one reading (*puellae* can be genitive or dative singular, or nominative plural). Any one reading counts as right. The first answer is the one that scores, and the one the Leitner card uses.
 
-Ask “And…?” is on by default. After a right Identify answer, the app can ask for the other readings of that same word. Skipping costs nothing, and the follow-up does not change the schedule. The other choice is “Just show them.”
+Ask “And…?” is on by default, on the Drills tab under How to answer. After a right Identify answer, the app can ask for the other readings of that same word. Skipping costs nothing, and the follow-up does not change the schedule. The other choice is “Just show them.”
 
 And…? across parts of speech is off by default. When it is on, a right answer can also ask about a different part of speech the learner has already studied in the active deck, such as the noun *amor* and the passive of *amō*. It does not add another dictionary word that only shares a spelling, a difference of gloss alone, a word not yet studied, or a Church-only word while that pack is off. Macrons still keep *rēgī* and *regī* apart.
 
@@ -70,7 +70,7 @@ The cheat sheet is the endings tables in one place: the declensions and conjugat
 
 ## Words
 
-The word list can be sorted by frequency rank or A–Z in every pack.
+The word list opens with 200 rows. Show more says how many are left. A part-of-speech menu sits above the sort, so both fit on a narrow phone. Each row has a part-of-speech pill. The list can be sorted by frequency rank or A–Z in every pack.
 
 Classical also offers “Diederich’s order (by topic),” which follows his sections.
 
@@ -80,9 +80,9 @@ On the frequency sort, Church-only words have no rank. They are grouped at the e
 
 ## Settings
 
-Settings are on the About tab.
+The About subtitle is “About & settings.” Settings come first: the Pack menu, then new words per day, then macrons. Your progress (export, import, reset) is its own card, and import and reset ask before they replace anything. Then How it works, then Word packs, then credits. How it works is in small type and includes a Words line.
 
-**Pack.** Classical or Church Latin. The core list is always on. The Church pack adds its own words, glosses, and lessons, and only one added pack is active. The choice is saved. An older file that had the Church Latin switch on becomes the Church pack; otherwise it becomes Classical, including on import. Cards and lesson marks are kept. Turning the Church pack off hides its extra words and does not delete their cards. A shared word still has one card. While the pack is on, a Church gloss (and the dictionary line, when the overlay has one) replaces the classical one on the card, in drills, Learn, the cheat sheet, and the word list.
+**Pack.** Classical or Church Latin, chosen from a menu. The change applies at once. Word packs lists each pack and its word count: the core list, and the Church Latin words it adds. The core list is always on. The Church pack adds its own words, glosses, and lessons, and only one added pack is active. The choice is saved. An older file that had the Church Latin switch on becomes the Church pack; otherwise it becomes Classical, including on import. Cards and lesson marks are kept. Turning the Church pack off hides its extra words and does not delete their cards. A shared word still has one card. While the pack is on, a Church gloss (and the dictionary line, when the overlay has one) replaces the classical one on the card, in drills, Learn, the cheat sheet, and the word list.
 
 New Church words use the same daily cap as classical words: one Church word after every two new classical words.
 
@@ -120,7 +120,7 @@ Ascension and Corpus Christi are on Sunday. That is the practice of most US prov
 
 ## Offline
 
-The app is a progressive web app. After it has been opened once, a service worker serves the cached files, so it works offline. The live site is https://ericianni.github.io/latin-diederich-vocab/. On a wide screen (720px and up) the layout is a centered column with a top or side navigation. The phone layout is the default.
+The app is a progressive web app. After it has been opened once, a service worker serves the cached files, so it works offline. Changing tabs updates the address (#today, #learn, and the rest). If a new version arrives during a session, the app offers “A new version is ready. Reload.” The live site is https://ericianni.github.io/latin-diederich-vocab/. On a wide screen (720px and up) the layout is a centered column with a top or side navigation. The phone layout is the default.
 
 ## Android
 

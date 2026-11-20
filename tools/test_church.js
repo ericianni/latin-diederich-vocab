@@ -382,7 +382,13 @@ ok(/The Frequency of Latin Words and Their Endings/.test(credits) && /Made by Er
 ok(/Missale Romanum/.test(credits) && /pack === 'church'/.test(credits) && !/Muccigrosso/.test(appSrc) && !/DWF\.csv/.test(appSrc) && !/PACK\.about\.sources/.test(appSrc), 'church credits are pack-only, and the old blurbs are gone');
 const how = appSrc.slice(appSrc.indexOf('How it works'), appSrc.indexOf('Sources &amp; credits'));
 ok(/<b>Cards:<\/b> learn a few new words a day/.test(how) && /<b>Learn:<\/b> short grammar lessons/.test(how) && /<b>Drills:<\/b> practice word forms anytime/.test(how) && /<b>Cheat sheet:<\/b> all the endings tables/.test(how) && /Your progress stays on this device/.test(how), 'How it works is the short pack-neutral copy');
-ok(/<b>Church Latin<\/b> adds words and lessons from the Mass, prayers, and readings/.test(how) && !/Leitner boxes/.test(how) && !/Sentences in drills/.test(how), 'the Church Latin line is the only extra, and the old drill essay is gone');
+ok(/<b>Church Latin<\/b> adds words and lessons from the Mass, prayers, and readings/.test(how) && /<b>Words:<\/b> search the list/.test(how) && !/Leitner boxes/.test(how) && !/Sentences in drills/.test(how), 'How it works adds a Words line and stays pack-neutral aside from Church Latin');
+ok(/<select id="pack">/.test(appSrc) && /New words per day/.test(appSrc) && /Word packs/.test(appSrc) && /Your progress/.test(appSrc) && !/<div class="seg" id="pack">/.test(appSrc), 'Pack is a dropdown, and About lists the packs');
+ok(/SESSION_MAX = 30/.test(appSrc) && /Start \(\$\{SESSION_MAX\} cards\)/.test(appSrc) && /REVIEW_CAP = 60/.test(appSrc), 'a flashcard run is 30 cards; the day’s review pile stays 60');
+ok(/Ask “And…\?”/.test(appSrc) && /id="andpos"/.test(appSrc) && /How to answer/.test(appSrc), 'And…? sits on the Drills How to answer card');
+ok(/All types/.test(appSrc) && /Show more \(\$\{rows\.length - listN\} left\)/.test(appSrc) && /listN = 200/.test(appSrc), 'the word list filters by part of speech and starts with 200 rows');
+ok(/history\.replaceState\(null, '', '#' \+ t\)/.test(appSrc) && /A new version is ready/.test(appSrc), 'tabs update the URL hash, and an update can reload');
+ok(/Doesn’t change your flashcards or drill stats/.test(appSrc) && />Tables</.test(appSrc) === false && /: 'Tables'/.test(appSrc), 'lesson tables are titled Tables unless the lesson is endings only');
 const bare = [
   { id: 0, la: 'deus', sec: '1.1', r: 33 },
   { id: 24, la: 'hiems', sec: '1.2' },
