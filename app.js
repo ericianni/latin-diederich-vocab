@@ -298,10 +298,11 @@
     document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === (t === 'quiz' ? 'today' : t)));
     Q = null; closeSheet(); exitTest(); applyChrome();
     ({ today: renderToday, learn: renderLearn, drills: renderDrills, cheat: renderCheat, quiz: renderQuiz, list: renderList, about: renderAbout })[t]();
-    window.scrollTo(0, 0);
+    scrollPageTop();
     if ((location.hash || '').slice(1) !== t) history.replaceState(null, '', '#' + t);
   }
 
+  function scrollPageTop() { window.scrollTo(0, 0); const v = document.getElementById('view'); if (v) v.scrollTop = 0; }
   function progressBar() {
     const started = W.filter(w => S.cards['r:' + w.id]).length;
     return `<div class="small muted">Words started: <b>${started}</b> / ${W.length}</div><div class="bar"><i style="width:${(100 * started / W.length).toFixed(1)}%"></i></div>`;
@@ -458,7 +459,7 @@
     if ($('#dgo')) $('#dgo').onclick = () => startDrills(fin && fin.only && [...fin.only].some(c => UNITS.has(c)) ? fin.only : null);
     if ($('#gweak')) $('#gweak').onclick = renderWeak;
     $('#tset').onclick = () => { showSet = !showSet; renderDrills(); };
-    if ($('#tdone')) $('#tdone').onclick = () => { showSet = false; renderDrills(); window.scrollTo(0, 0); };
+    if ($('#tdone')) $('#tdone').onclick = () => { showSet = false; renderDrills(); scrollPageTop(); };
     $('#opencs').onclick = () => setTab('cheat');
     document.querySelectorAll('.chips button').forEach(b => b.onclick = () => {
       const g = b.parentNode.dataset.g, v = b.dataset.v, arr = S.set.df[g];
@@ -917,7 +918,8 @@
   // the section being read is highlighted as you scroll
   function bindJump(root) {
     const bar = root.querySelector('.jump'); if (!bar) return;
-    const sc = root.classList.contains('ovbody') ? root : window, links = [...bar.querySelectorAll('a')];
+    const view = document.getElementById('view');
+    const sc = root.classList.contains('ovbody') ? root : (view && getComputedStyle(view).overflowY === 'auto' ? view : window), links = [...bar.querySelectorAll('a')];
     const tg = links.map(a => root.querySelector('#' + CSS.escape(a.getAttribute('href').slice(1))));
     let lock = null, lockT = 0, raf = 0;
     const setH = () => root.style.setProperty('--jh', bar.offsetHeight + 'px');
@@ -1056,7 +1058,7 @@
     $('#lback').onclick = renderLearn;
     if ($('#lq')) $('#lq').onclick = () => runLessonQuiz(l, quizItems(l));
     if ($('#lmark')) $('#lmark').onclick = () => { markLesson(l.id); openLesson(l.id); };
-    if ($('#lnext')) $('#lnext').onclick = () => { openLesson(nx.id); window.scrollTo(0, 0); };
+    if ($('#lnext')) $('#lnext').onclick = () => { openLesson(nx.id); scrollPageTop(); };
   }
   function openLesson(id) {
     const list = lessonSet();
@@ -1077,7 +1079,7 @@
     $('#lq').onclick = () => runLessonQuiz(l, quizItems(l));
     if ($('#ldr')) $('#ldr').onclick = () => practiceLesson(l);
     if ($('#lmark')) $('#lmark').onclick = () => { markLesson(id); openLesson(id); };
-    if ($('#lnext')) $('#lnext').onclick = () => { openLesson(nx.id); window.scrollTo(0, 0); };
+    if ($('#lnext')) $('#lnext').onclick = () => { openLesson(nx.id); scrollPageTop(); };
   }
   function practiceLesson(l) {
     const df = S.set.df;
@@ -1143,7 +1145,7 @@
         if ($('#ldr')) $('#ldr').onclick = () => practiceLesson(l);
         if ($('#lnext')) $('#lnext').onclick = () => openLesson(nx.id);
         if ($('#lall')) $('#lall').onclick = renderLearn;
-        window.scrollTo(0, 0); return;
+        scrollPageTop(); return;
       }
       const it = qs[i];
       if (it.t === 'mc') {
@@ -1292,7 +1294,7 @@
   }
 
   // ---------- Test mode (debugging): every feature on one chosen word, progress untouched ----------
-  function enterTest(id) { if (!TEST) TEST = { id, snap: JSON.stringify(S) }; else TEST.id = id; Q = null; renderTest(); window.scrollTo(0, 0); }
+  function enterTest(id) { if (!TEST) TEST = { id, snap: JSON.stringify(S) }; else TEST.id = id; Q = null; renderTest(); scrollPageTop(); }
   function exitTest() { if (!TEST) return; S = fix(JSON.parse(TEST.snap)); TEST = null; UNITS = buildUnits(); }
   function testUnits(id) { const u = new Map(), all = buildUnits(); for (const [c, ids] of all) if (ids.includes(id)) u.set(c, [id]); return u; }
   function renderTest(fin) {
