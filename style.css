@@ -144,7 +144,10 @@ body.church{--bg:#f4e7c8;--card:#fbf6e8;--ink:#2c2116;--muted:#6e5c45;--line:#e2
   display:flex;flex-direction:column;min-height:0;margin:0;padding:5px;border:3px solid var(--lit,#1e6b3a);border-radius:24px;overflow:hidden;background:var(--bg)}
 body.church::before{content:none}
 body.church .top{flex:none;padding-top:10px}
-body.church main#view{flex:1 1 auto;min-height:0;width:auto;max-width:none;margin:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
+body.church main#view{flex:1 1 auto;min-height:0;width:auto;max-width:none;margin:0;padding-top:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;scrollbar-width:none}
+body.church .jump{top:0;background:var(--card);margin-left:-34px;margin-right:-34px;padding-left:34px;padding-right:34px}
+body.church .listbar{top:0;background:var(--bg);margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;z-index:3}
+body.church #ul.list li.sec{margin-left:-16px;margin-right:-16px;padding-left:24px;padding-right:24px}
 body.church main#view::-webkit-scrollbar{width:0;height:0}
 body.church .tabs{position:relative;left:auto;right:auto;bottom:auto;flex:none;width:auto;padding-bottom:0;z-index:2}
 body.church .card{border:2px solid var(--lit,#1e6b3a);box-shadow:inset 0 0 0 1px var(--lit,#1e6b3a)}
@@ -175,7 +178,10 @@ body.church .rest{font-family:"EB Garamond",Georgia,serif;font-size:1.9rem;line-
   #overlay{z-index:50}
   body.church{position:relative;top:auto;right:auto;bottom:auto;left:auto;display:grid;grid-template-columns:1fr minmax(0,680px) 1fr;grid-template-areas:"nav nav nav" ". header ." ". main .";min-height:100vh;margin:0;padding:0 0 28px;border:0;border-radius:0;overflow:visible}
   body.church .top{padding-top:calc(14px + env(safe-area-inset-top, 0px))}
-  body.church main#view{overflow:visible;flex:none;min-height:0;grid-area:main;max-width:none;width:100%;padding-left:4px;padding-right:4px;touch-action:auto}
+  body.church main#view{overflow:visible;flex:none;min-height:0;grid-area:main;max-width:none;width:100%;padding-top:6px;padding-left:4px;padding-right:4px;touch-action:auto}
+  body.church .jump{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+  body.church .listbar{top:48px;margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+  body.church #ul.list li.sec{margin-left:0;margin-right:0;padding-left:8px;padding-right:8px}
   body.church .tabs{position:sticky;top:0;bottom:auto;left:auto;right:auto;grid-area:nav;display:flex;width:100%;padding:0}
   body.church::before{content:"";position:absolute;inset:auto;top:52px;bottom:12px;left:max(10px,calc(50% - 352px));right:max(10px,calc(50% - 352px));border:3px solid var(--lit,#1e6b3a);border-radius:0;pointer-events:none;z-index:40}
 }
@@ -203,6 +209,9 @@ body.church .rest{font-family:"EB Garamond",Georgia,serif;font-size:1.9rem;line-
   body.church{position:relative;top:auto;right:auto;bottom:auto;left:auto;display:grid;grid-template-columns:188px minmax(0,760px);column-gap:32px;justify-content:center;align-items:start;min-height:100vh;margin:0;padding:22px 28px 48px;border:0;border-radius:0;overflow:visible}
   body.church .top{padding-top:6px}
   body.church main#view{overflow:visible;flex:none;min-height:0;grid-column:2;grid-row:2;max-width:none;width:100%;padding:8px 8px 32px;touch-action:auto}
+  body.church .jump{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+  body.church .listbar{top:0;margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+  body.church #ul.list li.sec{margin-left:0;margin-right:0;padding-left:8px;padding-right:8px}
   body.church .tabs{position:sticky;top:22px;bottom:auto;left:auto;right:auto;grid-column:1;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:stretch;width:auto;height:auto;padding:8px;border-color:var(--lit,#1e6b3a);background:var(--card)}
   body.church::before{content:"";position:absolute;inset:auto;top:12px;bottom:12px;left:calc(50% - 284px);right:calc(50% - 504px);border:3px solid var(--lit,#1e6b3a);border-radius:0;pointer-events:none;z-index:40}
 }

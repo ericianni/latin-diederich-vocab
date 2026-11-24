@@ -418,6 +418,7 @@ ok(/M12 3h1\.4a2\.5 2\.5 0 0 1 0 5H12/.test(page) && !/h9 a8 8 0 0 1 0 16/.test(
 const css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
 ok(/\.tab-ico\{[^}]*stroke:currentColor/.test(css) && /stroke-width:1\.65/.test(css) && /stroke-width:2\.2/.test(css), 'church tab icons use currentColor and the mockup stroke');
 ok(/body\.church\{[^}]*env\(safe-area-inset-top/.test(css) && /body\.church\{[^}]*border-radius:24px/.test(css) && /body\.church\{[^}]*overflow:hidden/.test(css) && /body\.church main#view\{[^}]*overflow-y:auto/.test(css) && /min-width:720px\) and \(max-width:1179px\)/.test(css) && /min-width:1180px\)/.test(css), 'the phone frame is the scrolling window; tablet breakpoints stay 720 and 1180');
+ok(/body\.church \.jump\{[^}]*top:0/.test(css) && /body\.church \.listbar\{[^}]*top:0/.test(css) && /body\.church #ul\.list li\.sec\{/.test(css), 'church phone sticky bars sit flush with the scroller');
 
 console.log('OK', n);
 console.log('tier1 words', pack.words.length, 'overlays', pack.overlays.length, 'tokens', tokens, 'lessons', pack.lessons.length);
