@@ -80,7 +80,7 @@ On the frequency sort, Church-only words have no rank. They are grouped at the e
 
 ## Settings
 
-The About subtitle is “About & settings.” Settings come first: the Pack menu, then new words per day, then macrons. Your progress (export, import, reset) is its own card, and import and reset ask before they replace anything. Then How it works, then Word packs, then credits. How it works is in small type and includes a Words line.
+The About subtitle is “About & settings.” Settings come first: the Pack menu, then new words per day, then macrons. Your progress (export, import, reset) is its own card, and import and reset ask before they replace anything. Then How it works, then Word packs, then credits. Credits say the app is free for personal and classroom use. A privacy note follows: there are no accounts, ads, or tracking, and progress stays on the device. A link below it opens a Google Forms page to send feedback. How it works is in small type and includes a Words line.
 
 **Pack.** Classical or Church Latin, chosen from a menu. The change applies at once. Word packs lists each pack and its word count: the core list, and the Church Latin words it adds. The core list is always on. The Church pack adds its own words, glosses, and lessons, and only one added pack is active. The choice is saved. An older file that had the Church Latin switch on becomes the Church pack; otherwise it becomes Classical, including on import. Cards and lesson marks are kept. Turning the Church pack off hides its extra words and does not delete their cards. A shared word still has one card. While the pack is on, a Church gloss (and the dictionary line, when the overlay has one) replaces the classical one on the card, in drills, Learn, the cheat sheet, and the word list.
 
