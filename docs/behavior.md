@@ -114,7 +114,7 @@ The Church pack adds its own credit: the Ordinary of the Mass from the public-do
 
 ## Liturgical colors
 
-With the Church pack on, the frame and the line under the title follow the US Roman (Ordinary Form) color and celebration for the local date. The calendar does not change progress or the word list.
+With the Church pack on, the frame and the line under the title follow the US Roman (Ordinary Form) color and celebration for the local date. On a phone the frame is inset from the screen edge, including the notch and the rounded corners, so it stays fully on screen. The calendar does not change progress or the word list.
 
 Ascension and Corpus Christi are on Sunday. That is the practice of most US provinces, including the Diocese of Arlington. Optional memorials keep the season color unless the learner chooses the saint’s color in Settings.
 
