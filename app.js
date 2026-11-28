@@ -1321,6 +1321,10 @@
   }
 
   // ---------- about / settings ----------
+  function backupNote() {
+    const line = Progress.backupLine(Progress.readBackup(localStorage, KEY), Progress.isoDay(), Progress.hasProgress(S));
+    return line ? `<p class="small muted">${esc(line)}</p>` : '';
+  }
   function renderAbout() {
     setSub('About & settings');
     const mem = S.set.churchMem === 'saint' ? 'saint' : 'season';
@@ -1335,9 +1339,11 @@
       <div class="small muted" style="margin-top:14px">New words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
       <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p></div>
-      <div class="card"><h2 style="margin-top:0">Your progress</h2><p class="small muted" style="margin-top:0">Progress is stored only on this device. Export it to back up or move to another device.</p>
+      <div class="card"><h2 style="margin-top:0">Your progress</h2><p class="small muted" style="margin-top:0">Progress is stored only on this device. Export a copy to back it up or move it to another device.</p>
+      ${backupNote()}
       <div class="row wrap"><button class="grow" id="exp">Export progress</button><button class="grow" id="imp">Import</button><button class="grow" id="rst">Reset</button></div>
-      <input type="file" id="impf" accept="application/json" hidden></div>
+      <input type="file" id="impf" accept=".json,.txt,application/json,text/plain" hidden>
+      ${Progress.homeTip(window.Capacitor) ? `<p class="small muted">${esc(Progress.homeTip(window.Capacitor))}</p>` : ''}</div>
       <div class="card"><h2 style="margin-top:0">How it works</h2>
       <p class="small"><b>Cards:</b> learn a few new words a day and review what’s due. Mark each one Right or Wrong. Right answers come back later and later; wrong ones come back soon.</p>
       <p class="small"><b>Learn:</b> short grammar lessons.</p>
@@ -1353,17 +1359,22 @@
       <p class="small">Free for personal and classroom use.</p>
       <p class="small muted">Made by Eric Ianni. Source: <a href="https://github.com/ericianni/latin-diederich-vocab" rel="noopener">github.com/ericianni/latin-diederich-vocab</a>. Version 3.3.0</p></div>
       <div class="card"><h2 style="margin-top:0">Your privacy</h2>
-      <p class="small">Latin 1400 has no accounts, ads, or tracking. Your progress is saved only on this device and never leaves it. The optional feedback form below is run by Google Forms.</p>
+      <p class="small">Latin 1400 has no accounts, ads, or tracking. Your progress is saved only on this device. It leaves the device only if you export or share a copy. The optional feedback form below is run by Google Forms.</p>
       <p class="small"><a href="https://docs.google.com/forms/d/e/1FAIpQLScf3Tjl_imDAjzyN4wqziyCnQGW7e4EgbsVOiY2AWA9qiSMqg/viewform" target="_blank" rel="noopener">Send feedback or report a mistake</a></p></div>
       ${window.Capacitor ? '' : '<div class="card"><a class="btn" id="sentlink" href="sentences.html" style="display:block;text-align:center;text-decoration:none">Sentences (beta) ›</a></div>'}`;
     $('#pack').onchange = () => { if (S.set.pack === $('#pack').value) return; S.set.pack = $('#pack').value; rebuildDeck(); save(); applyChrome(); renderAbout(); };
     document.querySelectorAll('#cmem button').forEach(b => b.onclick = () => { S.set.churchMem = b.dataset.v; save(); applyChrome(); renderAbout(); });
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
-    $('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'latin1400-progress.json'; a.click(); };
+    $('#exp').onclick = () => {
+      const name = Progress.fileName('latin1400');
+      Progress.deliver(Progress.exportText(S, KEY), name, navigator, (filename, body) => {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([body], { type: 'application/json' })); a.download = filename; a.click();
+      }).then(() => { try { Progress.rememberBackup(localStorage, KEY); } catch (e) {} if (TAB === 'about') renderAbout(); });
+    };
     $('#imp').onclick = () => $('#impf').click();
-    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const s = JSON.parse(t); if (!s.cards) throw 0; if (!confirm('Replace the progress on this device with the imported file?')) return; S = fix(s); save(); rebuildDeck(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
-    $('#rst').onclick = () => { if (confirm('Erase all progress on this device? This can’t be undone (export first to keep a copy).')) { S = fix({}); save(); rebuildDeck(); applyChrome(); renderAbout(); } };
+    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const raw = Progress.importObj(t, KEY, true); if (!confirm('Replace the progress on this device with the imported file?')) return; S = fix(raw); save(); rebuildDeck(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
+    $('#rst').onclick = () => { if (confirm('Erase all progress on this device? This can’t be undone (export first to keep a copy).')) { S = fix({}); save(); try { Progress.forgetBackup(localStorage, KEY); } catch (e) {} rebuildDeck(); applyChrome(); renderAbout(); } };
   }
 
   // ---------- boot ----------
@@ -1408,4 +1419,5 @@
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastCheck > 60000) { lastCheck = Date.now(); reg.update().catch(() => {}); } });
     }).catch(() => {}));
   }
+  Progress.askPersist(navigator);
 })();

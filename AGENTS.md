@@ -103,7 +103,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 
 ## Release / Git / APK
 
-- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v57`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
+- Every user-facing code or data change: bump `const CACHE = 'latin1400-vNN'` in root `sw.js` (currently `latin1400-v58`) and add new assets to `ASSETS` if needed. Sentence engine files are already in `ASSETS`. Wide screens (720px and up) get a centered column and a top or side navigation; the phone layout is the default stylesheet and is not restated in those media queries.
 - **Docs-only** commits (e.g. this file) do **not** need a cache bump.
 - Do **not** touch `android/` or `www/` except when Eric asks for an APK. `www/` is a Capacitor copy and is often stale vs root — rebuild with `npm run build:web` / `android:debug` only for APK.
 - APK (when asked): a cloud agent only prepares the wrapper. Set `versionCode` / `versionName` in `android/app/build.gradle` (next local build is versionCode **4**, versionName **3.3-android-4**, package `io.github.ericianni.latin1400`) and refresh `www/` with `npm run build:web`. Do **not** generate a keystore, sign, or publish a GitHub Release from the cloud VM. The debug key stays on the persistent computer (`~/.android/debug.keystore`; public SHA-256 `CD:AE:EE:F3:ED:C6:E2:FD:4D:83:16:68:B1:16:91:D1:BE:3C:E3:28:8B:DF:9C:7E:18:8D:E0:7B:EF:1A:64:13`). On that machine: `JAVA_HOME=/opt/jdk21 ANDROID_HOME=/opt/android-sdk npm run android:debug`.
@@ -123,6 +123,7 @@ Per-word morphology overrides live **in `morph.js`**, not in JSON (PERF_FIX, NOU
 | `node tools/test_sentences.js` | ~16s | 2k sentences |
 | `node tools/test_liturgical.js` | ~0.2s | USCCB dates 2025–2030 |
 | `node tools/test_church.js` | ~0.2s | Mass tokens, Church paradigms, mode toggle |
+| `node tools/test_progress.js` | ~0.2s | export, import, backup reminder |
 | Browser: `tools/test_drills_browser.js`, `test_sentences_browser.js`, `test_testmode_browser.js` | slower | need Chrome |
 
 ## Gotchas
