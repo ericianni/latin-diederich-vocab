@@ -41,6 +41,17 @@ ok(/It's been a while/.test(P.backupLine('2026-11-01', '2026-11-15', true)), '14
 ok(/It's been a while/.test(P.backupLine('', '2026-11-15', true)), 'progress with no copy asks for one');
 eq(P.backupLine('', '2026-11-15', false), '', 'a fresh start stays quiet');
 eq(P.fileName('latin1400', new Date('2026-11-28T15:00:00Z')), 'latin1400-progress-2026-11-28.json', 'dated filename');
+const prevTZ = process.env.TZ;
+process.env.TZ = 'America/New_York';
+const eastern = new Date('2026-11-29T04:00:00.000Z');
+eq(P.isoDay(eastern), '2026-11-28', '11 PM US Eastern on Nov 28 is the local day');
+eq(eastern.toISOString().slice(0, 10), '2026-11-29', 'that instant is the next UTC day');
+eq(P.fileName('latin1400', eastern), 'latin1400-progress-2026-11-28.json', 'the export is named with the local day');
+eq(P.daysBetween(P.isoDay(eastern), '2026-12-12'), 14, 'the 14-day check uses the local day');
+eq(P.backupLine(P.isoDay(eastern), '2026-11-28', true), 'Last saved copy: November 28, 2026.', 'Last saved copy uses that local day');
+if (prevTZ == null) delete process.env.TZ; else process.env.TZ = prevTZ;
+const themed = { cards: { 'r:1': { box: 1 } }, set: { theme: 'dark', pack: 'classical' } };
+eq(JSON.parse(P.exportText(themed, 'latin1400.v1', eastern)).set.theme, 'dark', 'the export keeps the Appearance setting');
 
 (async () => {
   const downloaded = [];

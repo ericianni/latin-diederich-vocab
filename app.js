@@ -20,7 +20,8 @@
   function boxFromIvl(c) { const i = c.ivl || 0; if (i <= 0) return c.reps > 0 ? 1 : 0; return i <= 2 ? 1 : i <= 6 ? 2 : i <= 13 ? 3 : i <= 29 ? 4 : i <= 59 ? 5 : i <= 119 ? 6 : 7; }
   function fix(s) {
     s.cards = s.cards || {}; s.day = s.day || {};
-    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, andPos: false, church: false, churchMem: 'season' }, s.set || {});
+    s.set = Object.assign({ newPerDay: 10, strictMac: false, dmode: 'type', dlen: 10, andMore: true, andPos: false, church: false, churchMem: 'season', theme: 'auto' }, s.set || {});
+    s.set.theme = s.set.theme === 'light' || s.set.theme === 'dark' ? s.set.theme : 'auto';
     s.set.pack = (typeof Church !== 'undefined' && Church.packOf) ? Church.packOf(s.set) : (s.set.church === true ? 'church' : 'classical');
     if (!s.v || s.v < 2) {                     // v1 (SM-2, combined drills) -> v2 (Leitner, separate drills)
       for (const k of Object.keys(s.cards)) {
@@ -146,19 +147,31 @@
   }
   function applyChrome() {
     const on = activePack() === 'church';
+    const choice = Liturgical.appearance(S.set.theme);
+    const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const look = Liturgical.lookClass(choice, prefers, on ? 'church' : 'classical');
+    const root = document.documentElement;
+    root.dataset.theme = choice;
+    root.dataset.pack = on ? 'church' : 'classical';
+    root.classList.toggle('dark-bronze', look === 'dark-bronze');
+    root.classList.toggle('dark-candle', look === 'dark-candle');
     document.body.classList.toggle('church', on);
+    document.body.classList.toggle('dark-bronze', look === 'dark-bronze');
+    document.body.classList.toggle('dark-candle', look === 'dark-candle');
     applyTabIcons();
     $('#title').textContent = on ? 'Church Latin' : 'Latin 1400';
     const meta = document.querySelector('meta[name="theme-color"]');
+    const dark = look !== '';
     if (on) {
       const info = litToday();
       document.body.dataset.lit = info.color;
-      document.documentElement.style.setProperty('--lit', Liturgical.FRAME[info.color]);
-      if (meta) meta.setAttribute('content', Liturgical.FRAME[info.color]);
+      const map = dark ? Liturgical.FRAME_DARK : Liturgical.FRAME;
+      document.documentElement.style.setProperty('--lit', map[info.color]);
+      if (meta) meta.setAttribute('content', map[info.color]);
     } else {
       document.body.removeAttribute('data-lit');
       document.documentElement.style.removeProperty('--lit');
-      if (meta) meta.setAttribute('content', '#7a3428');
+      if (meta) meta.setAttribute('content', dark ? '#16110e' : '#7a3428');
     }
   }
   function setSub(label) { $('#sub').textContent = activePack() === 'church' ? litToday().celebration : label; }
@@ -1336,6 +1349,7 @@
         <div class="small muted chiph">Optional memorials</div><div class="seg" id="cmem"><button data-v="season" class="${mem === 'season' ? 'on' : ''}" aria-pressed="${mem === 'season'}">Season color</button><button data-v="saint" class="${mem === 'saint' ? 'on' : ''}" aria-pressed="${mem === 'saint'}">Saint’s color</button></div>
         <div class="small muted chiph">Pronunciation</div><div class="small" id="cpron">${PACK ? PACK.about.pronunciation : ''}</div>
       </div>
+      <div class="small muted" style="margin-top:14px">Appearance</div><div class="seg" id="stheme">${[['light', 'Light'], ['dark', 'Dark'], ['auto', 'Auto']].map(([v, l]) => `<button data-t="${v}" class="${Liturgical.appearance(S.set.theme) === v ? 'on' : ''}" aria-pressed="${Liturgical.appearance(S.set.theme) === v}">${l}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">New words per day</div><div class="seg" id="snew">${[5, 10, 20].map(n => `<button data-n="${n}" class="${S.set.newPerDay === n ? 'on' : ''}">${n}</button>`).join('')}</div>
       <div class="small muted" style="margin-top:14px">Typed answers (English → Latin cards and drills)</div><div class="seg" id="smac"><button data-m="0" class="${S.set.strictMac ? '' : 'on'}">Macrons optional</button><button data-m="1" class="${S.set.strictMac ? 'on' : ''}">Require macrons</button></div>
       <p class="small muted">With <b>Require macrons</b> on, a missing or wrong macron counts as wrong, and ā ē ī ō ū keys appear under the answer box.</p></div>
@@ -1364,6 +1378,7 @@
       ${window.Capacitor ? '' : '<div class="card"><a class="btn" id="sentlink" href="sentences.html" style="display:block;text-align:center;text-decoration:none">Sentences (beta) ›</a></div>'}`;
     $('#pack').onchange = () => { if (S.set.pack === $('#pack').value) return; S.set.pack = $('#pack').value; rebuildDeck(); save(); applyChrome(); renderAbout(); };
     document.querySelectorAll('#cmem button').forEach(b => b.onclick = () => { S.set.churchMem = b.dataset.v; save(); applyChrome(); renderAbout(); });
+    document.querySelectorAll('#stheme button').forEach(b => b.onclick = () => { S.set.theme = b.dataset.t; save(); applyChrome(); renderAbout(); });
     document.querySelectorAll('#snew button').forEach(b => b.onclick = () => { S.set.newPerDay = +b.dataset.n; save(); renderAbout(); });
     document.querySelectorAll('#smac button').forEach(b => b.onclick = () => { S.set.strictMac = b.dataset.m === '1'; save(); renderAbout(); });
     $('#exp').onclick = () => {
@@ -1373,12 +1388,16 @@
       }).then(() => { try { Progress.rememberBackup(localStorage, KEY); } catch (e) {} if (TAB === 'about') renderAbout(); });
     };
     $('#imp').onclick = () => $('#impf').click();
-    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const raw = Progress.importObj(t, KEY, true); if (!confirm('Replace the progress on this device with the imported file?')) return; S = fix(raw); save(); rebuildDeck(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
+    $('#impf').onchange = e => { const f = e.target.files[0]; if (!f) return; f.text().then(t => { try { const raw = Progress.importObj(t, KEY, true); if (!confirm('Replace the progress on this device with the imported file?')) return; S = fix(raw); save(); rebuildDeck(); applyChrome(); alert('Progress imported.'); renderAbout(); } catch (x) { alert('That file is not a Latin 1400 progress export.'); } }); };
     $('#rst').onclick = () => { if (confirm('Erase all progress on this device? This can’t be undone (export first to keep a copy).')) { S = fix({}); save(); try { Progress.forgetBackup(localStorage, KEY); } catch (e) {} rebuildDeck(); applyChrome(); renderAbout(); } };
   }
 
   // ---------- boot ----------
   document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  applyChrome();
+  const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+  const onScheme = () => { if (Liturgical.appearance(S.set.theme) === 'auto') applyChrome(); };
+  if (scheme.addEventListener) scheme.addEventListener('change', onScheme);
   const SENT_SRC = ['sentences/lexicon_s1.js', 'sentences/lexicon_s2.js', 'sentences/lexicon_s3.js', 'sentences/lexicon_s4.js', 'sentences/lexicon_s5.js', 'sentences/lexicon_s7.js', 'sentences/lexicon_s8.js', 'sentences/lexicon.js', 'sentences/engine.js'];
   let sentLoad = null;
   function loadSentences() {

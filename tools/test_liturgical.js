@@ -113,5 +113,23 @@ check('2025-12-02', 'violet', 'Advent');
 check('2025-12-03', 'white', 'Francis Xavier');
 ok(L.COLORS.includes(on('2025-06-08').color) && L.FRAME.red && L.FRAME.white, 'colors and frame map exist');
 
+function lin(c) { c = c / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function lum(hex) { const n = parseInt(hex.slice(1), 16); return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255); }
+function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+ok(L.FRAME_DARK.white === '#d4af4a', 'white and gold feasts use gold in the dark');
+for (const c of L.COLORS) {
+  ok(contrast(L.FRAME_DARK[c], '#1e1a14') >= 4.5, c + ' dark frame clears 4.5:1 on the Candlelit card (' + contrast(L.FRAME_DARK[c], '#1e1a14').toFixed(2) + ')');
+  ok(contrast('#1a1408', L.FRAME_DARK[c]) >= 4.5, 'drop-cap ink clears 4.5:1 on ' + c);
+}
+ok(L.appearance(undefined) === 'auto' && L.appearance('nope') === 'auto' && L.appearance('dark') === 'dark', 'Appearance defaults to Auto');
+ok(L.darkOn('auto', true) === true && L.darkOn('auto', false) === false && L.darkOn('light', true) === false && L.darkOn('dark', false) === true, 'Auto follows the media query; Light and Dark force it');
+ok(L.lookClass('dark', false, 'classical') === 'dark-bronze' && L.lookClass('auto', true, 'church') === 'dark-candle' && L.lookClass('light', true, 'church') === '', 'dark class follows the pack');
+const fs = require('fs'), path = require('path'), root = path.join(__dirname, '..');
+const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const page = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+ok(/id="stheme"/.test(app) && /Appearance/.test(app) && /S\.set\.theme = b\.dataset\.t/.test(app) && /theme: 'auto'/.test(app), 'Appearance is saved with the other settings');
+ok(/dataset\.theme = theme/.test(page) && /dark-bronze/.test(page) && /dark-candle/.test(page), 'the stored look is applied before the first paint');
+ok(/color-scheme:dark/.test(fs.readFileSync(path.join(root, 'style.css'), 'utf8')) && /color:var\(--accent-ink\)/.test(fs.readFileSync(path.join(root, 'style.css'), 'utf8')), 'dark mode sets color-scheme and dark ink on filled answers');
+
 console.log(fail ? 'FAILED ' + fail + ' / ' + (pass + fail) : 'OK ' + pass);
 process.exit(fail ? 1 : 0);

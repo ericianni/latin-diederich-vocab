@@ -27,7 +27,7 @@
     return copyState(s);
   }
   function fileName(stem, now) {
-    return stem + '-progress-' + (now || new Date()).toISOString().slice(0, 10) + '.json';
+    return stem + '-progress-' + isoDay(now) + '.json';
   }
   function shareFileName(jsonName) { return String(jsonName).replace(/\.json$/i, '.txt'); }
   async function deliver(text, filename, nav, download) {
@@ -43,7 +43,10 @@
     return 'download';
   }
   function backupKey(appKey) { return appKey + '.lastBackup'; }
-  function isoDay(d) { return (d || new Date()).toISOString().slice(0, 10); }
+  function isoDay(d) {
+    const x = d || new Date();
+    return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+  }
   function daysBetween(earlier, later) {
     const p = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
     return Math.round((p(later) - p(earlier)) / 86400000);

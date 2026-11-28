@@ -8,6 +8,12 @@
   const COLORS = ['green', 'violet', 'rose', 'white', 'red'];
   // Gold stands in for white vestments so a frame still shows on parchment.
   const FRAME = { green: '#1e6b3a', violet: '#5c3d86', rose: '#b85c74', red: '#8e2f2f', white: '#a68534' };
+  // Same seasons, brightened so accent text clears 4.5:1 on the Candlelit card (#1e1a14).
+  // White and gold feasts stay gold. Dark ink on these fills is the drop cap.
+  const FRAME_DARK = { green: '#3ea866', violet: '#b08adf', rose: '#e088a0', red: '#e07070', white: '#d4af4a' };
+  function appearance(choice) { return choice === 'light' || choice === 'dark' ? choice : 'auto'; }
+  function darkOn(choice, prefersDark) { const t = appearance(choice); return t === 'dark' || (t === 'auto' && !!prefersDark); }
+  function lookClass(choice, prefersDark, pack) { return darkOn(choice, prefersDark) ? (pack === 'church' ? 'dark-candle' : 'dark-bronze') : ''; }
 
   function date(y, m, d) { return new Date(y, m - 1, d, 12, 0, 0, 0); }
   function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -333,7 +339,7 @@
     return { color: day.color, celebration: day.name, season: day.season };
   }
 
-  const api = { colorFor, easter, advent1, epiphanySunday, baptism, COLORS, FRAME, addDays, ymd };
+  const api = { colorFor, easter, advent1, epiphanySunday, baptism, COLORS, FRAME, FRAME_DARK, appearance, darkOn, lookClass, addDays, ymd };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.Liturgical = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

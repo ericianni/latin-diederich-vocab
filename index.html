@@ -6,6 +6,24 @@
 <title>Latin 1400 · Diederich</title>
 <meta name="description" content="Study Paul Diederich's high-frequency Latin vocabulary with spaced repetition and grammar drills. Free, offline, no account.">
 <meta name="theme-color" content="#7a3428">
+<script>
+(function () {
+  try {
+    var s = JSON.parse(localStorage.getItem('latin1400.v1') || 'null') || {};
+    var set = s.set || {};
+    var theme = set.theme === 'light' || set.theme === 'dark' ? set.theme : 'auto';
+    var pack = set.pack === 'church' || set.pack === 'classical' ? set.pack : (set.church === true ? 'church' : 'classical');
+    var dark = theme === 'dark' || (theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    var root = document.documentElement;
+    root.dataset.theme = theme;
+    root.dataset.pack = pack;
+    root.classList.toggle('dark-bronze', dark && pack !== 'church');
+    root.classList.toggle('dark-candle', dark && pack === 'church');
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta && dark) meta.setAttribute('content', pack === 'church' ? '#14110c' : '#16110e');
+  } catch (e) {}
+})();
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">

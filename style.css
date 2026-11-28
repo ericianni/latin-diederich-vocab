@@ -139,6 +139,7 @@ mark.tgt{background:none;color:var(--accent);font-weight:700;text-decoration:und
 /* Church Latin: parchment, a frame in today's liturgical color, EB Garamond, an illuminated initial.
    On a phone the frame is the window: header and tabs stay put, and only #view scrolls inside it. */
 html:has(body.church){background:#f4e7c8}
+html.dark-candle:has(body.church),html[data-theme="dark"][data-pack="church"]{background:#0b0a08}
 body.church{--bg:#f4e7c8;--card:#fbf6e8;--ink:#2c2116;--muted:#6e5c45;--line:#e2d2b0;--soft:#efe2c8;--accent:var(--lit,#1e6b3a);--serif:"EB Garamond",Georgia,"Times New Roman",serif;
   position:fixed;top:calc(8px + env(safe-area-inset-top, 0px));right:calc(8px + env(safe-area-inset-right, 0px));bottom:calc(8px + env(safe-area-inset-bottom, 0px));left:calc(8px + env(safe-area-inset-left, 0px));
   display:flex;flex-direction:column;min-height:0;margin:0;padding:5px;border:3px solid var(--lit,#1e6b3a);border-radius:24px;overflow:hidden;background:var(--bg)}
@@ -160,6 +161,45 @@ body.church .rest{font-family:"EB Garamond",Georgia,serif;font-size:1.9rem;line-
 .listbar select{display:block;margin-top:8px}
 .upd{position:fixed;left:12px;right:12px;bottom:76px;z-index:50;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .upd button.link{color:inherit;font-weight:600;margin-left:6px}
+
+/* Dark. Auto follows the media query; Light and Dark force a look. Bronze is Classical. Candlelit is Church, and the frame stays the liturgical color. */
+html[data-theme="light"]{color-scheme:light}
+html.dark-bronze,html[data-theme="dark"]:not([data-pack="church"]){
+  color-scheme:dark;
+  --bg:#16110e;--card:#231c17;--ink:#f4eadf;--muted:#c0b0a2;--line:#43382f;
+  --accent:#e39980;--accent-ink:#1a110d;--good:#7ad07e;--bad:#f2867e;
+  --hard:#f0b15a;--easy:#7aaff0;--soft:#312821;
+  background:var(--bg);color:var(--ink)}
+html.dark-candle,html[data-theme="dark"][data-pack="church"]{color-scheme:dark;background:#0b0a08}
+html.dark-candle body.church,body.church.dark-candle,html[data-theme="dark"][data-pack="church"] body.church{
+  color-scheme:dark;
+  --bg:#14110c;--card:#1e1a14;--ink:#f3e6c8;--muted:#cbb894;--line:#3a3224;
+  --accent:var(--lit,#d4af4a);--accent-ink:#1a1408;--good:#7ad07e;--bad:#f2867e;
+  --hard:#f0b15a;--easy:#7aaff0;--soft:#2a2418;
+  background:var(--bg);border-color:var(--lit,#d4af4a)}
+html.dark-candle body.church .drop,body.church.dark-candle .drop{color:#1a1408;border-color:color-mix(in srgb,var(--lit,#d4af4a) 72%,#1a1408)}
+html.dark-candle body.church .card,body.church.dark-candle .card{border-color:var(--lit,#d4af4a);box-shadow:inset 0 0 0 1px var(--lit,#d4af4a),0 0 22px color-mix(in srgb,var(--lit,#d4af4a) 28%,transparent)}
+html.dark-bronze .opts button.right,html.dark-bronze .opts button.wrong,html.dark-bronze .idc button.right,html.dark-bronze .idc button.wrong,html.dark-bronze .lck.on,
+html.dark-candle .opts button.right,html.dark-candle .opts button.wrong,html.dark-candle .idc button.right,html.dark-candle .idc button.wrong,html.dark-candle .lck.on{color:var(--accent-ink)}
+@media (prefers-color-scheme:dark){
+  html[data-theme="auto"]:not([data-pack="church"]){
+    color-scheme:dark;
+    --bg:#16110e;--card:#231c17;--ink:#f4eadf;--muted:#c0b0a2;--line:#43382f;
+    --accent:#e39980;--accent-ink:#1a110d;--good:#7ad07e;--bad:#f2867e;
+    --hard:#f0b15a;--easy:#7aaff0;--soft:#312821;
+    background:var(--bg);color:var(--ink)}
+  html[data-theme="auto"][data-pack="church"]{color-scheme:dark;background:#0b0a08}
+  html[data-theme="auto"][data-pack="church"] body.church{
+    color-scheme:dark;
+    --bg:#14110c;--card:#1e1a14;--ink:#f3e6c8;--muted:#cbb894;--line:#3a3224;
+    --accent:var(--lit,#d4af4a);--accent-ink:#1a1408;--good:#7ad07e;--bad:#f2867e;
+    --hard:#f0b15a;--easy:#7aaff0;--soft:#2a2418;
+    background:var(--bg);border-color:var(--lit,#d4af4a)}
+  html[data-theme="auto"][data-pack="church"] body.church .drop{color:#1a1408;border-color:color-mix(in srgb,var(--lit,#d4af4a) 72%,#1a1408)}
+  html[data-theme="auto"][data-pack="church"] body.church .card{border-color:var(--lit,#d4af4a);box-shadow:inset 0 0 0 1px var(--lit,#d4af4a),0 0 22px color-mix(in srgb,var(--lit,#d4af4a) 28%,transparent)}
+  html[data-theme="auto"]:not([data-pack="church"]) .opts button.right,html[data-theme="auto"]:not([data-pack="church"]) .opts button.wrong,html[data-theme="auto"]:not([data-pack="church"]) .idc button.right,html[data-theme="auto"]:not([data-pack="church"]) .idc button.wrong,html[data-theme="auto"]:not([data-pack="church"]) .lck.on,
+  html[data-theme="auto"][data-pack="church"] .opts button.right,html[data-theme="auto"][data-pack="church"] .opts button.wrong,html[data-theme="auto"][data-pack="church"] .idc button.right,html[data-theme="auto"][data-pack="church"] .idc button.wrong,html[data-theme="auto"][data-pack="church"] .lck.on{color:var(--accent-ink)}
+}
 
 /* Wide screens. Everything above this line is the phone layout and stays as it is. */
 @media (min-width:720px) and (max-width:1179px){
